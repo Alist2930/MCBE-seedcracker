@@ -152,7 +152,7 @@ def main():
     parser.add_argument('--end', type=int, default=0xFFFFFFFF, help='End high value')
     parser.add_argument('--test', action='store_true', help='Test mode: 0 ~ 100M')
     parser.add_argument('--low32', type=int, default=LOW32, help='Low 32-bit value')
-    parser.add_argument('--processes', type=int, default=2, help='Number of processes')
+    parser.add_argument('--processes', type=int, default=None, help='Number of processes')
     args = parser.parse_args()
     
     print("=" * 60)
