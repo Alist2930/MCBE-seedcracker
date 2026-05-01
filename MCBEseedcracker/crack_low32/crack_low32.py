@@ -3,8 +3,9 @@
 Minecraft Bedrock Low 32-bit Seed Cracker
 
 Usage:
-    python crack_low32.py          # Full crack (2^32)
-    python crack_low32.py --test   # Test mode (100M seeds)
+    python crack_low32.py              # Full crack (2^32)
+    python crack_low32.py --test       # Test mode (100M seeds)
+    python crack_low32.py --start 1000 --end 2000  # Custom range
 """
 import ctypes
 import time
