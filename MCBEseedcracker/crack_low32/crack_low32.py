@@ -31,7 +31,7 @@ STRUCTURE_CONFIGS = {
     "jungle_temple": {"name": "Jungle Temple", "salt": 14357617, "spacing": 32, "separation": 8, "spread_type": "linear"},
 }
 
-# ===== 在这里填写目标结构（建议5个）=====
+# ===== Target structures (recommended: 5) =====
 TARGETS = [
     {"structure": "swamp_hut", "x": 2136, "z": -1176},
     {"structure": "jungle_temple", "x": -360, "z": -248},
