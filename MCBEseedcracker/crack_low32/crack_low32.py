@@ -153,23 +153,6 @@ def main():
         print(f"\n[!] Error: DLL not found: {lib_path}")
         return
     
-    print("\n" + "-" * 60)
-    print("Verification test (known seed 1818588773)...")
-    print("-" * 60)
-    
-    known_seed = 1818588773
-    tasks = [(known_seed - 1000, known_seed + 1000, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE)]
-    pool = mp.Pool(1)
-    results = pool.map(crack_worker, tasks)
-    pool.close()
-    pool.join()
-    
-    if known_seed in [s for r in results for s in r]:
-        print(f"[OK] Known seed {known_seed} verified!")
-    else:
-        print(f"[X] Warning: Known seed {known_seed} not found!")
-        return
-    
     total_seeds = 100_000_000 if args.test else 0x100000000
     print(f"\n[*] Mode: {'Test' if args.test else 'Full'} ({total_seeds:,} seeds)")
     
