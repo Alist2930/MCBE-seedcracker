@@ -24,10 +24,6 @@ typedef struct
 #define EXPORT
 #endif
 
-static volatile int g_progress = 0;
-static volatile int g_phase = 1;
-static volatile uint64_t g_processed = 0;
-
 #define SIMD_WIDTH 4
 
 typedef struct
@@ -193,7 +189,7 @@ static int xDoublePerlinInitSOA(DoublePerlinNoiseSOA *noise, Xoroshiro xr[4],
     int trim_len = len;
     for (i = trim_len - 1; i >= 0 && amplitudes[i] == 0.0; i--)
         trim_len--;
-    for (i = 0; i < trim_len && amplitudes[i] == 0.0; i++)
+    for (i = 0; i < trim_len && amplitudes[i] == 0.0; i--)
         trim_len--;
     static const double amp_ini[] = {
         0,
@@ -458,12 +454,8 @@ EXPORT int phase1_filter_avx2(
     int x = rare_sample->x;
     int z = rare_sample->z;
     int target_id = rare_sample->biome_id;
-    uint64_t search_range = end_high - start_high;
 
     int total = 0;
-    g_phase = 1;
-    g_progress = 0;
-    g_processed = 0;
 
 #pragma omp parallel
     {
@@ -510,29 +502,16 @@ EXPORT int phase1_filter_avx2(
                     }
                 }
             }
-
-#pragma omp atomic
-            g_processed += batch_size;
-
-            if (g_processed % (search_range / 100 + 1) == 0)
-            {
-#pragma omp critical
-                {
-                    g_progress = (int)(g_processed * 100 / search_range);
-                }
-            }
         }
 
         free(bn_soa->oct);
         free(bn_soa);
     }
 
-    g_progress = 100;
-    g_processed = search_range;
     return total;
 }
 
-EXPORT int phase2_filter_avx2(
+EXPORT int phase2_verify(
     uint64_t *candidates,
     int num_candidates,
     uint32_t low32,
@@ -547,9 +526,6 @@ EXPORT int phase2_filter_avx2(
         return 0;
 
     int found_count = 0;
-    g_phase = 2;
-    g_progress = 0;
-    g_processed = 0;
 
     BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)malloc(sizeof(BiomeNoiseSOA));
     if (!bn_soa)
@@ -612,49 +588,11 @@ EXPORT int phase2_filter_avx2(
                 results[found_count++] = seeds[s];
             }
         }
-
-        g_processed = c + batch_size;
-        if (g_processed % (num_candidates / 100 + 1) == 0)
-        {
-            g_progress = (int)(g_processed * 100 / num_candidates);
-        }
     }
 
     free(bn_soa->oct);
     free(bn_soa);
-    g_progress = 100;
-    g_processed = num_candidates;
     return found_count;
-}
-
-EXPORT int phase2_verify(
-    uint64_t *candidates,
-    int num_candidates,
-    uint32_t low32,
-    int y_coord,
-    BiomeSample *other_samples,
-    int num_other_samples,
-    uint64_t *results,
-    int max_results,
-    int mc_version)
-{
-    return phase2_filter_avx2(candidates, num_candidates, low32, y_coord,
-                              other_samples, num_other_samples, results, max_results, mc_version);
-}
-
-EXPORT int get_progress(void)
-{
-    return g_progress;
-}
-
-EXPORT int get_phase(void)
-{
-    return g_phase;
-}
-
-EXPORT uint64_t get_processed(void)
-{
-    return g_processed;
 }
 
 EXPORT int getBiomeAtSeed(
@@ -676,107 +614,4 @@ EXPORT int getBiomeAtSeed(
     int64_t np[6];
     sampleBiomeNoise(&bn, np, x4, y4, z4, NULL, 0);
     return climateToBiome(mc_version, (const uint64_t *)np, NULL);
-}
-
-EXPORT int getBiomeAtSeedSOA(
-    uint64_t seed,
-    int x,
-    int y,
-    int z,
-    int mc_version)
-{
-    BiomeNoiseSOA *bn = (BiomeNoiseSOA *)malloc(sizeof(BiomeNoiseSOA));
-    memset(bn, 0, sizeof(BiomeNoiseSOA));
-    bn->oct = (PerlinNoiseSOA *)malloc(256 * sizeof(PerlinNoiseSOA));
-    memset(bn->oct, 0, 256 * sizeof(PerlinNoiseSOA));
-
-    uint64_t seeds[4] = {seed, seed, seed, seed};
-    setBiomeSeedSOA(bn, seeds, 0);
-
-    uint64_t sha = getVoronoiSHA(seed);
-    int x4, y4, z4;
-    voronoiAccess3D(sha, x, y, z, &x4, &y4, &z4);
-
-    int x4_arr[4] = {x4, x4, x4, x4};
-    int y4_arr[4] = {y4, y4, y4, y4};
-    int z4_arr[4] = {z4, z4, z4, z4};
-
-    int64_t np[4][6];
-    sampleBiomeNoiseSOA(bn, np, x4_arr, y4_arr, z4_arr);
-
-    int biome_id = climateToBiomeSOA(mc_version, np[0]);
-
-    free(bn->oct);
-    free(bn);
-    return biome_id;
-}
-
-EXPORT void debug_batch(
-    uint32_t start_high,
-    uint32_t batch_size,
-    uint32_t low32,
-    int y_coord,
-    int x,
-    int z,
-    int mc_version)
-{
-    BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)malloc(sizeof(BiomeNoiseSOA));
-    memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
-    bn_soa->oct = (PerlinNoiseSOA *)malloc(256 * sizeof(PerlinNoiseSOA));
-    memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
-
-    uint64_t seeds[4];
-    uint64_t sha[4];
-    int x4[4], y4[4], z4[4];
-    int64_t np[4][6];
-
-    printf("Debug batch: start_high=%u, batch_size=%u\n", start_high, batch_size);
-
-    for (int s = 0; s < batch_size && s < 4; s++)
-    {
-        seeds[s] = (((uint64_t)(start_high + s)) << 32) | low32;
-        sha[s] = getVoronoiSHA(seeds[s]);
-        voronoiAccess3D(sha[s], x, y_coord, z, &x4[s], &y4[s], &z4[s]);
-        printf("  s=%d: seed=%llu, sha=%llu, x4=%d, y4=%d, z4=%d\n",
-               s, seeds[s], sha[s], x4[s], y4[s], z4[s]);
-    }
-
-    setBiomeSeedSOA(bn_soa, seeds, 0);
-
-    sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4);
-
-    for (int s = 0; s < batch_size && s < 4; s++)
-    {
-        printf("  s=%d: np=[%lld, %lld, %lld, %lld, %lld, %lld]\n",
-               s, np[s][0], np[s][1], np[s][2], np[s][3], np[s][4], np[s][5]);
-        int biome_id = climateToBiomeSOA(mc_version, np[s]);
-        printf("  s=%d: biome_id=%d\n", s, biome_id);
-    }
-
-    printf("\nComparing with individual calculations:\n");
-    for (int s = 0; s < batch_size && s < 4; s++)
-    {
-        BiomeNoise bn_ind;
-        memset(&bn_ind, 0, sizeof(bn_ind));
-        initBiomeNoise(&bn_ind, mc_version);
-        setBiomeSeed(&bn_ind, seeds[s], 0);
-        uint64_t sha_ind = getVoronoiSHA(seeds[s]);
-
-        int x4_ind, y4_ind, z4_ind;
-        voronoiAccess3D(sha_ind, x, y_coord, z, &x4_ind, &y4_ind, &z4_ind);
-
-        printf("  s=%d: individual sha=%llu, x4=%d, y4=%d, z4=%d\n",
-               s, sha_ind, x4_ind, y4_ind, z4_ind);
-
-        int64_t np_ind[6];
-        sampleBiomeNoise(&bn_ind, np_ind, x4_ind, y4_ind, z4_ind, NULL, 0);
-
-        printf("  s=%d: individual np=[%lld, %lld, %lld, %lld, %lld, %lld]\n",
-               s, np_ind[0], np_ind[1], np_ind[2], np_ind[3], np_ind[4], np_ind[5]);
-        int biome_id_ind = climateToBiome(mc_version, (const uint64_t *)np_ind, NULL);
-        printf("  s=%d: individual biome_id=%d\n", s, biome_id_ind);
-    }
-
-    free(bn_soa->oct);
-    free(bn_soa);
 }
