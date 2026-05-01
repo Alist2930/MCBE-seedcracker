@@ -113,6 +113,7 @@ python3 crack_low32.py
 编辑 `crack_low32.py` 开头的 `TARGETS`（建议5个结构）：
 
 ```python
+# 示例：种子 1818588773 的结构坐标
 TARGETS = [
     {"structure": "swamp_hut", "x": 2136, "z": -1176},
     {"structure": "jungle_temple", "x": -360, "z": -248},
@@ -219,7 +220,7 @@ LOW32 = 1818588773
 # MC版本
 MC_VERSION_STR = "1.21"  # 可选: "1.18", "1.19", "1.20", "1.21"
 
-# 群系样本 (x, z, biome_id)，建议5个
+# 示例：种子 18998457957 的群系样本
 SAMPLES = [
     (-1922, 1231, 185),   # cherry_grove
     (-4706, 3302, 132),   # flower_forest
