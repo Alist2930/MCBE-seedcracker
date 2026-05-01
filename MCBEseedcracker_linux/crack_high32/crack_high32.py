@@ -71,11 +71,11 @@ def check_biome_version(samples, mc_version):
     return warnings
 
 SAMPLES = [
-    (-1922, 1231, 185),
-    (-4706, 3302, 132),
-    (-935, 2592, 5),
-    (-2697, 1363, 4),
-    (-270, 470, 186),
+    (-1922, 1231, 185),   # cherry_grove
+    (-4706, 3302, 132),   # flower_forest
+    (-935, 2592, 5),      # taiga
+    (-2697, 1363, 4),     # forest
+    (-270, 470, 186),     # pale_garden
 ]
 
 # ===== 在这里填写低32位值（来自 crack_low32 结果）=====
