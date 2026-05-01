@@ -92,16 +92,17 @@ def crack_worker(args):
     found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
     return [results_arr[i] for i in range(found)]
 
-def run_crack(total_seeds, num_processes, all_results):
+def run_crack(search_start, search_end, num_processes, all_results):
     global_start = time.time()
-    processed = 0
+    processed = search_start
+    total_seeds = search_end - search_start
     step_size = 200_000_000
     
     pool = mp.Pool(num_processes)
     
-    while processed < total_seeds:
+    while processed < search_end:
         step_start = processed
-        step_end = min(processed + step_size, total_seeds)
+        step_end = min(processed + step_size, search_end)
         chunk_size = (step_end - step_start) // num_processes
         
         tasks = []
@@ -120,12 +121,12 @@ def run_crack(total_seeds, num_processes, all_results):
         
         processed = step_end
         elapsed = time.time() - global_start
-        speed = processed / elapsed if elapsed > 0 else 0
-        progress = processed / total_seeds * 100
-        eta = (total_seeds - processed) / speed if speed > 0 else 0
+        speed = (processed - search_start) / elapsed if elapsed > 0 else 0
+        progress = (processed - search_start) / total_seeds * 100
+        eta = (search_end - processed) / speed if speed > 0 else 0
         
         eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
-        print(f"[-] {processed:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
+        print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
     
     pool.close()
     pool.join()
@@ -134,6 +135,8 @@ def run_crack(total_seeds, num_processes, all_results):
 
 def main():
     parser = argparse.ArgumentParser(description="Minecraft Bedrock Low 32-bit Seed Cracker")
+    parser.add_argument("--start", type=int, default=0, help="Start low32 value")
+    parser.add_argument("--end", type=int, default=0xFFFFFFFF, help="End low32 value")
     parser.add_argument("--test", action="store_true", help="Test mode (100M seeds)")
     args = parser.parse_args()
     
@@ -153,15 +156,19 @@ def main():
         print(f"\n[!] Error: DLL not found: {lib_path}")
         return
     
-    total_seeds = 100_000_000 if args.test else 0x100000000
-    print(f"\n[*] Mode: {'Test' if args.test else 'Full'} ({total_seeds:,} seeds)")
+    search_start = args.start
+    search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
+    total_seeds = search_end - search_start
+    
+    print(f"\n[*] Mode: {'Test' if args.test else 'Full'}")
+    print(f"[*] Search range: {search_start:,} ~ {search_end:,} ({total_seeds:,} seeds)")
     
     print("\n" + "-" * 60)
     print("Starting crack...")
     print("-" * 60)
     
     all_results = []
-    elapsed = run_crack(total_seeds, num_processes, all_results)
+    elapsed = run_crack(search_start, search_end, num_processes, all_results)
     
     print(f"\n[*] Done! Time: {elapsed:.1f}s ({elapsed/60:.1f}min)")
     print(f"[*] Speed: {total_seeds/elapsed:,.0f} seeds/s")
