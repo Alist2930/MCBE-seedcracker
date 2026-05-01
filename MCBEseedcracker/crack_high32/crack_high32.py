@@ -126,7 +126,7 @@ def check_biome_version(samples, mc_version):
         biome_idx = version_order.index(biome_version)
         if biome_idx > mc_idx:
             biome_name = get_biome_name(biome_id)
-            warnings.append(f"  ({x}, {z}) -> {biome_name} (ID: {biome_id}) 需要 {biome_version}+，但当前版本是 {mc_version}")
+            warnings.append(f"  ({x}, {z}) -> {biome_name} (ID: {biome_id}) requires {biome_version}+, but current version is {mc_version}")
     
     return warnings
 
@@ -138,11 +138,11 @@ SAMPLES = [
     (-270, 470, 186),     # pale_garden
 ]
 
-# ===== 在这里填写低32位值（来自 crack_low32 结果）=====
+# ===== Low 32-bit value (from crack_low32 result) =====
 LOW32 = 1818588773
 Y_COORD = 150
 
-# ===== MC版本设置 =====
+# ===== MC Version Settings =====
 MC_VERSION_STR = "1.21"
 
 MC_1_18 = 22
