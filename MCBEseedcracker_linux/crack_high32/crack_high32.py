@@ -78,11 +78,11 @@ SAMPLES = [
     (-270, 470, 186),     # pale_garden
 ]
 
-# ===== 在这里填写低32位值（来自 crack_low32 结果）=====
+# ===== \u5728\u8fd9\u91cc\u586b\u5199\u4f4e32\u4f4d\u503c\uff08\u6765\u81ea crack_low32 \u7ed3\u679c\uff09=====
 LOW32 = 1818588773
 Y_COORD = 150
 
-# ===== MC版本设置 =====
+# ===== MC\u7248\u672c\u8bbe\u7f6e =====
 MC_VERSION_STR = "1.21"
 
 MC_1_18 = 22
@@ -257,19 +257,31 @@ def main():
             tasks.append((all_candidates[start_idx:end_idx], args.low32, other_samples, Y_COORD, MC_VERSION))
     
     pool = mp.Pool(num_processes)
-    results = pool.map(phase2_batch, tasks)
+    all_results = []
+    total_tasks = len(tasks)
+    completed_tasks = 0
+    
+    for result in pool.imap_unordered(phase2_batch, tasks):
+        all_results.extend(result)
+        completed_tasks += 1
+        elapsed = time.time() - phase2_start
+        speed = len(all_candidates) * completed_tasks / total_tasks / elapsed if elapsed > 0 else 0
+        percent = completed_tasks / total_tasks * 100
+        
+        bar_len = 30
+        filled = int(bar_len * percent / 100)
+        bar = '#' * filled + '-' * (bar_len - filled)
+        
+        sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {completed_tasks}/{total_tasks} batches | {speed:,.0f}/s | Found: {len(all_results)}')
+        sys.stdout.flush()
+    
     pool.close()
     pool.join()
     
     phase2_elapsed = time.time() - phase2_start
-    
-    all_results = []
-    for r in results:
-        all_results.extend(r)
-    
     phase2_speed = len(all_candidates) / phase2_elapsed if phase2_elapsed > 0 else 0
     
-    print(f"\n[Phase 2 Complete]")
+    print(f"\n\n[Phase 2 Complete]")
     print(f"  Time: {phase2_elapsed:.1f}s")
     print(f"  Speed: {phase2_speed:,.0f} candidates/s")
     print(f"  Matches: {len(all_results)}")
