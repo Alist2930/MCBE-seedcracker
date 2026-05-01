@@ -122,7 +122,7 @@ EXPORT int crack_low32(
     uint32_t* offset_range,
     int* spread_type,
     int num_targets,
-    int32_t* results,
+    uint32_t* results,
     int max_results
 ) {
     int found_count = 0;
@@ -143,7 +143,7 @@ EXPORT int crack_low32(
             }
             
             if (all_match) {
-                results[found_count++] = (int32_t)w;
+                results[found_count++] = w;
             }
         }
     }
