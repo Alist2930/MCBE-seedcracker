@@ -114,11 +114,11 @@ python3 crack_low32.py
 
 ```python
 TARGETS = [
-    {"structure": "desert_temple", "x": 2136, "z": -1176},
+    {"structure": "swamp_hut", "x": 2136, "z": -1176},
     {"structure": "jungle_temple", "x": -360, "z": -248},
+    {"structure": "desert_temple", "x": -936, "z": 4744},
     {"structure": "ocean_monument", "x": 792, "z": -792},
-    {"structure": "swamp_hut", "x": 1352, "z": -1208},
-    {"structure": "shipwreck", "x": 200, "z": 300},
+    {"structure": "end_city", "x": 1352, "z": -1208},
 ]
 ```
 
