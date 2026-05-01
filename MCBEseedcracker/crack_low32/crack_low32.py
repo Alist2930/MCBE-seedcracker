@@ -78,7 +78,7 @@ def crack_worker(args):
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-        ctypes.POINTER(ctypes.c_int32), ctypes.c_int
+        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
     ]
     lib.crack_low32.restype = ctypes.c_int
     
@@ -88,7 +88,7 @@ def crack_worker(args):
     oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
     offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
     spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-    results_arr = (ctypes.c_int32 * 1000)()
+    results_arr = (ctypes.c_uint32 * 1000)()
     
     found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
     return [results_arr[i] for i in range(found)]
