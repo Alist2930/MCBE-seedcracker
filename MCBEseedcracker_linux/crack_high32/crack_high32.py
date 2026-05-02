@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Minecraft Bedrock High 32-bit Seed Cracker (Linux)
+Minecraft Bedrock High 32-bit Seed Cracker
 
 Usage:
     python crack_high32.py              # Full search
@@ -10,12 +10,14 @@ Usage:
 import ctypes
 import time
 import sys
+import os
 import argparse
 import multiprocessing as mp
+import threading
 from pathlib import Path
 
 script_dir = Path(__file__).parent.resolve()
-lib_path = script_dir / "crack_high32.so"
+dll_path = script_dir / "crack_high32.so"
 
 BIOME_IDS = {
     'ocean': {'id': 0, 'rarity': {'1.18': 0.06883430, '1.19': 0.07081740, '1.20': 0.06959600, '1.21': 0.06865850}},
@@ -139,11 +141,9 @@ SAMPLES = [
     (-270, 470, 186),     # pale_garden
 ]
 
-# ===== 在这里填写低32位值（来自 crack_low32 结果）=====
 LOW32 = 1818588773
 Y_COORD = 150
 
-# ===== MC版本设置 =====
 MC_VERSION_STR = "1.21"
 
 MC_1_18 = 22
@@ -162,47 +162,36 @@ MC_VERSION = VERSION_MAP.get(MC_VERSION_STR, MC_1_21)
 
 BATCH_SIZE = 500000
 
-class BiomeSample(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("biome_id", ctypes.c_int)]
+def init_dll():
+    dll = ctypes.CDLL(str(dll_path))
+    
+    dll.getBiomeAtSeed.argtypes = [ctypes.c_uint64, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    dll.getBiomeAtSeed.restype = ctypes.c_int
+    
+    return dll
 
-def init_lib():
-    lib = ctypes.CDLL(str(lib_path))
+def crack_batch(args):
+    start_high, end_high, low32, samples, y_coord, mc_version, result_queue = args
+    dll = init_dll()
     
-    lib.phase1_filter_avx2.argtypes = [
-        ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
-        ctypes.POINTER(BiomeSample), ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
-    ]
-    lib.phase1_filter_avx2.restype = ctypes.c_int
+    results = []
     
-    lib.phase2_verify.argtypes = [
-        ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_uint32, ctypes.c_int,
-        ctypes.POINTER(BiomeSample), ctypes.c_int, ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
-    ]
-    lib.phase2_verify.restype = ctypes.c_int
+    for high32 in range(start_high, end_high):
+        seed = (high32 << 32) | low32
+        
+        all_match = True
+        for x, z, biome_id in samples:
+            actual_id = dll.getBiomeAtSeed(seed, x, y_coord, z, mc_version)
+            if actual_id != biome_id:
+                all_match = False
+                break
+        
+        if all_match:
+            results.append(seed)
+            if result_queue is not None:
+                result_queue.put(seed)
     
-    return lib
-
-def phase1_batch(args):
-    start_high, end_high, low32, rare_sample, y_coord, mc_version = args
-    lib = init_lib()
-    
-    rare = BiomeSample(rare_sample[0], rare_sample[1], rare_sample[2])
-    max_candidates = (end_high - start_high) // 10 + 100
-    candidates_arr = (ctypes.c_uint64 * max_candidates)()
-    
-    found = lib.phase1_filter_avx2(start_high, end_high, low32, y_coord, ctypes.byref(rare), candidates_arr, max_candidates, mc_version)
-    return [candidates_arr[i] for i in range(found)]
-
-def phase2_batch(args):
-    candidates_chunk, low32, other_samples, y_coord, mc_version = args
-    lib = init_lib()
-    
-    candidates_arr = (ctypes.c_uint64 * len(candidates_chunk))(*candidates_chunk)
-    other_arr = (BiomeSample * len(other_samples))(*[BiomeSample(x, z, bid) for x, z, bid in other_samples])
-    results_arr = (ctypes.c_uint64 * 1000)()
-    
-    found = lib.phase2_verify(candidates_arr, len(candidates_chunk), low32, y_coord, other_arr, len(other_samples), results_arr, 1000, mc_version)
-    return [results_arr[i] for i in range(found)]
+    return results
 
 def main():
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
@@ -214,13 +203,8 @@ def main():
     args = parser.parse_args()
     
     print("=" * 60)
-    print("Minecraft Bedrock High 32-bit Seed Cracker (Linux)")
+    print("Minecraft Bedrock High 32-bit Seed Cracker")
     print("=" * 60)
-    
-    if not lib_path.exists():
-        print(f"\n[!] Error: Library not found: {lib_path}")
-        print("[!] Please run 'bash build.sh' first to compile the library.")
-        return
     
     search_start = args.start
     search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
@@ -248,41 +232,55 @@ def main():
         input("\nPress Enter to exit...")
         sys.exit(1)
     
-    rare_sample = sorted_samples[0]
-    other_samples = sorted_samples[1:]
     total_search = search_end - search_start
     
     print(f"\n[*] Search range: {search_start:,} ~ {search_end:,}")
-    
     print("-" * 60)
-    print(f"[Phase 1] Filtering with {get_biome_name(rare_sample[2])}...")
+    print("[*] Cracking (check all biomes for each high32)...")
     print("-" * 60)
     
-    all_candidates = []
-    phase1_start = time.time()
+    manager = mp.Manager()
+    result_queue = manager.Queue()
+    all_results = []
+    stop_listener = threading.Event()
+    
+    def result_listener():
+        while not stop_listener.is_set():
+            try:
+                seed = result_queue.get(timeout=0.1)
+                all_results.append(seed)
+                high32 = seed >> 32
+                low32 = seed & 0xFFFFFFFF
+                print(f"\n[!] Found seed: {seed} (high32: {high32}, low32: {low32})")
+            except:
+                pass
+    
+    listener_thread = threading.Thread(target=result_listener, daemon=True)
+    listener_thread.start()
+    
+    start_time = time.time()
     total_done = 0
-    batch_size = BATCH_SIZE * num_processes
+    batch_size = BATCH_SIZE
     
     pool = mp.Pool(num_processes)
     
-    for batch_start in range(search_start, search_end, batch_size):
-        batch_end = min(batch_start + batch_size, search_end)
+    for batch_start in range(search_start, search_end, batch_size * num_processes):
+        batch_end = min(batch_start + batch_size * num_processes, search_end)
         
         tasks = []
-        chunk = (batch_end - batch_start) // num_processes
+        chunk = batch_size
         for i in range(num_processes):
             start = batch_start + i * chunk
-            end = batch_start + (i + 1) * chunk if i < num_processes - 1 else batch_end
-            if start < end:
-                tasks.append((start, end, args.low32, rare_sample, Y_COORD, MC_VERSION))
+            end = start + chunk
+            if start < batch_end:
+                actual_end = min(end, batch_end)
+                tasks.append((start, actual_end, args.low32, sorted_samples, Y_COORD, MC_VERSION, result_queue))
         
         if tasks:
-            results = pool.map(phase1_batch, tasks)
-            for r in results:
-                all_candidates.extend(r)
+            results = pool.map(crack_batch, tasks)
         
         total_done = batch_end - search_start
-        elapsed = time.time() - phase1_start
+        elapsed = time.time() - start_time
         speed = total_done / elapsed if elapsed > 0 else 0
         eta = (total_search - total_done) / speed if speed > 0 else 0
         percent = total_done / total_search * 100
@@ -297,82 +295,20 @@ def main():
     pool.close()
     pool.join()
     
-    phase1_elapsed = time.time() - phase1_start
-    phase1_speed = total_search / phase1_elapsed if phase1_elapsed > 0 else 0
+    stop_listener.set()
+    listener_thread.join(timeout=1)
     
-    print(f"\n\n[Phase 1 Complete]")
-    print(f"  Time: {phase1_elapsed:.1f}s")
-    print(f"  Speed: {phase1_speed:,.0f}/s")
-    print(f"  Candidates: {len(all_candidates):,} ({len(all_candidates)/total_search*100:.4f}%)")
+    total_elapsed = time.time() - start_time
+    total_speed = total_search / total_elapsed if total_elapsed > 0 else 0
     
-    if not all_candidates:
-        print("\nNo candidates found. Search ended.")
-        return
-    
-    print("-" * 60)
-    print(f"[Phase 2] Verifying {len(all_candidates):,} candidates...")
-    print(f"  Verification order (rarest first):")
-    for i, (x, z, biome_id) in enumerate(other_samples):
-        print(f"    {i+1}. ({x}, {z}) -> {get_biome_name(biome_id)} (ID: {biome_id}, {get_biome_rarity(biome_id, MC_VERSION_STR)*100:.4f}%)")
-    print("-" * 60)
-    
-    phase2_start = time.time()
-    
-    batch_size = max(1, len(all_candidates) // num_processes)
-    tasks = []
-    for i in range(num_processes):
-        start_idx = i * batch_size
-        end_idx = start_idx + batch_size if i < num_processes - 1 else len(all_candidates)
-        if start_idx < len(all_candidates):
-            tasks.append((all_candidates[start_idx:end_idx], args.low32, other_samples, Y_COORD, MC_VERSION))
-    
-    pool = mp.Pool(num_processes)
-    all_results = []
-    total_tasks = len(tasks)
-    completed_tasks = 0
-    
-    for result in pool.imap_unordered(phase2_batch, tasks):
-        all_results.extend(result)
-        completed_tasks += 1
-        elapsed = time.time() - phase2_start
-        speed = len(all_candidates) * completed_tasks / total_tasks / elapsed if elapsed > 0 else 0
-        percent = completed_tasks / total_tasks * 100
-        
-        bar_len = 30
-        filled = int(bar_len * percent / 100)
-        bar = '#' * filled + '-' * (bar_len - filled)
-        
-        sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {completed_tasks}/{total_tasks} batches | {speed:,.0f}/s | Found: {len(all_results)}')
-        sys.stdout.flush()
-    
-    pool.close()
-    pool.join()
-    
-    phase2_elapsed = time.time() - phase2_start
-    phase2_speed = len(all_candidates) / phase2_elapsed if phase2_elapsed > 0 else 0
-    
-    print(f"\n\n[Phase 2 Complete]")
-    print(f"  Time: {phase2_elapsed:.1f}s")
-    print(f"  Speed: {phase2_speed:,.0f} candidates/s")
-    print(f"  Matches: {len(all_results)}")
-    
-    total_elapsed = phase1_elapsed + phase2_elapsed
+    print(f"\n\n[Complete]")
+    print(f"  Time: {total_elapsed:.1f}s ({total_elapsed/60:.1f}min)")
+    print(f"  Speed: {total_speed:,.0f}/s")
+    print(f"  Found: {len(all_results)} seed(s)")
     
     print("\n" + "=" * 60)
     print("Search Complete!")
     print("=" * 60)
-    print(f"\n[*] Total time: {total_elapsed:.1f}s ({total_elapsed/60:.1f}min)")
-    print(f"[*] Found {len(all_results)} matching seed(s)")
-    
-    if all_results:
-        print("\n[*] All matching full seeds:")
-        for seed in all_results:
-            high32 = seed >> 32
-            low32 = seed & 0xFFFFFFFF
-            print(f"    Seed: {seed}")
-            print(f"    High 32-bit: {high32}")
-            print(f"    Low 32-bit: {low32}")
-            print()
 
 if __name__ == "__main__":
     main()

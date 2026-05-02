@@ -251,7 +251,7 @@ python3 crack_high32.py
 
 **Automatic Rarity Sorting:**
 
-The program automatically sorts samples by biome rarity. The rarest biome is used for Phase 1 filtering, greatly improving efficiency:
+The program automatically sorts samples by biome rarity. The rarest biome is checked first, and if it doesn't match, the current seed is skipped immediately, greatly improving efficiency:
 
 ```
 [*] Biome samples (sorted by rarity, rarest first):
@@ -260,6 +260,10 @@ The program automatically sorts samples by biome rarity. The rarest biome is use
     3. (-4706, 3302) -> flower_forest (ID: 132, 0.6488%)
     ...
 ```
+
+**Cracking Strategy:**
+
+For each high32 value, all biome samples are checked in rarity order. If the first biome doesn't match, the seed is skipped immediately to avoid unnecessary calculations.
 
 **Configuration:**
 
