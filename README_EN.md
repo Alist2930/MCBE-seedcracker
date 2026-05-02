@@ -390,6 +390,19 @@ The program checks biome sample compatibility with MC version:
 | 1.20    | cherry_grove                                 |
 | 1.21    | pale_garden                                  |
 
+### Supported Version Details
+
+High 32-bit cracking is based on cubiomes library, supporting the following versions:
+
+| Version | Enum Value | Notes                        |
+| ------- | ---------- | ---------------------------- |
+| 1.18    | 22         | Includes 1.18.2              |
+| 1.19    | 24         | Includes 1.19.4              |
+| 1.20    | 25         | Includes 1.20.6              |
+| 1.21    | 28         | Latest version (Winter Drop) |
+
+> **Note**: Currently only major version numbers are supported. Biome generation differences between minor versions are minimal. If you need more precise minor version support (e.g., 1.19.2, 1.21.3, etc.), feel free to open an Issue.
+
 ---
 
 ## Building (Optional)
@@ -447,6 +460,7 @@ Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
 - [ ] **CUDA acceleration** - Use GPU parallel computing, expected 10-100x performance boost
 - [ ] **Automatic biome recognition** - Automatically identify biome types and coordinates in-game
 - [ ] **Earlier version support** - Support biome generation algorithms for 1.17 and earlier
+- [ ] **Minor version support** - Support more precise minor version numbers (e.g., 1.19.2, 1.21.3, etc.)
 
 ---
 
