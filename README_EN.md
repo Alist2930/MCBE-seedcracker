@@ -127,11 +127,11 @@ python3 crack_low32.py
 
 **Command Line Arguments:**
 
-| Argument  | Description                        |
-| --------- | ---------------------------------- |
-| `--start` | Start low32 value (default: 0)     |
-| `--end`   | End low32 value (default: 2^32-1)  |
-| `--test`  | Test mode (0 ~ 100M)               |
+| Argument  | Description                       |
+| --------- | --------------------------------- |
+| `--start` | Start low32 value (default: 0)    |
+| `--end`   | End low32 value (default: 2^32-1) |
+| `--test`  | Test mode (0 ~ 100M)              |
 
 **Configure Target Structures:**
 
@@ -150,22 +150,24 @@ TARGETS = [
 
 **Supported Structures:**
 
-| Name             | Description              |
-| ---------------- | ------------------------ |
-| village          | Village/Zombie Village   |
-| mansion          | Woodland Mansion         |
-| end_city         | End City                 |
-| ocean_monument   | Ocean Monument           |
-| ancient_city     | Ancient City             |
-| ocean_ruins      | Ocean Ruins              |
-| shipwreck        | Shipwreck                |
-| nether_complexes | Nether Fortress/Bastion  |
-| desert_temple    | Desert Temple            |
-| igloo            | Igloo                    |
-| swamp_hut        | Witch Hut                |
-| jungle_temple    | Jungle Temple            |
+| Name             | Description             | Spread Type |
+| ---------------- | ----------------------- | ----------- |
+| village          | Village/Zombie Village  | triangular  |
+| mansion          | Woodland Mansion        | triangular  |
+| end_city         | End City                | triangular  |
+| ocean_monument   | Ocean Monument          | triangular  |
+| ancient_city     | Ancient City            | triangular  |
+| ocean_ruins      | Ocean Ruins             | **linear**  |
+| shipwreck        | Shipwreck               | **linear**  |
+| nether_complexes | Nether Fortress/Bastion | **linear**  |
+| desert_temple    | Desert Temple           | **linear**  |
+| igloo            | Igloo                   | **linear**  |
+| swamp_hut        | Witch Hut               | **linear**  |
+| jungle_temple    | Jungle Temple           | **linear**  |
 
 Coordinates just need to be within the same chunk.
+
+> **💡 Tip**: Prioritize finding **linear** type structures (such as Desert Temple, Witch Hut, Jungle Temple, Shipwreck, etc.). The program automatically sorts linear types first for processing, requiring less computation and faster cracking speed.
 
 **Chunk Location Method:**
 
@@ -239,12 +241,12 @@ python3 crack_high32.py
 
 **Command Line Arguments:**
 
-| Argument      | Description                        |
-| ------------- | ---------------------------------- |
-| `--start`     | Start high32 value (default: 0)    |
-| `--end`       | End high32 value (default: 2^32-1) |
-| `--test`      | Test mode (0 ~ 100M)               |
-| `--low32`     | Low 32-bit value                   |
+| Argument      | Description                              |
+| ------------- | ---------------------------------------- |
+| `--start`     | Start high32 value (default: 0)          |
+| `--end`       | End high32 value (default: 2^32-1)       |
+| `--test`      | Test mode (0 ~ 100M)                     |
+| `--low32`     | Low 32-bit value                         |
 | `--processes` | Number of processes (default: CPU cores) |
 
 **Automatic Rarity Sorting:**
@@ -281,6 +283,8 @@ SAMPLES = [
 
 Y_COORD = 150  # Sampling height (surface recommended Y>=150)
 ```
+
+> **⚠️ Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether, End, or other dimensions. This tool is based on Overworld biome generation algorithms; biomes from other dimensions cannot be used for cracking.
 
 ---
 
@@ -320,24 +324,22 @@ Y_COORD = 150  # Sampling height (surface recommended Y>=150)
 
 1. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
 2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-3. **Wrong MC version setting** - Biome generation algorithm changes with versions
-4. **Improper sampling height** - Recommend Y >= 150 to avoid underground biome interference
-5. **Insufficient biome samples** - Recommend at least 5 samples
-6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove, Pale Garden), avoid common biomes (like Plains, Ocean)
+3. **Improper sampling height** - Recommend Y >= 150 to avoid underground biome interference
+4. **Insufficient biome samples** - Recommend at least 5 samples
+5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove, Pale Garden), avoid common biomes (like Plains, Ocean)
 
 **Solutions:**
 
 - Confirm low 32-bit value is correct
 - Verify biome sample coordinates and IDs
-- Check MC_VERSION_STR setting
 - Increase sampling height
 - Choose rare biomes as samples
 
 ### Cracking takes too long
 
-**Low 32-bit cracking:** Normally about 30-40 minutes
+**Low 32-bit cracking:** Normally about 20-30 minutes (4-core CPU)
 
-**High 32-bit cracking:** Normally about 10-20 hours
+**High 32-bit cracking:** Normally about 10-20 hours (4-core CPU)
 
 If significantly longer:
 
@@ -377,12 +379,12 @@ The program checks biome sample compatibility with MC version:
   (-1922, 1231) -> cherry_grove (ID: 185) requires 1.20+
 ```
 
-| Version | New Biomes                               |
-| ------- | ---------------------------------------- |
+| Version | New Biomes                                   |
+| ------- | -------------------------------------------- |
 | 1.18    | dripstone_caves, lush_caves, mountain biomes |
-| 1.19    | deep_dark, mangrove_swamp                |
-| 1.20    | cherry_grove                             |
-| 1.21    | pale_garden                              |
+| 1.19    | deep_dark, mangrove_swamp                    |
+| 1.20    | cherry_grove                                 |
+| 1.21    | pale_garden                                  |
 
 ---
 
@@ -416,12 +418,14 @@ chmod +x build.sh
 
 ## Performance Reference
 
-| Cracker   | Speed       | Estimated Time (2^32) |
-| --------- | ----------- | --------------------- |
-| Low 32-bit| ~2M/s       | ~36 minutes           |
-| High 32-bit| ~70K/s     | ~17 hours             |
+| Cracker     | Speed  | Estimated Time (2^32) |
+| ----------- | ------ | --------------------- |
+| Low 32-bit  | ~3M/s  | ~24 minutes           |
+| High 32-bit | ~70K/s | ~17 hours             |
 
 Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
+
+> **💡 Tip**: Low 32-bit cracking speed is affected by structure types. Using linear type structures (such as Desert Temple, Witch Hut, etc.) is faster.
 
 ---
 

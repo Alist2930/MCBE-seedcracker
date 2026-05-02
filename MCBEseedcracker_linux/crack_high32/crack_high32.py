@@ -18,78 +18,77 @@ script_dir = Path(__file__).parent.resolve()
 lib_path = script_dir / "crack_high32.so"
 
 BIOME_IDS = {
-    'ocean':               {'id': 0,   'rarity': 0.08384000},
-    'plains':              {'id': 1,   'rarity': 0.10468000},
-    'desert':              {'id': 2,   'rarity': 0.01468000},
-    'windswept_hills':     {'id': 3,   'rarity': 0.00284800},
-    'forest':              {'id': 4,   'rarity': 0.11568000},
-    'taiga':               {'id': 5,   'rarity': 0.03476000},
-    'swamp':               {'id': 6,   'rarity': 0.01084000},
-    'river':               {'id': 7,   'rarity': 0.06892000},
-    'nether_wastes':       {'id': 8,   'rarity': 1.0},
-    'the_end':             {'id': 9,   'rarity': 1.0},
-    'frozen_ocean':        {'id': 10,  'rarity': 0.02066000},
-    'frozen_river':        {'id': 11,  'rarity': 0.00750800},
-    'snowy_plains':        {'id': 12,  'rarity': 0.02428000},
-    'snowy_mountains':     {'id': 13,  'rarity': 1.0},
-    'mushroom_fields':     {'id': 14,  'rarity': 0.00157600},
-    'beach':               {'id': 16,  'rarity': 0.02696000},
-    'desert_hills':        {'id': 17,  'rarity': 1.0},
-    'wooded_hills':        {'id': 18,  'rarity': 1.0},
-    'taiga_hills':         {'id': 19,  'rarity': 1.0},
-    'jungle':              {'id': 21,  'rarity': 0.02064000},
-    'jungle_hills':        {'id': 22,  'rarity': 1.0},
-    'sparse_jungle':       {'id': 23,  'rarity': 0.01413600},
-    'deep_ocean':          {'id': 24,  'rarity': 0.04396000},
-    'stony_shore':         {'id': 25,  'rarity': 0.01194000},
-    'snowy_beach':         {'id': 26,  'rarity': 0.00310000},
-    'birch_forest':        {'id': 27,  'rarity': 0.02136000},
-    'birch_forest_hills':  {'id': 28,  'rarity': 1.0},
-    'dark_forest':         {'id': 29,  'rarity': 0.02018000},
-    'snowy_taiga':         {'id': 30,  'rarity': 0.02584000},
-    'old_growth_pine_taiga':       {'id': 32, 'rarity': 0.00699600},
-    'windswept_forest':           {'id': 34, 'rarity': 0.00207600},
-    'savanna':                    {'id': 35, 'rarity': 0.03308000},
-    'savanna_plateau':            {'id': 36, 'rarity': 0.00374800},
-    'badlands':                   {'id': 37, 'rarity': 0.01118000},
-    'wooded_badlands':            {'id': 38, 'rarity': 0.00722000},
-    'badlands_plateau':           {'id': 39, 'rarity': 1.0},
-    'warm_ocean':                 {'id': 44, 'rarity': 0.01524000},
-    'lukewarm_ocean':             {'id': 45, 'rarity': 0.04228000},
-    'cold_ocean':                 {'id': 46, 'rarity': 0.05820000},
-    'deep_warm_ocean':            {'id': 47, 'rarity': 1.0},
-    'deep_lukewarm_ocean':        {'id': 48, 'rarity': 0.01916000},
-    'deep_cold_ocean':            {'id': 49, 'rarity': 0.04144000},
-    'deep_frozen_ocean':          {'id': 50, 'rarity': 0.01010000},
-    'sunflower_plains':           {'id': 129, 'rarity': 0.00690000},
-    'desert_lakes':               {'id': 130, 'rarity': 1.0},
-    'windswept_gravelly_hills':   {'id': 131, 'rarity': 0.00104000},
-    'flower_forest':              {'id': 132, 'rarity': 0.00648800},
-    'ice_spikes':                 {'id': 140, 'rarity': 0.00208000},
-    'old_growth_birch_forest':    {'id': 155, 'rarity': 0.01998000},
-    'old_growth_spruce_taiga':    {'id': 160, 'rarity': 0.00606800},
-    'windswept_savanna':          {'id': 163, 'rarity': 0.00232400},
-    'eroded_badlands':            {'id': 165, 'rarity': 0.00425600},
-    'bamboo_jungle':              {'id': 168, 'rarity': 0.00745200},
-    'soul_sand_valley':           {'id': 170, 'rarity': 1.0},
-    'crimson_forest':             {'id': 171, 'rarity': 1.0},
-    'warped_forest':              {'id': 172, 'rarity': 1.0},
-    'basalt_deltas':              {'id': 173, 'rarity': 1.0},
-    'dripstone_caves':            {'id': 174, 'rarity': 1.0},
-    'lush_caves':                 {'id': 175, 'rarity': 1.0},
-    'meadow':                     {'id': 177, 'rarity': 0.01149200},
-    'grove':                      {'id': 178, 'rarity': 0.00661600},
-    'snowy_slopes':               {'id': 179, 'rarity': 0.00345200},
-    'jagged_peaks':               {'id': 180, 'rarity': 0.00139600},
-    'frozen_peaks':               {'id': 181, 'rarity': 0.00142800},
-    'stony_peaks':                {'id': 182, 'rarity': 0.00105600},
-    'deep_dark':                  {'id': 183, 'rarity': 1.0},
-    'mangrove_swamp':             {'id': 184, 'rarity': 0.00612400},
-    'cherry_grove':               {'id': 185, 'rarity': 0.00255200},
-    'pale_garden':                {'id': 186, 'rarity': 0.00072400},
+    'ocean': {'id': 0, 'rarity': {'1.18': 0.06883430, '1.19': 0.07081740, '1.20': 0.06959600, '1.21': 0.06865850}},
+    'plains': {'id': 1, 'rarity': {'1.18': 0.10660260, '1.19': 0.10651130, '1.20': 0.10665340, '1.21': 0.10519710}},
+    'desert': {'id': 2, 'rarity': {'1.18': 0.02353480, '1.19': 0.02318180, '1.20': 0.02315620, '1.21': 0.02471080}},
+    'windswept_hills': {'id': 3, 'rarity': {'1.18': 0.00274980, '1.19': 0.00285080, '1.20': 0.00274630, '1.21': 0.00273670}},
+    'forest': {'id': 4, 'rarity': {'1.18': 0.12118830, '1.19': 0.12192850, '1.20': 0.12179220, '1.21': 0.12070520}},
+    'taiga': {'id': 5, 'rarity': {'1.18': 0.03464820, '1.19': 0.03443280, '1.20': 0.03502180, '1.21': 0.03414500}},
+    'swamp': {'id': 6, 'rarity': {'1.18': 0.01524060, '1.19': 0.01048190, '1.20': 0.00986360, '1.21': 0.00998030}},
+    'river': {'id': 7, 'rarity': {'1.18': 0.06208020, '1.19': 0.06204710, '1.20': 0.06197610, '1.21': 0.06173880}},
+    'nether_wastes': {'id': 8, 'rarity': {}},
+    'the_end': {'id': 9, 'rarity': {}},
+    'frozen_ocean': {'id': 10, 'rarity': {'1.18': 0.02302610, '1.19': 0.02255790, '1.20': 0.02238450, '1.21': 0.02269140}},
+    'frozen_river': {'id': 11, 'rarity': {'1.18': 0.00841050, '1.19': 0.00832640, '1.20': 0.00839990, '1.21': 0.00823050}},
+    'snowy_plains': {'id': 12, 'rarity': {'1.18': 0.02818270, '1.19': 0.02799720, '1.20': 0.02802380, '1.21': 0.02785780}},
+    'snowy_mountains': {'id': 13, 'rarity': {}},
+    'mushroom_fields': {'id': 14, 'rarity': {'1.18': 0.00145790, '1.19': 0.00140860, '1.20': 0.00142810, '1.21': 0.00141960}},
+    'beach': {'id': 16, 'rarity': {'1.18': 0.02664350, '1.19': 0.02673220, '1.20': 0.02674990, '1.21': 0.02673920}},
+    'desert_hills': {'id': 17, 'rarity': {}},
+    'wooded_hills': {'id': 18, 'rarity': {}},
+    'taiga_hills': {'id': 19, 'rarity': {}},
+    'jungle': {'id': 21, 'rarity': {'1.18': 0.01898790, '1.19': 0.01908080, '1.20': 0.01906120, '1.21': 0.01901830}},
+    'jungle_hills': {'id': 22, 'rarity': {}},
+    'sparse_jungle': {'id': 23, 'rarity': {'1.18': 0.01254590, '1.19': 0.01259620, '1.20': 0.01262130, '1.21': 0.01258250}},
+    'deep_ocean': {'id': 24, 'rarity': {'1.18': 0.04364550, '1.19': 0.04448230, '1.20': 0.04433620, '1.21': 0.04382860}},
+    'stony_shore': {'id': 25, 'rarity': {'1.18': 0.01193090, '1.19': 0.01198030, '1.20': 0.01187230, '1.21': 0.01187870}},
+    'snowy_beach': {'id': 26, 'rarity': {'1.18': 0.00352320, '1.19': 0.00351620, '1.20': 0.00353220, '1.21': 0.00353820}},
+    'birch_forest': {'id': 27, 'rarity': {'1.18': 0.02153490, '1.19': 0.02157010, '1.20': 0.02147580, '1.21': 0.02141640}},
+    'birch_forest_hills': {'id': 28, 'rarity': {}},
+    'dark_forest': {'id': 29, 'rarity': {'1.18': 0.02005990, '1.19': 0.02009390, '1.20': 0.02009000, '1.21': 0.02001480}},
+    'snowy_taiga': {'id': 30, 'rarity': {'1.18': 0.02569520, '1.19': 0.02571140, '1.20': 0.02564280, '1.21': 0.02563410}},
+    'old_growth_pine_taiga': {'id': 32, 'rarity': {'1.18': 0.00682330, '1.19': 0.00682250, '1.20': 0.00685920, '1.21': 0.00677310}},
+    'windswept_forest': {'id': 34, 'rarity': {'1.18': 0.00189080, '1.19': 0.00198030, '1.20': 0.00194970, '1.21': 0.00191330}},
+    'savanna': {'id': 35, 'rarity': {'1.18': 0.04082720, '1.19': 0.03970920, '1.20': 0.04011960, '1.21': 0.03997160}},
+    'savanna_plateau': {'id': 36, 'rarity': {'1.18': 0.00402740, '1.19': 0.00385280, '1.20': 0.00400960, '1.21': 0.00402530}},
+    'badlands': {'id': 37, 'rarity': {'1.18': 0.00848480, '1.19': 0.00842020, '1.20': 0.00837960, '1.21': 0.00901250}},
+    'wooded_badlands': {'id': 38, 'rarity': {'1.18': 0.00595350, '1.19': 0.00615770, '1.20': 0.00593240, '1.21': 0.00637180}},
+    'badlands_plateau': {'id': 39, 'rarity': {}},
+    'warm_ocean': {'id': 44, 'rarity': {'1.18': 0.02141150, '1.19': 0.02035970, '1.20': 0.02069320, '1.21': 0.02241260}},
+    'lukewarm_ocean': {'id': 45, 'rarity': {'1.18': 0.04549210, '1.19': 0.04430840, '1.20': 0.04502280, '1.21': 0.04607490}},
+    'cold_ocean': {'id': 46, 'rarity': {'1.18': 0.04569830, '1.19': 0.04543550, '1.20': 0.04648820, '1.21': 0.04510310}},
+    'deep_warm_ocean': {'id': 47, 'rarity': {}},
+    'deep_lukewarm_ocean': {'id': 48, 'rarity': {'1.18': 0.02414840, '1.19': 0.02306920, '1.20': 0.02374440, '1.21': 0.02454670}},
+    'deep_cold_ocean': {'id': 49, 'rarity': {'1.18': 0.02404640, '1.19': 0.02424240, '1.20': 0.02434420, '1.21': 0.02396680}},
+    'deep_frozen_ocean': {'id': 50, 'rarity': {'1.18': 0.01230010, '1.19': 0.01179670, '1.20': 0.01152850, '1.21': 0.01207150}},
+    'sunflower_plains': {'id': 129, 'rarity': {'1.18': 0.00677230, '1.19': 0.00666230, '1.20': 0.00663100, '1.21': 0.00663730}},
+    'desert_lakes': {'id': 130, 'rarity': {}},
+    'windswept_gravelly_hills': {'id': 131, 'rarity': {'1.18': 0.00099090, '1.19': 0.00101740, '1.20': 0.00097430, '1.21': 0.00096950}},
+    'flower_forest': {'id': 132, 'rarity': {'1.18': 0.00650960, '1.19': 0.00647790, '1.20': 0.00648900, '1.21': 0.00652940}},
+    'ice_spikes': {'id': 140, 'rarity': {'1.18': 0.00221900, '1.19': 0.00216960, '1.20': 0.00236230, '1.21': 0.00231340}},
+    'old_growth_birch_forest': {'id': 155, 'rarity': {'1.18': 0.02068730, '1.19': 0.02134130, '1.20': 0.02107020, '1.21': 0.02091630}},
+    'old_growth_spruce_taiga': {'id': 160, 'rarity': {'1.18': 0.00682330, '1.19': 0.00682250, '1.20': 0.00685920, '1.21': 0.00677310}},
+    'windswept_savanna': {'id': 163, 'rarity': {'1.18': 0.00214110, '1.19': 0.00217620, '1.20': 0.00216400, '1.21': 0.00218520}},
+    'eroded_badlands': {'id': 165, 'rarity': {'1.18': 0.00285390, '1.19': 0.00295490, '1.20': 0.00303530, '1.21': 0.00326410}},
+    'bamboo_jungle': {'id': 168, 'rarity': {'1.18': 0.00640070, '1.19': 0.00648950, '1.20': 0.00642610, '1.21': 0.00653340}},
+    'soul_sand_valley': {'id': 170, 'rarity': {}},
+    'crimson_forest': {'id': 171, 'rarity': {}},
+    'warped_forest': {'id': 172, 'rarity': {}},
+    'basalt_deltas': {'id': 173, 'rarity': {}},
+    'dripstone_caves': {'id': 174, 'rarity': {}},
+    'lush_caves': {'id': 175, 'rarity': {}},
+    'meadow': {'id': 177, 'rarity': {'1.18': 0.01444760, '1.19': 0.01483050, '1.20': 0.01180500, '1.21': 0.01181040}},
+    'grove': {'id': 178, 'rarity': {'1.18': 0.00725410, '1.19': 0.00750920, '1.20': 0.00733450, '1.21': 0.00750000}},
+    'snowy_slopes': {'id': 179, 'rarity': {'1.18': 0.00389140, '1.19': 0.00386220, '1.20': 0.00382970, '1.21': 0.00389680}},
+    'jagged_peaks': {'id': 180, 'rarity': {'1.18': 0.00145390, '1.19': 0.00146290, '1.20': 0.00143470, '1.21': 0.00148760}},
+    'frozen_peaks': {'id': 181, 'rarity': {'1.18': 0.00145250, '1.19': 0.00146110, '1.20': 0.00148070, '1.21': 0.00149530}},
+    'stony_peaks': {'id': 182, 'rarity': {'1.18': 0.00096520, '1.19': 0.00095350, '1.20': 0.00096540, '1.21': 0.00100140}},
+    'deep_dark': {'id': 183, 'rarity': {}},
+    'mangrove_swamp': {'id': 184, 'rarity': {'1.18': 1.00000000, '1.19': 0.00514440, '1.20': 0.00503250, '1.21': 0.00522440}},
+    'cherry_grove': {'id': 185, 'rarity': {'1.18': 1.00000000, '1.19': 1.00000000, '1.20': 0.00278580, '1.21': 0.00280480}},
+    'pale_garden': {'id': 186, 'rarity': {'1.18': 1.00000000, '1.19': 1.00000000, '1.20': 1.00000000, '1.21': 0.00078550}},
 }
 BIOME_NAMES = {v['id']: k for k, v in BIOME_IDS.items()}
-BIOME_RARITIES = {v['id']: v['rarity'] for v in BIOME_IDS.values()}
 
 VERSION_BIOMES = {
     '1.18': [174, 175, 177, 178, 179, 180, 181, 182],
@@ -101,11 +100,16 @@ VERSION_BIOMES = {
 def get_biome_name(biome_id):
     return BIOME_NAMES.get(biome_id, f"biome_{biome_id}")
 
-def get_biome_rarity(biome_id):
-    return BIOME_RARITIES.get(biome_id, 1.0)
+def get_biome_rarity(biome_id, mc_version):
+    biome_name = BIOME_NAMES.get(biome_id)
+    if biome_name and biome_name in BIOME_IDS:
+        rarity_dict = BIOME_IDS[biome_name].get('rarity', {})
+        if rarity_dict:
+            return rarity_dict.get(mc_version, 1.0)
+    return 1.0
 
-def sort_samples_by_rarity(samples):
-    return sorted(samples, key=lambda s: get_biome_rarity(s[2]))
+def sort_samples_by_rarity(samples, mc_version):
+    return sorted(samples, key=lambda s: get_biome_rarity(s[2], mc_version))
 
 def get_biome_version(biome_id):
     for version, biome_ids in VERSION_BIOMES.items():
@@ -227,11 +231,11 @@ def main():
     print(f"[*] MC Version: {MC_VERSION_STR}")
     print(f"[*] Processes: {num_processes}")
     
-    sorted_samples = sort_samples_by_rarity(SAMPLES)
+    sorted_samples = sort_samples_by_rarity(SAMPLES, MC_VERSION_STR)
     
     print(f"\n[*] Biome samples (sorted by rarity, rarest first):")
     for i, (x, z, biome_id) in enumerate(sorted_samples):
-        rarity = get_biome_rarity(biome_id)
+        rarity = get_biome_rarity(biome_id, MC_VERSION_STR)
         rarity_pct = rarity * 100
         print(f"    {i+1}. ({x}, {z}) -> {get_biome_name(biome_id)} (ID: {biome_id}, {rarity_pct:.4f}%)")
     
@@ -241,6 +245,8 @@ def main():
         for w in version_warnings:
             print(w)
         print("[!] These samples will never match! Please update MC_VERSION_STR or remove these samples.")
+        input("\nPress Enter to exit...")
+        sys.exit(1)
     
     rare_sample = sorted_samples[0]
     other_samples = sorted_samples[1:]
@@ -307,7 +313,7 @@ def main():
     print(f"[Phase 2] Verifying {len(all_candidates):,} candidates...")
     print(f"  Verification order (rarest first):")
     for i, (x, z, biome_id) in enumerate(other_samples):
-        print(f"    {i+1}. ({x}, {z}) -> {get_biome_name(biome_id)} (ID: {biome_id}, {get_biome_rarity(biome_id)*100:.4f}%)")
+        print(f"    {i+1}. ({x}, {z}) -> {get_biome_name(biome_id)} (ID: {biome_id}, {get_biome_rarity(biome_id, MC_VERSION_STR)*100:.4f}%)")
     print("-" * 60)
     
     phase2_start = time.time()

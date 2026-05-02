@@ -41,10 +41,12 @@ TARGETS = [
 ]
 
 def prepare_targets(targets):
+    sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
+    
     r_base_list, ox_list, oz_list = [], [], []
     offset_range_list, spread_type_list, structure_info = [], [], []
     
-    for t in targets:
+    for t in sorted_targets:
         config = STRUCTURE_CONFIGS[t["structure"]]
         x, z = t["x"], t["z"]
         spacing, separation = config["spacing"], config["separation"]
@@ -61,7 +63,7 @@ def prepare_targets(targets):
         oz_list.append(oz)
         offset_range_list.append(spacing - separation)
         spread_type_list.append(spread_type_int)
-        structure_info.append({"name": config["name"], "x": x, "z": z, "rx": rx, "rz": rz})
+        structure_info.append({"name": config["name"], "x": x, "z": z, "rx": rx, "rz": rz, "spread_type": config.get("spread_type", "linear")})
     
     return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info
 
@@ -145,9 +147,10 @@ def main():
     print("Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
     print("=" * 60)
     
-    print(f"\n[*] Target structures ({len(TARGETS)}):")
+    print(f"\n[*] Target structures ({len(TARGETS)}) [sorted: linear first]:")
     for i, info in enumerate(STRUCTURE_INFO):
-        print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']})")
+        spread_type_str = f" [{info['spread_type']}]"
+        print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']}){spread_type_str}")
     
     num_processes = mp.cpu_count()
     print(f"\n[*] Processes: {num_processes}")
