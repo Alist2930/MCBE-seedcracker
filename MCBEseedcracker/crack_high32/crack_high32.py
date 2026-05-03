@@ -198,7 +198,7 @@ def crack_batch(args):
 def main():
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
     parser.add_argument('--start', type=int, default=0, help='Start high value')
-    parser.add_argument('--end', type=int, default=0xFFFFFFFF, help='End high value')
+    parser.add_argument('--end', type=int, default=0x100000000, help='End high value (exclusive, use 0x100000000 for full range)')
     parser.add_argument('--test', action='store_true', help='Test mode: 0 ~ 100M')
     parser.add_argument('--low32', type=int, default=LOW32, help='Low 32-bit value')
     parser.add_argument('--processes', type=int, default=None, help='Number of processes')
@@ -209,7 +209,7 @@ def main():
     print("=" * 60)
     
     search_start = args.start
-    search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
+    search_end = 100000000 if args.test and args.end == 0x100000000 else args.end
     num_processes = args.processes if args.processes else mp.cpu_count()
     
     print(f"\n[*] Low 32-bit: {args.low32}")

@@ -1,22 +1,22 @@
 /**
  * Minecraft Bedrock Edition High 32-bit Seed Cracker
- * 
+ *
  * This file implements the SOA (Structure of Arrays) optimized biome noise
  * calculation for cracking the high 32 bits of a 64-bit world seed.
- * 
+ *
  * Build Commands:
  *   Windows (MinGW-w64):
  *     gcc -O3 -shared -o crack_high32.dll crack_high32.c ^
  *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c ^
  *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c ^
  *         cubiomes/util.c cubiomes/finders.c -lm -fopenmp
- * 
+ *
  *   Linux:
  *     gcc -O3 -shared -fPIC -o libcrack_high32.so crack_high32.c \
  *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c \
  *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c \
  *         cubiomes/util.c cubiomes/finders.c -lm -fopenmp
- * 
+ *
  * Bug Fixes (2024):
  *   1. Fixed SHIFT noise parameter order in sampleBiomeNoiseSOA():
  *      - Original bug: pz used (z, 0, x) instead of (z, x, 0)
@@ -25,7 +25,7 @@
  *      - Original bug: depth calculation was missing the spline offset
  *      - This caused incorrect biome detection for underground biomes
  *        (dripstone_caves, lush_caves) at lower Y coordinates
- * 
+ *
  * Note: These were code bugs, not double precision issues in SOA implementation.
  */
 

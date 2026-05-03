@@ -399,9 +399,43 @@ High 32-bit cracking is based on cubiomes library, supporting the following vers
 | 1.18    | 22         | Includes 1.18.2              |
 | 1.19    | 24         | Includes 1.19.4              |
 | 1.20    | 25         | Includes 1.20.6              |
-| 1.21    | 28         | Latest version (Winter Drop) |
+| 1.21    | 28         | Winter Drop (1.21.4)         |
 
 > **Note**: Currently only major version numbers are supported. Biome generation differences between minor versions are minimal. If you need more precise minor version support (e.g., 1.19.2, 1.21.3, etc.), feel free to open an Issue.
+
+### ⚠️ Pale Garden Version Differences
+
+**Important**: The cubiomes library currently only supports up to MC 1.21.4 (Winter Drop). MC 1.21.5+ has adjusted the Pale Garden generation range.
+
+| MC Version | cubiomes Support | Pale Garden Generation |
+| ---------- | ---------------- | ---------------------- |
+| 1.21.3 and earlier | ✅ (code 27) | Does not exist, original location is Dark Forest |
+| 1.21.4 | ✅ (code 28) | Exists, but with smaller range |
+| 1.21.5+ | ❌ Not supported | Expanded range, some Dark Forest became Pale Garden |
+
+**If you collected Pale Garden samples in 1.21.5+ but cracking fails**:
+
+This is likely because cubiomes' 1.21 version (code 28) corresponds to 1.21.4, which has a smaller Pale Garden generation range than 1.21.5+. In 1.21.5+, some locations that were Dark Forest have become Pale Garden.
+
+**Solution**:
+
+Change the Pale Garden sample to Dark Forest (ID: 29) and try again. For example:
+
+```python
+# Original sample (Pale Garden in 1.21.5+ game)
+SAMPLES = [
+    (-3695, 5731, 186),   # pale_garden - may be dark_forest in cubiomes
+    ...
+]
+
+# Modified (compatible with cubiomes 1.21.4)
+SAMPLES = [
+    (-3695, 5731, 29),    # dark_forest - try using Dark Forest
+    ...
+]
+```
+
+We will continue to monitor cubiomes updates and update this project when 1.21.5+ support is available.
 
 ---
 
