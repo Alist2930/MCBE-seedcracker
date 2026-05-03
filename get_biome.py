@@ -44,7 +44,7 @@ VERSION_MAP = {
 }
 
 def get_biome_at_seed(dll_path: Path, seed: int, x: int, y: int, z: int, mc_version: int) -> int:
-    lib = ctypes.CDLL(str(dll_path))
+    lib = ctypes.CDLL(str(dll_path), winmode=0x00000008)
     
     lib.getBiomeAtSeed.argtypes = [
         ctypes.c_uint64, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int

@@ -285,7 +285,7 @@ SAMPLES = [
     (-270, 470, 186),     # pale_garden
 ]
 
-Y_COORD = 150  # Sampling height (surface recommended Y>=150)
+Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground biome interference)
 ```
 
 > **⚠️ Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether, End, or other dimensions. This tool is based on Overworld biome generation algorithms; biomes from other dimensions cannot be used for cracking.
@@ -328,7 +328,7 @@ Y_COORD = 150  # Sampling height (surface recommended Y>=150)
 
 1. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
 2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-3. **Improper sampling height** - Recommend Y >= 150 to avoid underground biome interference
+3. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 4. **Insufficient biome samples** - Recommend at least 5 samples
 5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove, Pale Garden), avoid common biomes (like Plains, Ocean)
 
@@ -368,7 +368,7 @@ If significantly longer:
 | dripstone_caves | 174 | -      | lush_caves     | 175 | -      |
 | deep_dark       | 183 | -      |                |     |        |
 
-> **Note**: Rarity is based on surface Y=150 sampling statistics. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting.
+> **Note**: Rarity is based on surface Y=200 sampling statistics. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting.
 
 See the `BIOME_IDS` dictionary at the beginning of `crack_high32.py` for the complete list with IDs and rarity information.
 

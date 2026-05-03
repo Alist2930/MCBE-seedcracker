@@ -115,6 +115,9 @@ STRUCT(SplineStack)
 };
 
 
+float getSpline(const Spline *sp, const float *vals);
+
+
 enum
 {
     NP_TEMPERATURE      = 0,

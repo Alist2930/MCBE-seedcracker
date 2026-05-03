@@ -73,7 +73,7 @@ def crack_worker(args):
     start, end, r_base, ox, oz, offset_range, spread_type = args
     
     lib_path = Path(__file__).parent / 'crack_low32.dll'
-    lib = ctypes.CDLL(str(lib_path))
+    lib = ctypes.CDLL(str(lib_path), winmode=0x00000008)
     
     lib.crack_low32.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,

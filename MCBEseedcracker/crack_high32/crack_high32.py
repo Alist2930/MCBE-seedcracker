@@ -144,7 +144,7 @@ SAMPLES = [
 ]
 
 LOW32 = 1818588773
-Y_COORD = 150
+Y_COORD = 200
 
 MC_VERSION_STR = "1.21"
 
@@ -165,7 +165,7 @@ MC_VERSION = VERSION_MAP.get(MC_VERSION_STR, MC_1_21)
 BATCH_SIZE = 500000
 
 def init_dll():
-    dll = ctypes.CDLL(str(dll_path))
+    dll = ctypes.CDLL(str(dll_path), winmode=0x00000008)
     
     dll.getBiomeAtSeed.argtypes = [ctypes.c_uint64, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
     dll.getBiomeAtSeed.restype = ctypes.c_int

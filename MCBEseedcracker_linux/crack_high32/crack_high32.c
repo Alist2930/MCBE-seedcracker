@@ -1,3 +1,34 @@
+/**
+ * Minecraft Bedrock Edition High 32-bit Seed Cracker
+ *
+ * This file implements the SOA (Structure of Arrays) optimized biome noise
+ * calculation for cracking the high 32 bits of a 64-bit world seed.
+ *
+ * Build Commands:
+ *   Windows (MinGW-w64):
+ *     gcc -O3 -shared -o crack_high32.dll crack_high32.c ^
+ *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c ^
+ *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c ^
+ *         cubiomes/util.c cubiomes/finders.c -lm -fopenmp
+ *
+ *   Linux:
+ *     gcc -O3 -shared -fPIC -o libcrack_high32.so crack_high32.c \
+ *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c \
+ *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c \
+ *         cubiomes/util.c cubiomes/finders.c -lm -fopenmp
+ *
+ * Bug Fixes (2024):
+ *   1. Fixed SHIFT noise parameter order in sampleBiomeNoiseSOA():
+ *      - Original bug: pz used (z, 0, x) instead of (z, x, 0)
+ *      - This caused coordinate offset errors in biome calculation
+ *   2. Added missing getSpline() offset for depth parameter:
+ *      - Original bug: depth calculation was missing the spline offset
+ *      - This caused incorrect biome detection for underground biomes
+ *        (dripstone_caves, lush_caves) at lower Y coordinates
+ *
+ * Note: These were code bugs, not double precision issues in SOA implementation.
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -396,8 +427,12 @@ static double sampleDoublePerlinSOA(const DoublePerlinNoiseSOA *noise, double x,
     return v * noise->amplitude[idx];
 }
 
-static void sampleBiomeNoiseSOA(const BiomeNoiseSOA *bn, int64_t np[4][6], int x4[4], int y4[4], int z4[4])
+static void sampleBiomeNoiseSOA(const BiomeNoiseSOA *bn, int64_t np[4][6], int x4[4], int y4[4], int z4[4], int mc_version)
 {
+    BiomeNoise bn_tmp;
+    memset(&bn_tmp, 0, sizeof(bn_tmp));
+    initBiomeNoise(&bn_tmp, mc_version);
+
     for (int s = 0; s < 4; s++)
     {
         for (int i = 0; i < 6; i++)
@@ -408,7 +443,7 @@ static void sampleBiomeNoiseSOA(const BiomeNoiseSOA *bn, int64_t np[4][6], int x
     for (int s = 0; s < 4; s++)
     {
         px[s] = x4[s] + sampleDoublePerlinSOA(&bn->climate[NP_SHIFT], x4[s], 0, z4[s], s) * 4.0;
-        pz[s] = z4[s] + sampleDoublePerlinSOA(&bn->climate[NP_SHIFT], z4[s], 0, x4[s], s) * 4.0;
+        pz[s] = z4[s] + sampleDoublePerlinSOA(&bn->climate[NP_SHIFT], z4[s], x4[s], 0, s) * 4.0;
     }
 
     for (int s = 0; s < 4; s++)
@@ -419,7 +454,14 @@ static void sampleBiomeNoiseSOA(const BiomeNoiseSOA *bn, int64_t np[4][6], int x
         double e = sampleDoublePerlinSOA(&bn->climate[NP_EROSION], px[s], 0, pz[s], s);
         double w = sampleDoublePerlinSOA(&bn->climate[NP_WEIRDNESS], px[s], 0, pz[s], s);
 
-        double d = 1.0 - (y4[s] * 4) / 128.0 - 83.0 / 160.0;
+        float np_param[] = {
+            (float)c,
+            (float)e,
+            -3.0F * (fabsf(fabsf((float)w) - 0.6666667F) - 0.33333334F),
+            (float)w,
+        };
+        double off = getSpline(bn_tmp.sp, np_param) + 0.015F;
+        double d = 1.0 - (y4[s] * 4) / 128.0 - 83.0 / 160.0 + off;
 
         np[s][0] = (int64_t)(t * 10000.0);
         np[s][1] = (int64_t)(h * 10000.0);
@@ -485,7 +527,7 @@ EXPORT int phase1_filter_avx2(
 
             setBiomeSeedSOA(bn_soa, seeds, 0);
 
-            sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4);
+            sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4, mc_version);
 
             for (int s = 0; s < batch_size; s++)
             {
@@ -568,7 +610,7 @@ EXPORT int phase2_verify(
                 voronoiAccess3D(sha[s], other_samples[i].x, y_coord, other_samples[i].z, &x4[s], &y4[s], &z4[s]);
             }
 
-            sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4);
+            sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4, mc_version);
 
             for (int s = 0; s < batch_size; s++)
             {
