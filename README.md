@@ -448,9 +448,12 @@ chmod +x build.sh
 
 ## 参考资料
 
-- [ChunkBase Seed Map](https://www.chunkbase.com/apps/seed-map)
-- [SodaMC Seed Map](https://sodamc.com/tools/Seed_Map.htm)
-- [cubiomes](https://github.com/Cubitect/cubiomes)
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算
+- [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
+- [Xoroshiro128](https://prng.di.unimi.it/) - 高32位破解中使用的随机数生成器，用于噪声参数初始化
+- [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - 用于基岩版 Voronoi 扰动计算（基岩版特有）
+- [Minecraft Wiki](https://minecraft.wiki/) - Minecraft 相关科普知识参考
+- [MC种子科普视频](https://www.bilibili.com/video/BV1r1N3ezEXU) - 介绍 Minecraft 种子机制的基础知识
 
 ---
 
@@ -461,51 +464,6 @@ chmod +x build.sh
 - [ ] **自动群系识别** - 在游戏内能自动识别群系类型和坐标
 - [ ] **更早版本支持** - 支持1.17及更早版本的群系生成算法
 - [ ] **小版本支持** - 支持更精确的小版本号（如1.19.2、1.21.3等）
-
----
-
-## MC种子科普[参考：https://www.bilibili.com/video/BV1r1N3ezEXU/]
-
-### 种子值范围
-
-Minecraft使用64位整数作为世界种子，范围：`-2⁶³ ~ 2⁶³-1`（约-922亿亿 ~ 922亿亿）。
-
-### 种子输入规则
-
-**1. 不输入种子**
-
-系统随机生成一个64位范围内的种子。
-
-**2. 输入数字**
-
-- 如果数字在 `-2⁶³ ~ 2⁶³-1` 范围内，直接使用该数字作为种子
-- 如果数字超出范围，则按字符串处理
-
-**3. 输入字符串**
-
-字符串会被转换为数字种子，计算公式：
-
-```
-seed = Σ(Unicode(字符i) × 31^(长度-i))
-```
-
-例如：
-
-- `"d"` → Unicode=100 → seed=100
-- `"dd"` → 31×100 + 100 = 3200
-
-计算结果会被截断到32位整数范围（`-2³¹ ~ 2³¹-1`）。
-
-### 为什么需要分两步破解？
-
-64位种子空间太大（约1.8×10¹⁹种可能），直接遍历不现实。
-
-但结构生成算法只依赖种子的低32位，所以：
-
-1. **低32位**：通过结构位置快速缩小范围（约43亿种可能）
-2. **高32位**：通过群系样本精确定位（约43亿种可能）
-
-两步结合，将问题分解为两个可处理的子问题。
 
 ---
 

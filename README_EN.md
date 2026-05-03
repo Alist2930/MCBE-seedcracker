@@ -448,9 +448,12 @@ Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
 
 ## References
 
-- [ChunkBase Seed Map](https://www.chunkbase.com/apps/seed-map)
-- [SodaMC Seed Map](https://sodamc.com/tools/Seed_Map.htm)
-- [cubiomes](https://github.com/Cubitect/cubiomes)
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library for high 32-bit cracking
+- [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - RNG used in low 32-bit cracking for structure offset calculation
+- [Xoroshiro128](https://prng.di.unimi.it/) - RNG used in high 32-bit cracking for noise parameter initialization
+- [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - Used for Bedrock Edition Voronoi perturbation (Bedrock-specific)
+- [Minecraft Wiki](https://minecraft.wiki/) - Minecraft related knowledge reference
+- [MC Seed Science Video](https://www.bilibili.com/video/BV1r1N3ezEXU) - Introduction to Minecraft seed mechanics
 
 ---
 
@@ -461,51 +464,6 @@ Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
 - [ ] **Automatic biome recognition** - Automatically identify biome types and coordinates in-game
 - [ ] **Earlier version support** - Support biome generation algorithms for 1.17 and earlier
 - [ ] **Minor version support** - Support more precise minor version numbers (e.g., 1.19.2, 1.21.3, etc.)
-
----
-
-## Minecraft Seed Science [Reference: https://www.bilibili.com/video/BV1r1N3ezEXU/]
-
-### Seed Value Range
-
-Minecraft uses 64-bit integers as world seeds, range: `-2⁶³ ~ 2⁶³-1` (approximately -922 quintillion ~ 922 quintillion).
-
-### Seed Input Rules
-
-**1. No seed input**
-
-The system randomly generates a seed within the 64-bit range.
-
-**2. Number input**
-
-- If the number is within `-2⁶³ ~ 2⁶³-1` range, it's used directly as the seed
-- If the number exceeds the range, it's treated as a string
-
-**3. String input**
-
-Strings are converted to numeric seeds using the formula:
-
-```
-seed = Σ(Unicode(char_i) × 31^(length-i))
-```
-
-For example:
-
-- `"d"` → Unicode=100 → seed=100
-- `"dd"` → 31×100 + 100 = 3200
-
-The result is truncated to 32-bit integer range (`-2³¹ ~ 2³¹-1`).
-
-### Why Two-Step Cracking?
-
-The 64-bit seed space is too large (about 1.8×10¹⁹ possibilities), making direct iteration impractical.
-
-However, the structure generation algorithm only depends on the low 32 bits of the seed, so:
-
-1. **Low 32 bits**: Quickly narrow down through structure positions (about 4.3 billion possibilities)
-2. **High 32 bits**: Precisely locate through biome samples (about 4.3 billion possibilities)
-
-Combining both steps breaks the problem into two manageable sub-problems.
 
 ---
 
