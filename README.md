@@ -190,7 +190,7 @@ After determining the low 32 bits, the high 32 bits are needed to get the comple
 
 This project uses the [cubiomes](https://github.com/Cubitect/cubiomes) library for biome calculation. This is a C library specifically designed to simulate Minecraft Java Edition biome generation.
 
-Starting from version 1.18, Minecraft Java and Bedrock Edition terrain generation algorithms are basically unified, both using the same noise functions and climate parameter system (temperature, humidity, continentalness, erosion, depth, weirdness). The only difference is that Bedrock Edition applies Voronoi perturbation to coordinates before biome sampling, which this tool has handled. Therefore, the cubiomes library can be directly used to calculate Bedrock Edition biomes without reimplementing complex noise generation algorithms.
+Starting from version 1.18, Minecraft Java and Bedrock Edition terrain generation algorithms are completely unified, both using the same noise functions, climate parameter system (temperature, humidity, continentalness, erosion, depth, weirdness), and Voronoi perturbation for coordinate mapping. Therefore, the cubiomes library can be directly used to calculate Bedrock Edition biomes without reimplementing complex noise generation algorithms.
 
 **Biome Generation Process (1.18+):**
 
@@ -205,15 +205,17 @@ Starting from version 1.18, Minecraft Java and Bedrock Edition terrain generatio
 3. **Noise Sampling**: Each parameter uses DoublePerlinNoise (multi-layer Perlin noise overlay)
 4. **Biome Mapping**: Determine biome type based on climate parameter combinations
 
-**Bedrock Edition Special Handling:**
+**Voronoi Coordinate Mapping:**
 
-Bedrock Edition applies Voronoi perturbation to coordinates before biome calculation:
+Biome noise is calculated at 1:4 scale (one sample per 4x4 block area). To get the biome at a specific 1:1 block coordinate, Voronoi perturbation is applied to map the coordinates:
 
 ```
 sha256_hash = SHA256(seed)
 voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 actual_sampling_coords = (x + voronoi_x, y + voronoi_y, z + voronoi_z)
 ```
+
+This is the standard algorithm used by both Java and Bedrock Edition since 1.18.
 
 **Cracking Method:**
 
@@ -498,7 +500,7 @@ Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library for high 32-bit cracking
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - RNG used in low 32-bit cracking for structure offset calculation
 - [Xoroshiro128](https://prng.di.unimi.it/) - RNG used in high 32-bit cracking for noise parameter initialization
-- [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - Used for Bedrock Edition Voronoi perturbation (Bedrock-specific)
+- [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - Used for Voronoi perturbation coordinate mapping
 - [Minecraft Wiki](https://minecraft.wiki/) - Minecraft related knowledge reference
 - [How Minecraft Calculates Seeds](https://www.bilibili.com/video/BV1r1N3ezEXU) - MC seed science video
 
