@@ -190,7 +190,7 @@ TARGETS = [
 
 本项目使用 [cubiomes](https://github.com/Cubitect/cubiomes) 库进行群系计算。这是一个用 C 语言编写的库，专门模拟 Minecraft Java 版的生物群系生成。
 
-从 1.18 版本开始，Minecraft Java 版和基岩版的地形生成算法已基本统一，两者使用相同的噪声函数和气候参数系统（温度、湿度、大陆性、侵蚀、深度、怪异度）。唯一的区别是基岩版在群系采样前会对坐标进行 Voronoi 扰动，本工具已对此做了兼容处理。因此，可以直接使用 cubiomes 库来计算基岩版的群系，无需重新实现复杂的噪声生成算法。
+从 1.18 版本开始，Minecraft Java 版和基岩版的地形生成算法完全统一，两者使用相同的噪声函数、气候参数系统（温度、湿度、大陆性、侵蚀、深度、怪异度）以及 Voronoi 扰动坐标映射。因此，可以直接使用 cubiomes 库来计算基岩版的群系，无需重新实现复杂的噪声生成算法。
 
 **群系生成流程（1.18+）：**
 
@@ -205,15 +205,17 @@ TARGETS = [
 3. **噪声采样**：每个参数使用DoublePerlinNoise（多层Perlin噪声叠加）
 4. **群系映射**：根据气候参数组合确定群系类型
 
-**基岩版特殊处理：**
+**Voronoi 坐标映射：**
 
-基岩版在群系计算前会对坐标进行Voronoi扰动：
+群系噪声在 1:4 尺度计算（每 4x4 方块区域一个采样点）。要获取具体 1:1 方块坐标的群系，需要应用 Voronoi 扰动进行坐标映射：
 
 ```
 sha256_hash = SHA256(种子)
 voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 实际采样坐标 = (x + voronoi_x, y + voronoi_y, z + voronoi_z)
 ```
+
+这是 Java 版和基岩版 1.18+ 使用的标准算法。
 
 **破解方法：**
 
@@ -498,7 +500,7 @@ chmod +x build.sh
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 - [Xoroshiro128](https://prng.di.unimi.it/) - 高32位破解中使用的随机数生成器，用于噪声参数初始化
-- [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - 用于基岩版 Voronoi 扰动计算（基岩版特有）
+- [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - 用于 Voronoi 扰动坐标映射
 - [Minecraft Wiki](https://minecraft.wiki/) - Minecraft 相关科普知识参考
 - [Minecraft是如何计算种子码的](https://www.bilibili.com/video/BV1r1N3ezEXU) - MC种子科普视频
 
