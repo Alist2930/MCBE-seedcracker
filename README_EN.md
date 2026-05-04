@@ -251,19 +251,15 @@ python3 crack_high32.py
 
 **Automatic Rarity Sorting:**
 
-The program automatically sorts samples by biome rarity. The rarest biome is checked first, and if it doesn't match, the current seed is skipped immediately, greatly improving efficiency:
+The program automatically sorts samples by biome rarity. The rarest biome is checked first, and if it doesn't match, the current seed is skipped immediately, greatly improving efficiency. For each high32 value, all biome samples are checked in rarity order. If the first biome doesn't match, the seed is skipped immediately to avoid unnecessary calculations:
 
 ```
 [*] Biome samples (sorted by rarity, rarest first):
-    1. (-270, 470) -> pale_garden (ID: 186, 0.0724%)
-    2. (-1922, 1231) -> cherry_grove (ID: 185, 0.2552%)
-    3. (-4706, 3302) -> flower_forest (ID: 132, 0.6488%)
+    1. (-270, 470) -> pale_garden (ID: 186, 0.0786%)
+    2. (-1922, 1231) -> cherry_grove (ID: 185, 0.2805%)
+    3. (-4706, 3302) -> flower_forest (ID: 132, 0.6529%)
     ...
 ```
-
-**Cracking Strategy:**
-
-For each high32 value, all biome samples are checked in rarity order. If the first biome doesn't match, the seed is skipped immediately to avoid unnecessary calculations.
 
 **Configuration:**
 
@@ -313,7 +309,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 3. **Poor structure type selection** - Some structures (like villages) have complex generation rules. Recommended:
    - Desert Temple, Witch Hut, Jungle Temple (simple and stable generation rules)
    - Ocean Monument, End City
-4. **Version incompatibility** - If the target world was generated in an older version, structure positions may differ from current version
+4. **Version incompatibility** - If the target world was generated in an older version (before 1.18), structure positions may differ from current version
 
 **Solutions:**
 
@@ -330,7 +326,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
 3. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 4. **Insufficient biome samples** - Recommend at least 5 samples
-5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove, Pale Garden), avoid common biomes (like Plains, Ocean)
+5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
 **Solutions:**
 
@@ -353,22 +349,39 @@ If significantly longer:
 
 ---
 
-## Biome ID Reference
+## Biome ID Reference（1.21）
 
-| Biome           | ID  | Rarity | Biome          | ID  | Rarity |
-| --------------- | --- | ------ | -------------- | --- | ------ |
-| pale_garden     | 186 | 0.07%  | cherry_grove   | 185 | 0.26%  |
-| flower_forest   | 132 | 0.65%  | ice_spikes     | 140 | 0.88%  |
-| badlands        | 37  | 1.05%  | jungle         | 21  | 1.47%  |
-| desert          | 2   | 1.47%  | dark_forest    | 29  | 2.42%  |
-| taiga           | 5   | 3.48%  | swamp          | 6   | 4.29%  |
-| deep_ocean      | 24  | 5.67%  | forest         | 4   | 11.57% |
-| plains          | 1   | 10.47% | ocean          | 0   | 8.38%  |
-| meadow          | 177 | -      | mangrove_swamp | 184 | -      |
-| dripstone_caves | 174 | -      | lush_caves     | 175 | -      |
-| deep_dark       | 183 | -      |                |     |        |
+| Biome                 | ID  | Rarity | Biome                    | ID  | Rarity |
+| --------------------- | --- | ------ | ------------------------ | --- | ------ |
+| pale_garden           | 186 | 0.08%  | windswept_gravelly_hills | 131 | 0.10%  |
+| stony_peaks           | 182 | 0.10%  | jagged_peaks             | 180 | 0.15%  |
+| frozen_peaks          | 181 | 0.15%  | mushroom_fields          | 14  | 0.14%  |
+| windswept_forest      | 34  | 0.19%  | cherry_grove             | 185 | 0.28%  |
+| ice_spikes            | 140 | 0.23%  | windswept_hills          | 3   | 0.27%  |
+| windswept_savanna     | 163 | 0.22%  | eroded_badlands          | 165 | 0.33%  |
+| snowy_slopes          | 179 | 0.39%  | savanna_plateau          | 36  | 0.40%  |
+| mangrove_swamp        | 184 | 0.52%  | flower_forest            | 132 | 0.65%  |
+| bamboo_jungle         | 168 | 0.65%  | sunflower_plains         | 129 | 0.66%  |
+| old_growth_pine_taiga | 32  | 0.68%  | wooded_badlands          | 38  | 0.64%  |
+| grove                 | 178 | 0.75%  | badlands                 | 37  | 0.90%  |
+| swamp                 | 6   | 1.00%  | snowy_beach              | 26  | 0.35%  |
+| stony_shore           | 25  | 1.19%  | sparse_jungle            | 23  | 1.26%  |
+| deep_frozen_ocean     | 50  | 1.21%  | meadow                   | 177 | 1.18%  |
+| dark_forest           | 29  | 2.00%  | jungle                   | 21  | 1.90%  |
+| birch_forest          | 27  | 2.14%  | desert                   | 2   | 2.47%  |
+| snowy_taiga           | 30  | 2.56%  | frozen_river             | 11  | 0.82%  |
+| warm_ocean            | 44  | 2.24%  | deep_lukewarm_ocean      | 48  | 2.45%  |
+| deep_cold_ocean       | 49  | 2.40%  | frozen_ocean             | 10  | 2.27%  |
+| beach                 | 16  | 2.67%  | snowy_plains             | 12  | 2.79%  |
+| taiga                 | 5   | 3.41%  | savanna                  | 35  | 4.00%  |
+| deep_ocean            | 24  | 4.38%  | lukewarm_ocean           | 45  | 4.61%  |
+| cold_ocean            | 46  | 4.51%  | river                    | 7   | 6.17%  |
+| ocean                 | 0   | 6.87%  | plains                   | 1   | 10.52% |
+| forest                | 4   | 12.07% | old_growth_birch_forest  | 155 | 2.09%  |
+| dripstone_caves       | 174 | -      | lush_caves               | 175 | -      |
+| deep_dark             | 183 | -      |                          |     |        |
 
-> **Note**: Rarity is based on surface Y=200 sampling statistics. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting.
+> **Note**: Rarity is based on surface Y=200 sampling statistics. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting, default rarity is 1.
 
 See the `BIOME_IDS` dictionary at the beginning of `crack_high32.py` for the complete list with IDs and rarity information.
 
@@ -394,24 +407,24 @@ The program checks biome sample compatibility with MC version:
 
 High 32-bit cracking is based on cubiomes library, supporting the following versions:
 
-| Version | Enum Value | Notes                        |
-| ------- | ---------- | ---------------------------- |
-| 1.18    | 22         | Includes 1.18.2              |
-| 1.19    | 24         | Includes 1.19.4              |
-| 1.20    | 25         | Includes 1.20.6              |
-| 1.21    | 28         | Winter Drop (1.21.4)         |
+| Version | Enum Value | Notes                |
+| ------- | ---------- | -------------------- |
+| 1.18    | 22         | Includes 1.18.2      |
+| 1.19    | 24         | Includes 1.19.4      |
+| 1.20    | 25         | Includes 1.20.6      |
+| 1.21    | 28         | Winter Drop (1.21.4) |
 
-> **Note**: Currently only major version numbers are supported. Biome generation differences between minor versions are minimal. If you need more precise minor version support (e.g., 1.19.2, 1.21.3, etc.), feel free to open an Issue.
+> **Note**: Currently only major version numbers are supported. Biome generation differences between minor versions may exist.
 
 ### ⚠️ Pale Garden Version Differences
 
 **Important**: The cubiomes library currently only supports up to MC 1.21.4 (Winter Drop). MC 1.21.5+ has adjusted the Pale Garden generation range.
 
-| MC Version | cubiomes Support | Pale Garden Generation |
-| ---------- | ---------------- | ---------------------- |
-| 1.21.3 and earlier | ✅ (code 27) | Does not exist, original location is Dark Forest |
-| 1.21.4 | ✅ (code 28) | Exists, but with smaller range |
-| 1.21.5+ | ❌ Not supported | Expanded range, some Dark Forest became Pale Garden |
+| MC Version         | cubiomes Support | Pale Garden Generation                              |
+| ------------------ | ---------------- | --------------------------------------------------- |
+| 1.21.3 and earlier | ✅ (code 27)     | Does not exist, original location is Dark Forest    |
+| 1.21.4             | ✅ (code 28)     | Exists, but with smaller range                      |
+| 1.21.5+            | ❌ Not supported | Expanded range, some Dark Forest became Pale Garden |
 
 **If you collected Pale Garden samples in 1.21.5+ but cracking fails**:
 
@@ -487,7 +500,7 @@ Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
 - [Xoroshiro128](https://prng.di.unimi.it/) - RNG used in high 32-bit cracking for noise parameter initialization
 - [SHA-256](https://en.wikipedia.org/wiki/SHA-2) - Used for Bedrock Edition Voronoi perturbation (Bedrock-specific)
 - [Minecraft Wiki](https://minecraft.wiki/) - Minecraft related knowledge reference
-- [MC Seed Science Video](https://www.bilibili.com/video/BV1r1N3ezEXU) - Introduction to Minecraft seed mechanics
+- [How Minecraft Calculates Seeds](https://www.bilibili.com/video/BV1r1N3ezEXU) - MC seed science video
 
 ---
 

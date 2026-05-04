@@ -9,13 +9,13 @@
  *     gcc -O3 -shared -o crack_high32.dll crack_high32.c ^
  *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c ^
  *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c ^
- *         cubiomes/util.c cubiomes/finders.c -lm -fopenmp
+ *         cubiomes/util.c cubiomes/finders.c -lm
  *
  *   Linux:
- *     gcc -O3 -shared -fPIC -o libcrack_high32.so crack_high32.c \
+ *     gcc -O3 -shared -fPIC -o crack_high32.so crack_high32.c \
  *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c \
  *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c \
- *         cubiomes/util.c cubiomes/finders.c -lm -fopenmp
+ *         cubiomes/util.c cubiomes/finders.c -lm
  *
  * Bug Fixes (2024):
  *   1. Fixed SHIFT noise parameter order in sampleBiomeNoiseSOA():
@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <immintrin.h>
-#include <omp.h>
 
 #include "cubiomes/biomes.h"
 #include "cubiomes/generator.h"
@@ -220,7 +219,7 @@ static int xDoublePerlinInitSOA(DoublePerlinNoiseSOA *noise, Xoroshiro xr[4],
     int trim_len = len;
     for (i = trim_len - 1; i >= 0 && amplitudes[i] == 0.0; i--)
         trim_len--;
-    for (i = 0; i < trim_len && amplitudes[i] == 0.0; i++)
+    for (i = 0; i < trim_len && amplitudes[i] == 0.0; i--)
         trim_len--;
     static const double amp_ini[] = {
         0,
@@ -480,119 +479,39 @@ static int climateToBiomeSOA(int mc, int64_t np[6])
     return climateToBiome(mc, (const uint64_t *)np, NULL);
 }
 
-EXPORT int phase1_filter_avx2(
+EXPORT int crack_high32_soa(
     uint32_t start_high,
     uint32_t end_high,
     uint32_t low32,
     int y_coord,
-    BiomeSample *rare_sample,
-    uint64_t *candidates,
-    int max_candidates,
-    int mc_version)
-{
-    if (start_high >= end_high)
-        return 0;
-
-    int x = rare_sample->x;
-    int z = rare_sample->z;
-    int target_id = rare_sample->biome_id;
-
-    int total = 0;
-
-#pragma omp parallel
-    {
-        BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)malloc(sizeof(BiomeNoiseSOA));
-        memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
-        bn_soa->oct = (PerlinNoiseSOA *)malloc(256 * sizeof(PerlinNoiseSOA));
-        memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
-
-        uint64_t seeds[4];
-        uint64_t sha[4];
-        int x4[4], y4[4], z4[4];
-        int64_t np[4][6];
-
-#pragma omp for schedule(dynamic, 10000)
-        for (uint64_t high = start_high; high < end_high; high += 4)
-        {
-            int batch_size = 4;
-            if (high + 4 > end_high)
-                batch_size = end_high - high;
-
-            for (int s = 0; s < batch_size; s++)
-            {
-                seeds[s] = (((uint64_t)(high + s)) << 32) | low32;
-                sha[s] = getVoronoiSHA(seeds[s]);
-                voronoiAccess3D(sha[s], x, y_coord, z, &x4[s], &y4[s], &z4[s]);
-            }
-
-            setBiomeSeedSOA(bn_soa, seeds, 0);
-
-            sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4, mc_version);
-
-            for (int s = 0; s < batch_size; s++)
-            {
-                int biome_id = climateToBiomeSOA(mc_version, np[s]);
-
-                if (biome_id == target_id)
-                {
-#pragma omp critical
-                    {
-                        if (total < max_candidates)
-                        {
-                            candidates[total++] = high + s;
-                        }
-                    }
-                }
-            }
-        }
-
-        free(bn_soa->oct);
-        free(bn_soa);
-    }
-
-    return total;
-}
-
-EXPORT int phase2_verify(
-    uint64_t *candidates,
-    int num_candidates,
-    uint32_t low32,
-    int y_coord,
-    BiomeSample *other_samples,
-    int num_other_samples,
+    BiomeSample *samples,
+    int num_samples,
     uint64_t *results,
     int max_results,
     int mc_version)
 {
-    if (num_candidates == 0)
+    if (start_high >= end_high || num_samples == 0)
         return 0;
 
     int found_count = 0;
 
     BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)malloc(sizeof(BiomeNoiseSOA));
-    if (!bn_soa)
-        return 0;
     memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
     bn_soa->oct = (PerlinNoiseSOA *)malloc(256 * sizeof(PerlinNoiseSOA));
-    if (!bn_soa->oct)
-    {
-        free(bn_soa);
-        return 0;
-    }
     memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
 
     uint64_t seeds[4];
     uint64_t sha[4];
 
-    for (int c = 0; c < num_candidates && found_count < max_results; c += 4)
+    for (uint64_t high = start_high; high < end_high; high += 4)
     {
         int batch_size = 4;
-        if (c + 4 > num_candidates)
-            batch_size = num_candidates - c;
+        if (high + 4 > end_high)
+            batch_size = end_high - high;
 
         for (int s = 0; s < batch_size; s++)
         {
-            seeds[s] = (((uint64_t)candidates[c + s]) << 32) | low32;
+            seeds[s] = (((uint64_t)(high + s)) << 32) | low32;
             sha[s] = getVoronoiSHA(seeds[s]);
         }
 
@@ -600,14 +519,14 @@ EXPORT int phase2_verify(
 
         int all_match[4] = {1, 1, 1, 1};
 
-        for (int i = 0; i < num_other_samples; i++)
+        for (int i = 0; i < num_samples && (all_match[0] || all_match[1] || all_match[2] || all_match[3]); i++)
         {
             int x4[4], y4[4], z4[4];
             int64_t np[4][6];
 
             for (int s = 0; s < batch_size; s++)
             {
-                voronoiAccess3D(sha[s], other_samples[i].x, y_coord, other_samples[i].z, &x4[s], &y4[s], &z4[s]);
+                voronoiAccess3D(sha[s], samples[i].x, y_coord, samples[i].z, &x4[s], &y4[s], &z4[s]);
             }
 
             sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4, mc_version);
@@ -617,7 +536,7 @@ EXPORT int phase2_verify(
                 if (all_match[s])
                 {
                     int actual_id = climateToBiomeSOA(mc_version, np[s]);
-                    if (actual_id != other_samples[i].biome_id)
+                    if (actual_id != samples[i].biome_id)
                         all_match[s] = 0;
                 }
             }
@@ -627,33 +546,16 @@ EXPORT int phase2_verify(
         {
             if (all_match[s])
             {
-                results[found_count++] = seeds[s];
+                if (found_count < max_results)
+                {
+                    results[found_count++] = seeds[s];
+                }
             }
         }
     }
 
     free(bn_soa->oct);
     free(bn_soa);
+
     return found_count;
-}
-
-EXPORT int getBiomeAtSeed(
-    uint64_t seed,
-    int x,
-    int y,
-    int z,
-    int mc_version)
-{
-    BiomeNoise bn;
-    memset(&bn, 0, sizeof(bn));
-    initBiomeNoise(&bn, mc_version);
-    setBiomeSeed(&bn, seed, 0);
-    uint64_t sha = getVoronoiSHA(seed);
-
-    int x4, y4, z4;
-    voronoiAccess3D(sha, x, y, z, &x4, &y4, &z4);
-
-    int64_t np[6];
-    sampleBiomeNoise(&bn, np, x4, y4, z4, NULL, 0);
-    return climateToBiome(mc_version, (const uint64_t *)np, NULL);
 }

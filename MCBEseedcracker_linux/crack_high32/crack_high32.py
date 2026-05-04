@@ -13,7 +13,6 @@ import sys
 import os
 import argparse
 import multiprocessing as mp
-import threading
 from pathlib import Path
 
 script_dir = Path(__file__).parent.resolve()
@@ -161,37 +160,43 @@ VERSION_MAP = {
 MC_VERSION = VERSION_MAP.get(MC_VERSION_STR, MC_1_21)
 
 BATCH_SIZE = 500000
+MAX_RESULTS = 1000
+
+class BiomeSample(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("biome_id", ctypes.c_int)]
 
 def init_dll():
     dll = ctypes.CDLL(str(dll_path))
     
-    dll.getBiomeAtSeed.argtypes = [ctypes.c_uint64, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
-    dll.getBiomeAtSeed.restype = ctypes.c_int
+    dll.crack_high32_soa.argtypes = [
+        ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
+        ctypes.POINTER(BiomeSample), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
+    ]
+    dll.crack_high32_soa.restype = ctypes.c_int
     
     return dll
 
-def crack_batch(args):
-    start_high, end_high, low32, samples, y_coord, mc_version, result_queue = args
+def crack_batch_soa(args):
+    start_high, end_high, low32, samples, y_coord, mc_version = args
     dll = init_dll()
     
-    results = []
+    num_samples = len(samples)
+    sample_array = (BiomeSample * num_samples)()
+    for i, (x, z, biome_id) in enumerate(samples):
+        sample_array[i].x = x
+        sample_array[i].z = z
+        sample_array[i].biome_id = biome_id
     
-    for high32 in range(start_high, end_high):
-        seed = (high32 << 32) | low32
-        
-        all_match = True
-        for x, z, biome_id in samples:
-            actual_id = dll.getBiomeAtSeed(seed, x, y_coord, z, mc_version)
-            if actual_id != biome_id:
-                all_match = False
-                break
-        
-        if all_match:
-            results.append(seed)
-            if result_queue is not None:
-                result_queue.put(seed)
+    results = (ctypes.c_uint64 * MAX_RESULTS)()
     
-    return results
+    found = dll.crack_high32_soa(
+        start_high, end_high, low32, y_coord,
+        sample_array, num_samples,
+        results, MAX_RESULTS, mc_version
+    )
+    
+    return [results[i] for i in range(found)]
 
 def main():
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
@@ -236,27 +241,11 @@ def main():
     
     print(f"\n[*] Search range: {search_start:,} ~ {search_end:,}")
     print("-" * 60)
-    print("[*] Cracking (check all biomes for each high32)...")
+    print("[*] Cracking with SOA optimization (4 seeds per batch)...")
     print("-" * 60)
     
-    manager = mp.Manager()
-    result_queue = manager.Queue()
     all_results = []
-    stop_listener = threading.Event()
-    
-    def result_listener():
-        while not stop_listener.is_set():
-            try:
-                seed = result_queue.get(timeout=0.1)
-                all_results.append(seed)
-                high32 = seed >> 32
-                low32 = seed & 0xFFFFFFFF
-                print(f"\n[!] Found seed: {seed} (high32: {high32}, low32: {low32})")
-            except:
-                pass
-    
-    listener_thread = threading.Thread(target=result_listener, daemon=True)
-    listener_thread.start()
+    found_count = 0
     
     start_time = time.time()
     total_done = 0
@@ -274,10 +263,15 @@ def main():
             end = start + chunk
             if start < batch_end:
                 actual_end = min(end, batch_end)
-                tasks.append((start, actual_end, args.low32, sorted_samples, Y_COORD, MC_VERSION, result_queue))
+                tasks.append((start, actual_end, args.low32, sorted_samples, Y_COORD, MC_VERSION))
         
         if tasks:
-            results = pool.map(crack_batch, tasks)
+            for r in pool.imap_unordered(crack_batch_soa, tasks):
+                if r:
+                    for seed in r:
+                        all_results.append(seed)
+                        found_count += 1
+                        print(f"\n[FOUND] Seed: {seed} (0x{seed:016X})")
         
         total_done = batch_end - search_start
         elapsed = time.time() - start_time
@@ -289,14 +283,11 @@ def main():
         filled = int(bar_len * percent / 100)
         bar = '#' * filled + '-' * (bar_len - filled)
         
-        sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {total_done:,}/{total_search:,} | {speed:,.0f}/s | ETA: {eta/60:.1f}min')
+        sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {total_done:,}/{total_search:,} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}')
         sys.stdout.flush()
     
     pool.close()
     pool.join()
-    
-    stop_listener.set()
-    listener_thread.join(timeout=1)
     
     total_elapsed = time.time() - start_time
     total_speed = total_search / total_elapsed if total_elapsed > 0 else 0

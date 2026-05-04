@@ -33,7 +33,7 @@ gcc -O3 -fPIC -shared -o crack_high32.so crack_high32.c \
     cubiomes/quadbase.c \
     cubiomes/util.c \
     cubiomes/finders.c \
-    -lm -fopenmp
+    -lm
 if [ -f crack_high32.so ]; then
     echo "    [OK] crack_high32.so created"
 else

@@ -32,7 +32,7 @@ gcc -O3 -shared -o crack_high32.dll crack_high32.c ^
     cubiomes/quadbase.c ^
     cubiomes/util.c ^
     cubiomes/finders.c ^
-    -lm -fopenmp
+    -lm
 if exist crack_high32.dll (
     echo     [OK] crack_high32.dll created
 ) else (
