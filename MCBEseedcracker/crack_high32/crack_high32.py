@@ -103,6 +103,27 @@ VERSION_BIOMES = {
 def get_biome_name(biome_id):
     return BIOME_NAMES.get(biome_id, f"biome_{biome_id}")
 
+SIGNED64_MAX = 9223372036854775807
+UINT64_MAX = 18446744073709551615
+
+def to_signed64(seed):
+    if seed > SIGNED64_MAX:
+        return seed - UINT64_MAX - 1
+    return seed
+
+def format_seed_output(seed, low32):
+    high32 = seed >> 32
+    display_seed = to_signed64(seed)
+    
+    lines = [
+        f"\n[FOUND] Seed found!",
+        f"    Low 32-bit:  {low32} (0x{low32:08X})",
+        f"    High 32-bit: {high32} (0x{high32:08X})",
+        f"    Full seed:   {display_seed} (0x{seed:016X})",
+    ]
+    
+    return '\n'.join(lines)
+
 def get_biome_rarity(biome_id, mc_version):
     biome_name = BIOME_NAMES.get(biome_id)
     if biome_name and biome_name in BIOME_IDS:
@@ -202,8 +223,8 @@ def crack_batch_soa(args):
 
 def main():
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
-    parser.add_argument('--start', type=int, default=0, help='Start high value')
-    parser.add_argument('--end', type=int, default=0x100000000, help='End high value (exclusive, use 0x100000000 for full range)')
+    parser.add_argument('--start', type=int, default=0, help='Start high value (inclusive)')
+    parser.add_argument('--end', type=int, default=0xFFFFFFFF, help='End high value (inclusive, use 0xFFFFFFFF for full range)')
     parser.add_argument('--test', action='store_true', help='Test mode: 0 ~ 100M')
     parser.add_argument('--low32', type=int, default=LOW32, help='Low 32-bit value')
     parser.add_argument('--processes', type=int, default=None, help='Number of processes')
@@ -214,7 +235,8 @@ def main():
     print("=" * 60)
     
     search_start = args.start
-    search_end = 100000000 if args.test and args.end == 0x100000000 else args.end
+    search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
+    search_end_exclusive = search_end + 1
     num_processes = args.processes if args.processes else mp.cpu_count()
     
     print(f"\n[*] Low 32-bit: {args.low32}")
@@ -239,7 +261,7 @@ def main():
         input("\nPress Enter to exit...")
         sys.exit(1)
     
-    total_search = search_end - search_start
+    total_search = search_end - search_start + 1
     
     print(f"\n[*] Search range: {search_start:,} ~ {search_end:,}")
     print("-" * 60)
@@ -255,8 +277,8 @@ def main():
     
     pool = mp.Pool(num_processes)
     
-    for batch_start in range(search_start, search_end, batch_size * num_processes):
-        batch_end = min(batch_start + batch_size * num_processes, search_end)
+    for batch_start in range(search_start, search_end_exclusive, batch_size * num_processes):
+        batch_end = min(batch_start + batch_size * num_processes, search_end_exclusive)
         
         tasks = []
         chunk = batch_size
@@ -273,7 +295,7 @@ def main():
                     for seed in r:
                         all_results.append(seed)
                         found_count += 1
-                        print(f"\n[FOUND] Seed: {seed} (0x{seed:016X})")
+                        print(format_seed_output(seed, args.low32))
         
         total_done = batch_end - search_start
         elapsed = time.time() - start_time
@@ -298,6 +320,17 @@ def main():
     print(f"  Time: {total_elapsed:.1f}s ({total_elapsed/60:.1f}min)")
     print(f"  Speed: {total_speed:,.0f}/s")
     print(f"  Found: {len(all_results)} seed(s)")
+    
+    if all_results:
+        print("\n" + "=" * 60)
+        print("All found seeds:")
+        print("=" * 60)
+        for seed in all_results:
+            high32 = seed >> 32
+            display_seed = to_signed64(seed)
+            print(f"\n  Low 32-bit:  {args.low32} (0x{args.low32:08X})")
+            print(f"  High 32-bit: {high32} (0x{high32:08X})")
+            print(f"  Full seed:   {display_seed} (0x{seed:016X})")
     
     print("\n" + "=" * 60)
     print("Search Complete!")

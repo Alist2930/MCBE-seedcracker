@@ -98,14 +98,15 @@ def crack_worker(args):
 def run_crack(search_start, search_end, num_processes, all_results):
     global_start = time.time()
     processed = search_start
-    total_seeds = search_end - search_start
+    total_seeds = search_end - search_start + 1
+    search_end_exclusive = search_end + 1
     step_size = 200_000_000
     
     pool = mp.Pool(num_processes)
     
-    while processed < search_end:
+    while processed <= search_end:
         step_start = processed
-        step_end = min(processed + step_size, search_end)
+        step_end = min(processed + step_size, search_end_exclusive)
         chunk_size = (step_end - step_start) // num_processes
         
         tasks = []
@@ -126,7 +127,7 @@ def run_crack(search_start, search_end, num_processes, all_results):
         elapsed = time.time() - global_start
         speed = (processed - search_start) / elapsed if elapsed > 0 else 0
         progress = (processed - search_start) / total_seeds * 100
-        eta = (search_end - processed) / speed if speed > 0 else 0
+        eta = (search_end_exclusive - processed) / speed if speed > 0 else 0
         
         eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
         print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
@@ -138,8 +139,8 @@ def run_crack(search_start, search_end, num_processes, all_results):
 
 def main():
     parser = argparse.ArgumentParser(description="Minecraft Bedrock Low 32-bit Seed Cracker")
-    parser.add_argument("--start", type=int, default=0, help="Start low32 value")
-    parser.add_argument("--end", type=int, default=0xFFFFFFFF, help="End low32 value")
+    parser.add_argument("--start", type=int, default=0, help="Start low32 value (inclusive)")
+    parser.add_argument("--end", type=int, default=0xFFFFFFFF, help="End low32 value (inclusive, use 0xFFFFFFFF for full range)")
     parser.add_argument("--test", action="store_true", help="Test mode (100M seeds)")
     args = parser.parse_args()
     
@@ -163,7 +164,8 @@ def main():
     
     search_start = args.start
     search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
-    total_seeds = search_end - search_start
+    search_end_exclusive = search_end + 1
+    total_seeds = search_end - search_start + 1
     
     print(f"\n[*] Mode: {'Test' if args.test else 'Full'}")
     print(f"[*] Search range: {search_start:,} ~ {search_end:,} ({total_seeds:,} seeds)")
