@@ -298,6 +298,8 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 4. **Run high 32-bit cracking** - Get complete seed
 5. **Verify** - Use [ChunkBase](https://www.chunkbase.com/apps/seed-map) to verify seed
 
+> **⚠️ Note**: Biome names on ChunkBase and similar websites follow Java Edition conventions, which differ from Bedrock Edition. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please pay attention to these differences when verifying.
+
 ---
 
 ## FAQ
@@ -307,7 +309,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 **Possible causes:**
 
 1. **Incorrect structure coordinates** - Coordinates are wrong, or chunk location method is incorrect
-2. **Insufficient structures** - Recommend at least 5 different structure types
+2. **Insufficient structures** - Insufficient structures will result in too many candidate seeds. Recommend at least 5 different structure types
 3. **Poor structure type selection** - Some structures (like villages) have complex generation rules. Recommended:
    - Desert Temple, Witch Hut, Jungle Temple (simple and stable generation rules)
    - Ocean Monument, End City
@@ -353,35 +355,35 @@ If significantly longer:
 
 ## Biome ID Reference（1.21）
 
-| Biome                 | ID  | Rarity | Biome                    | ID  | Rarity |
-| --------------------- | --- | ------ | ------------------------ | --- | ------ |
-| pale_garden           | 186 | 0.08%  | windswept_gravelly_hills | 131 | 0.10%  |
-| stony_peaks           | 182 | 0.10%  | jagged_peaks             | 180 | 0.15%  |
-| frozen_peaks          | 181 | 0.15%  | mushroom_fields          | 14  | 0.14%  |
-| windswept_forest      | 34  | 0.19%  | cherry_grove             | 185 | 0.28%  |
-| ice_spikes            | 140 | 0.23%  | windswept_hills          | 3   | 0.27%  |
-| windswept_savanna     | 163 | 0.22%  | eroded_badlands          | 165 | 0.33%  |
-| snowy_slopes          | 179 | 0.39%  | savanna_plateau          | 36  | 0.40%  |
-| mangrove_swamp        | 184 | 0.52%  | flower_forest            | 132 | 0.65%  |
-| bamboo_jungle         | 168 | 0.65%  | sunflower_plains         | 129 | 0.66%  |
-| old_growth_pine_taiga | 32  | 0.68%  | wooded_badlands          | 38  | 0.64%  |
-| grove                 | 178 | 0.75%  | badlands                 | 37  | 0.90%  |
-| swamp                 | 6   | 1.00%  | snowy_beach              | 26  | 0.35%  |
-| stony_shore           | 25  | 1.19%  | sparse_jungle            | 23  | 1.26%  |
-| deep_frozen_ocean     | 50  | 1.21%  | meadow                   | 177 | 1.18%  |
-| dark_forest           | 29  | 2.00%  | jungle                   | 21  | 1.90%  |
-| birch_forest          | 27  | 2.14%  | desert                   | 2   | 2.47%  |
-| snowy_taiga           | 30  | 2.56%  | frozen_river             | 11  | 0.82%  |
-| warm_ocean            | 44  | 2.24%  | deep_lukewarm_ocean      | 48  | 2.45%  |
-| deep_cold_ocean       | 49  | 2.40%  | frozen_ocean             | 10  | 2.27%  |
-| beach                 | 16  | 2.67%  | snowy_plains             | 12  | 2.79%  |
-| taiga                 | 5   | 3.41%  | savanna                  | 35  | 4.00%  |
-| deep_ocean            | 24  | 4.38%  | lukewarm_ocean           | 45  | 4.61%  |
-| cold_ocean            | 46  | 4.51%  | river                    | 7   | 6.17%  |
-| ocean                 | 0   | 6.87%  | plains                   | 1   | 10.52% |
-| forest                | 4   | 12.07% | old_growth_birch_forest  | 155 | 2.09%  |
-| dripstone_caves       | 174 | -      | lush_caves               | 175 | -      |
-| deep_dark             | 183 | -      |                          |     |        |
+| Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
+| ------------------------ | --- | ------ | --------------------- | --- | ------ |
+| pale_garden              | 186 | 0.08%  | extreme_hills_mutated | 131 | 0.10%  |
+| stony_peaks              | 182 | 0.10%  | jagged_peaks          | 180 | 0.15%  |
+| frozen_peaks             | 181 | 0.15%  | mushroom_island       | 14  | 0.14%  |
+| extreme_hills_plus_trees | 34  | 0.19%  | cherry_grove          | 185 | 0.28%  |
+| ice_spikes               | 140 | 0.23%  | extreme_hills         | 3   | 0.27%  |
+| savanna_mutated          | 163 | 0.22%  | mesa_bryce            | 165 | 0.33%  |
+| snowy_slopes             | 179 | 0.39%  | savanna_plateau       | 36  | 0.40%  |
+| mangrove_swamp           | 184 | 0.52%  | flower_forest         | 132 | 0.65%  |
+| bamboo_jungle            | 168 | 0.65%  | sunflower_plains      | 129 | 0.66%  |
+| mega_taiga               | 32  | 0.68%  | mesa_plateau_stone    | 38  | 0.64%  |
+| grove                    | 178 | 0.75%  | mesa                  | 37  | 0.90%  |
+| swamp                    | 6   | 1.00%  | cold_beach            | 26  | 0.35%  |
+| stone_beach              | 25  | 1.19%  | jungle_edge           | 23  | 1.26%  |
+| deep_frozen_ocean        | 50  | 1.21%  | meadow                | 177 | 1.18%  |
+| roofed_forest            | 29  | 2.00%  | jungle                | 21  | 1.90%  |
+| birch_forest             | 27  | 2.14%  | desert                | 2   | 2.47%  |
+| cold_taiga               | 30  | 2.56%  | frozen_river          | 11  | 0.82%  |
+| warm_ocean               | 44  | 2.24%  | deep_lukewarm_ocean   | 48  | 2.45%  |
+| deep_cold_ocean          | 49  | 2.40%  | frozen_ocean          | 10  | 2.27%  |
+| beach                    | 16  | 2.67%  | ice_plains            | 12  | 2.79%  |
+| taiga                    | 5   | 3.41%  | savanna               | 35  | 4.00%  |
+| deep_ocean               | 24  | 4.38%  | lukewarm_ocean        | 45  | 4.61%  |
+| cold_ocean               | 46  | 4.51%  | river                 | 7   | 6.17%  |
+| ocean                    | 0   | 6.87%  | plains                | 1   | 10.52% |
+| forest                   | 4   | 12.07% | birch_forest_mutated  | 155 | 2.09%  |
+| dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
+| deep_dark                | 183 | -      |                       |     |        |
 
 > **Note**: Rarity is based on surface Y=200 sampling statistics. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting, default rarity is 1.
 
@@ -434,18 +436,18 @@ This is likely because cubiomes' 1.21 version (code 28) corresponds to 1.21.4, w
 
 **Solution**:
 
-Change the Pale Garden sample to Dark Forest (ID: 29) and try again. For example:
+Change the Pale Garden sample to Dark Forest (roofed_forest, ID: 29) and try again. For example:
 
 ```python
 # Original sample (Pale Garden in 1.21.5+ game)
 SAMPLES = [
-    (-3695, 5731, 186),   # pale_garden - may be dark_forest in cubiomes
+    (-3695, 5731, 186),   # pale_garden - may be roofed_forest in cubiomes
     ...
 ]
 
 # Modified (compatible with cubiomes 1.21.4)
 SAMPLES = [
-    (-3695, 5731, 29),    # dark_forest - try using Dark Forest
+    (-3695, 5731, 29),    # roofed_forest - try using Dark Forest
     ...
 ]
 ```
@@ -490,8 +492,6 @@ chmod +x build.sh
 | High 32-bit | ~70K/s | ~17 hours             |
 
 Test environment: Windows 10, Intel Core i5-2500K @ 3.30GHz (4 cores)
-
-> **💡 Tip**: Low 32-bit cracking speed is affected by structure types. Using linear type structures (such as Desert Temple, Witch Hut, etc.) is faster.
 
 ---
 
