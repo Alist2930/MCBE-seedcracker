@@ -1,5 +1,6 @@
 # Compiled files
 *.o
+# *.so
 *.a
 *.obj
 *.lib
@@ -23,6 +24,33 @@ build/
 .DS_Store
 Thumbs.db
 
-# Build artifacts (keep precompiled DLLs/SOs)
-# *.dll
-# *.so
+# Test files
+test_*.py
+verify_*.py
+check_*.py
+biomes_zh.txt
+get_biome.py
+
+# Documentation (root level)
+UI_DEVELOPMENT_PLAN.md
+
+# Ignore Windows non-UI version (MCBEseedcracker/)
+MCBEseedcracker/
+
+# Keep only DLLs in UI version (ignore C source files in UI)
+MCBEseedcracker_win_ui/**/*.c
+MCBEseedcracker_win_ui/**/*.h
+MCBEseedcracker_win_ui/**/cubiomes/
+
+# Session and config files
+session_data.json
+config.json
+progress_*.json
+
+# Build artifacts
+*.spec
+!MCBEseedcracker_win_ui/build.spec
+
+# Compiled EXE (upload as Release instead)
+MCBEseedcracker_win_ui/dist/
+MCBEseedcracker_win_ui/build/

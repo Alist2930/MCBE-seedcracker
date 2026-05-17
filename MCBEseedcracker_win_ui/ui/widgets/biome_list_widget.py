@@ -1,0 +1,315 @@
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QTableWidget, QTableWidgetItem, QHeaderView,
+    QComboBox, QSpinBox, QDialog, QFormLayout,
+    QDialogButtonBox, QGroupBox, QMessageBox, QLabel,
+    QCompleter
+)
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+import json
+import os
+from ..utils.language_manager import lang_manager
+from ..utils.biome_icon_loader import biome_icon_loader
+
+
+class BiomeListWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.biomes = []
+        self.biome_data = self.load_biome_data()
+        self.mc_version = "1.21"
+        self.init_ui()
+    
+    def load_biome_data(self):
+        data_file = os.path.join(
+            os.path.dirname(__file__), "..", "data", "biomes.json"
+        )
+        if os.path.exists(data_file):
+            with open(data_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            return {
+                "plains": {"name_zh": "平原", "name_en": "Plains", "id": 1},
+                "forest": {"name_zh": "森林", "name_en": "Forest", "id": 4},
+                "desert": {"name_zh": "沙漠", "name_en": "Desert", "id": 2},
+                "cherry_grove": {"name_zh": "樱花树林", "name_en": "Cherry Grove", "id": 185},
+                "pale_garden": {"name_zh": "苍白之园", "name_en": "Pale Garden", "id": 186}
+            }
+    
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        
+        self.group_box = QGroupBox(lang_manager.get("biome_list"))
+        group_layout = QVBoxLayout(self.group_box)
+        
+        self.table = QTableWidget()
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels([
+            lang_manager.get("biome_type"),
+            lang_manager.get("x_coord"),
+            lang_manager.get("z_coord"),
+            lang_manager.get("y_coord")
+        ])
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.cellDoubleClicked.connect(self.edit_biome)
+        
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        
+        group_layout.addWidget(self.table)
+        
+        button_layout = QHBoxLayout()
+        self.add_btn = QPushButton(lang_manager.get("add_biome"))
+        self.remove_btn = QPushButton(lang_manager.get("remove_selected"))
+        self.clear_btn = QPushButton(lang_manager.get("clear_list"))
+        
+        self.add_btn.clicked.connect(self.add_biome)
+        self.remove_btn.clicked.connect(self.remove_biome)
+        self.clear_btn.clicked.connect(self.clear_biomes)
+        
+        button_layout.addWidget(self.add_btn)
+        button_layout.addWidget(self.remove_btn)
+        button_layout.addWidget(self.clear_btn)
+        
+        group_layout.addLayout(button_layout)
+        layout.addWidget(self.group_box)
+    
+    def retranslate_ui(self):
+        self.group_box.setTitle(lang_manager.get("biome_list"))
+        self.table.setHorizontalHeaderLabels([
+            lang_manager.get("biome_type"),
+            lang_manager.get("x_coord"),
+            lang_manager.get("z_coord"),
+            lang_manager.get("y_coord")
+        ])
+        self.add_btn.setText(lang_manager.get("add_biome"))
+        self.remove_btn.setText(lang_manager.get("remove_selected"))
+        self.clear_btn.setText(lang_manager.get("clear_list"))
+        
+        self.update_table()
+    
+    def add_biome(self):
+        dialog = AddBiomeDialog(self.biome_data, self, edit_mode=False)
+        if dialog.exec_() == QDialog.Accepted:
+            biome_type, x, z, y = dialog.get_data()
+            
+            from ui.utils.biome_version_filter import is_biome_available, get_biome_version
+            biome_id = self.biome_data[biome_type]["id"]
+            
+            if not is_biome_available(biome_id, self.mc_version):
+                biome_version = get_biome_version(biome_id)
+                biome_name = self.biome_data[biome_type]['name_zh'] if lang_manager.language == "zh_CN" else self.biome_data[biome_type]['name_en']
+                reply = QMessageBox.warning(
+                    self, lang_manager.get("version_compatibility_warning"),
+                    lang_manager.get("biome_not_available").format(biome_name, biome_version, self.mc_version),
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    return
+            
+            self.biomes.append({
+                "type": biome_type,
+                "x": x,
+                "z": z,
+                "y": y
+            })
+            self.update_table()
+    
+    def set_mc_version(self, version):
+        self.mc_version = version
+    
+    def remove_biome(self):
+        current_row = self.table.currentRow()
+        if current_row >= 0:
+            self.biomes.pop(current_row)
+            self.update_table()
+    
+    def clear_biomes(self):
+        if self.biomes:
+            reply = QMessageBox.question(
+                self, lang_manager.get("confirm"),
+                lang_manager.get("clear_biomes"),
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                self.biomes.clear()
+                self.update_table()
+    
+    def update_table(self):
+        self.table.setRowCount(len(self.biomes))
+        for i, biome in enumerate(self.biomes):
+            biome_info = self.biome_data.get(biome["type"], {})
+            
+            if lang_manager.language == "zh_CN":
+                name = f"{biome_info.get('name_zh', biome['type'])} ({biome_info.get('name_en', '')})"
+            else:
+                name = biome_info.get('name_en', biome['type'])
+            
+            item = QTableWidgetItem(name)
+            
+            icon = biome_icon_loader.get_icon(biome["type"])
+            if icon:
+                item.setIcon(icon)
+            
+            self.table.setItem(i, 0, item)
+            self.table.setItem(i, 1, QTableWidgetItem(str(biome["x"])))
+            self.table.setItem(i, 2, QTableWidgetItem(str(biome["z"])))
+            self.table.setItem(i, 3, QTableWidgetItem(str(biome["y"])))
+    
+    def edit_biome(self, row, column):
+        if row < 0 or row >= len(self.biomes):
+            return
+        
+        biome = self.biomes[row]
+        dialog = AddBiomeDialog(self.biome_data, self, edit_mode=True)
+        
+        index = dialog.type_combo.findData(biome["type"])
+        if index >= 0:
+            dialog.type_combo.setCurrentIndex(index)
+        dialog.x_spin.setValue(biome["x"])
+        dialog.z_spin.setValue(biome["z"])
+        dialog.y_spin.setValue(biome["y"])
+        
+        if dialog.exec_() == QDialog.Accepted:
+            biome_type, x, z, y = dialog.get_data()
+            self.biomes[row] = {
+                "type": biome_type,
+                "x": x,
+                "z": z,
+                "y": y
+            }
+            self.update_table()
+    
+    def set_enabled(self, enabled):
+        self.add_btn.setEnabled(enabled)
+        self.remove_btn.setEnabled(enabled)
+        self.clear_btn.setEnabled(enabled)
+        self.table.blockSignals(not enabled)
+    
+    def get_biomes(self):
+        return self.biomes
+
+
+class AddBiomeDialog(QDialog):
+    def __init__(self, biome_data, parent=None, edit_mode=False):
+        super().__init__(parent)
+        self.biome_data = biome_data
+        self.edit_mode = edit_mode
+        self.init_ui()
+    
+    def init_ui(self):
+        if self.edit_mode:
+            self.setWindowTitle(lang_manager.get("edit_biome_title"))
+        else:
+            self.setWindowTitle(lang_manager.get("add_biome_title"))
+        self.setModal(True)
+        self.setMinimumWidth(450)
+        
+        layout = QFormLayout(self)
+        
+        self.type_combo = QComboBox()
+        self.type_combo.setEditable(True)
+        self.type_combo.setInsertPolicy(QComboBox.NoInsert)
+        
+        completer_model = QStandardItemModel()
+        for key, value in sorted(self.biome_data.items(), key=lambda x: x[1]['id']):
+            if lang_manager.language == "zh_CN":
+                display_name = f"{value['name_zh']} ({value['name_en']}) - ID: {value['id']}"
+            else:
+                display_name = f"{value['name_en']} - ID: {value['id']}"
+            
+            self.type_combo.addItem(display_name, key)
+            
+            icon = biome_icon_loader.get_icon(key)
+            if icon:
+                self.type_combo.setItemIcon(self.type_combo.count() - 1, icon)
+            
+            item = QStandardItem(display_name)
+            if icon:
+                item.setIcon(icon)
+            completer_model.appendRow(item)
+        
+        completer = QCompleter()
+        completer.setModel(completer_model)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchContains)
+        completer.popup().setIconSize(QComboBox().iconSize())
+        self.type_combo.setCompleter(completer)
+        
+        self.type_combo.lineEdit().setPlaceholderText(
+            lang_manager.get("biome_type") + "..."
+        )
+        
+        self.x_spin = QSpinBox()
+        self.x_spin.setRange(-30000000, 30000000)
+        self.x_spin.setValue(0)
+        
+        self.z_spin = QSpinBox()
+        self.z_spin.setRange(-30000000, 30000000)
+        self.z_spin.setValue(0)
+        
+        self.y_spin = QSpinBox()
+        self.y_spin.setRange(-64, 320)
+        self.y_spin.setValue(200)
+        
+        self.type_label = lang_manager.get("biome_type")
+        self.x_label = lang_manager.get("x_coord")
+        self.z_label = lang_manager.get("z_coord")
+        self.y_label = lang_manager.get("y_coord")
+        
+        layout.addRow(f"{self.type_label}:", self.type_combo)
+        layout.addRow(f"{self.x_label}:", self.x_spin)
+        layout.addRow(f"{self.z_label}:", self.z_spin)
+        layout.addRow(f"{self.y_label}:", self.y_spin)
+        
+        self.hint_label = QLabel(lang_manager.get("biome_hint"))
+        self.hint_label.setStyleSheet("color: gray; font-size: 10px;")
+        self.hint_label.setWordWrap(True)
+        layout.addRow(self.hint_label)
+        
+        self.help_label = QLabel(lang_manager.get("biome_recommend"))
+        self.help_label.setStyleSheet("color: #4CAF50; font-size: 10px;")
+        self.help_label.setWordWrap(True)
+        layout.addRow(self.help_label)
+        
+        self.warning_label = QLabel(lang_manager.get("biome_warning"))
+        self.warning_label.setStyleSheet("color: #FF9800; font-size: 10px;")
+        self.warning_label.setWordWrap(True)
+        layout.addRow(self.warning_label)
+        
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self._validate_and_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+    
+    def _validate_and_accept(self):
+        if self._get_biome_type() is None:
+            QMessageBox.warning(self, lang_manager.get("warning"),
+                                lang_manager.get("invalid_biome_type"))
+            return
+        self.accept()
+    
+    def _get_biome_type(self):
+        biome_type = self.type_combo.currentData()
+        if biome_type is not None:
+            return biome_type
+        text = self.type_combo.currentText()
+        for i in range(self.type_combo.count()):
+            if self.type_combo.itemText(i) == text:
+                return self.type_combo.itemData(i)
+        return None
+    
+    def get_data(self):
+        biome_type = self._get_biome_type()
+        x = self.x_spin.value()
+        z = self.z_spin.value()
+        y = self.y_spin.value()
+        return biome_type, x, z, y

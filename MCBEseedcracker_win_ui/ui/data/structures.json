@@ -1,0 +1,110 @@
+{
+  "village": {
+    "name_zh": "村庄",
+    "name_en": "Village",
+    "id": 1,
+    "salt": 10387312,
+    "spacing": 34,
+    "separation": 8,
+    "spread_type": "triangular"
+  },
+  "mansion": {
+    "name_zh": "林地府邸",
+    "name_en": "Woodland Mansion",
+    "id": 2,
+    "salt": 10387319,
+    "spacing": 80,
+    "separation": 20,
+    "spread_type": "triangular"
+  },
+  "end_city": {
+    "name_zh": "末地城",
+    "name_en": "End City",
+    "id": 3,
+    "salt": 10387313,
+    "spacing": 20,
+    "separation": 11,
+    "spread_type": "triangular"
+  },
+  "ocean_monument": {
+    "name_zh": "海底神殿",
+    "name_en": "Ocean Monument",
+    "id": 4,
+    "salt": 10387313,
+    "spacing": 32,
+    "separation": 5,
+    "spread_type": "triangular"
+  },
+  "ancient_city": {
+    "name_zh": "深暗古城",
+    "name_en": "Ancient City",
+    "id": 5,
+    "salt": 20083232,
+    "spacing": 24,
+    "separation": 8,
+    "spread_type": "triangular"
+  },
+  "ocean_ruins": {
+    "name_zh": "海底废墟",
+    "name_en": "Ocean Ruins",
+    "id": 6,
+    "salt": 14357621,
+    "spacing": 20,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "shipwreck": {
+    "name_zh": "沉船",
+    "name_en": "Shipwreck",
+    "id": 7,
+    "salt": 165745295,
+    "spacing": 24,
+    "separation": 4,
+    "spread_type": "linear"
+  },
+  "nether_complexes": {
+    "name_zh": "下界要塞/堡垒遗迹",
+    "name_en": "Nether Fortress/Bastion",
+    "id": 8,
+    "salt": 30084232,
+    "spacing": 30,
+    "separation": 4,
+    "spread_type": "linear"
+  },
+  "desert_temple": {
+    "name_zh": "沙漠神殿",
+    "name_en": "Desert Temple",
+    "id": 9,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "igloo": {
+    "name_zh": "雪屋",
+    "name_en": "Igloo",
+    "id": 10,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "swamp_hut": {
+    "name_zh": "女巫屋",
+    "name_en": "Swamp Hut",
+    "id": 11,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "jungle_temple": {
+    "name_zh": "丛林神庙",
+    "name_en": "Jungle Temple",
+    "id": 12,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  }
+}
