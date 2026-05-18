@@ -2,36 +2,52 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import time
 import json
 import os
+import sys
 import multiprocessing as mp
-from pathlib import Path
 import ctypes
 
 
+def get_dll_path():
+    if getattr(sys, 'frozen', False):
+        base_path = os.path.dirname(sys.executable)
+        return os.path.join(base_path, "_internal", "dll", "crack_low32", "crack_low32.dll")
+    return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_low32", "crack_low32.dll")
+
+
 def crack_worker(args):
-    start, end, r_base, ox, oz, offset_range, spread_type = args
-    
-    lib_path = Path(__file__).parent.parent.parent.parent / "MCBEseedcracker" / "crack_low32" / "crack_low32.dll"
-    lib = ctypes.CDLL(str(lib_path), winmode=0x00000008)
-    
-    lib.crack_low32.argtypes = [
-        ctypes.c_uint32, ctypes.c_uint32,
-        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-    ]
-    lib.crack_low32.restype = ctypes.c_int
-    
-    num_targets = len(r_base)
-    r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-    ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-    oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-    offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-    spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-    results_arr = (ctypes.c_uint32 * 1000)()
-    
-    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
-    return [results_arr[i] for i in range(found)]
+    try:
+        start, end, r_base, ox, oz, offset_range, spread_type = args
+        
+        dll_path = get_dll_path()
+        
+        if not os.path.exists(dll_path):
+            print(f"[ERROR] DLL not found: {dll_path}")
+            return []
+        
+        lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+        
+        lib.crack_low32.argtypes = [
+            ctypes.c_uint32, ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+        ]
+        lib.crack_low32.restype = ctypes.c_int
+        
+        num_targets = len(r_base)
+        r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
+        ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
+        oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
+        offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
+        spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
+        results_arr = (ctypes.c_uint32 * 1000)()
+        
+        found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
+        return [results_arr[i] for i in range(found)]
+    except Exception as e:
+        print(f"[ERROR] crack_worker exception: {e}")
+        return []
 
 
 class Low32Worker(QThread):
@@ -56,7 +72,6 @@ class Low32Worker(QThread):
         
         self.progress_file = "progress_low32.json"
         
-        import json
         data_file = os.path.join(
             os.path.dirname(__file__), "..", "data", "structures.json"
         )
@@ -68,11 +83,19 @@ class Low32Worker(QThread):
             r_base, ox, oz, offset_range, spread_type = self.prepare_structures()
             
             num_processes = mp.cpu_count()
+            dll_path = get_dll_path()
+            
             print(f"[INFO] Using {num_processes} processes for parallel cracking")
             print(f"[INFO] Start value: {self.start_value}")
             print(f"[INFO] Original start value: {self.original_start_value}")
             print(f"[INFO] End value: {self.end_value}")
             print(f"[INFO] Total range: {self.end_value - self.original_start_value:,}")
+            print(f"[INFO] DLL path: {dll_path}")
+            print(f"[INFO] DLL exists: {os.path.exists(dll_path)}")
+            
+            if not os.path.exists(dll_path):
+                self.error_occurred.emit(f"DLL not found: {dll_path}")
+                return
             
             total_range = self.end_value - self.original_start_value + 1
             step_size = 200_000_000
@@ -84,71 +107,66 @@ class Low32Worker(QThread):
             last_save_time = start_time
             last_result_save_time = start_time
             
-            pool = mp.Pool(num_processes)
-            
-            end_inclusive = self.end_value
-            while current <= end_inclusive and not self.is_stopped:
-                while self.is_paused:
-                    time.sleep(0.1)
-                    if self.is_stopped:
-                        pool.close()
-                        pool.join()
+            ctx = mp.get_context('spawn')
+            with ctx.Pool(num_processes) as pool:
+                end_inclusive = self.end_value
+                while current <= end_inclusive and not self.is_stopped:
+                    while self.is_paused:
+                        time.sleep(0.1)
+                        if self.is_stopped:
+                            return
+                    
+                    step_start = current
+                    step_end = min(current + step_size - 1, end_inclusive)
+                    chunk_size = max(1, (step_end - step_start + 1) // num_processes)
+                    
+                    tasks = []
+                    for i in range(num_processes):
+                        task_start = step_start + i * chunk_size
+                        task_end = min(step_start + (i + 1) * chunk_size - 1, step_end) if i < num_processes - 1 else step_end
+                        if task_start <= task_end:
+                            tasks.append((task_start, task_end + 1, r_base, ox, oz, offset_range, spread_type))
+                    
+                    try:
+                        results_list = pool.map(crack_worker, tasks)
+                        
+                        for found in results_list:
+                            if found:
+                                self.results.extend(found)
+                                for seed in found:
+                                    self.found_seed.emit(seed)
+                        
+                    except Exception as e:
+                        print(f"[ERROR] Pool map exception: {e}")
+                        self.error_occurred.emit(str(e))
                         return
-                
-                step_start = current
-                step_end = min(current + step_size - 1, end_inclusive)
-                chunk_size = max(1, (step_end - step_start + 1) // num_processes)
-                
-                tasks = []
-                for i in range(num_processes):
-                    task_start = step_start + i * chunk_size
-                    task_end = min(step_start + (i + 1) * chunk_size - 1, step_end) if i < num_processes - 1 else step_end
-                    if task_start <= task_end:
-                        tasks.append((task_start, task_end + 1, r_base, ox, oz, offset_range, spread_type))
-                
-                try:
-                    results_list = pool.map(crack_worker, tasks)
                     
-                    for found in results_list:
-                        self.results.extend(found)
-                        for seed in found:
-                            self.found_seed.emit(seed)
+                    current = step_end + 1
                     
-                except Exception as e:
-                    self.error_occurred.emit(str(e))
-                    pool.close()
-                    pool.join()
-                    return
-                
-                current = step_end + 1
-                
-                now = time.time()
-                step_elapsed = now - last_progress_time
-                step_processed = current - last_progress_current
-                
-                processed = min(current, self.end_value + 1)
-                progress = (processed - self.original_start_value) / total_range * 100
-                speed = int(step_processed / step_elapsed) if step_elapsed > 0 else 0
-                eta = int((self.end_value - processed + 1) / speed) if speed > 0 else 0
-                
-                print(f"[PROGRESS] {progress:.2f}% | Current: {current:,} | Speed: {speed:,}/s | ETA: {eta}s")
-                
-                self.progress_updated.emit(progress, speed, eta)
-                
-                last_progress_time = now
-                last_progress_current = current
-                
-                if now - last_save_time >= 60:
-                    print(f"[SAVE] Saving progress at {current:,}")
-                    self.save_progress(current)
-                    last_save_time = now
-                
-                if now - last_result_save_time >= 30:
-                    print(f"[RESULT SAVE] Found {len(self.results)} seeds so far")
-                    last_result_save_time = now
-            
-            pool.close()
-            pool.join()
+                    now = time.time()
+                    step_elapsed = now - last_progress_time
+                    step_processed = current - last_progress_current
+                    
+                    processed = min(current, self.end_value + 1)
+                    progress = (processed - self.original_start_value) / total_range * 100
+                    speed = int(step_processed / step_elapsed) if step_elapsed > 0 else 0
+                    eta = int((self.end_value - processed + 1) / speed) if speed > 0 else 0
+                    
+                    print(f"[PROGRESS] {progress:.2f}% | Current: {current:,} | Speed: {speed:,}/s | ETA: {eta}s")
+                    
+                    self.progress_updated.emit(progress, speed, eta)
+                    
+                    last_progress_time = now
+                    last_progress_current = current
+                    
+                    if now - last_save_time >= 60:
+                        print(f"[SAVE] Saving progress at {current:,}")
+                        self.save_progress(current)
+                        last_save_time = now
+                    
+                    if now - last_result_save_time >= 30:
+                        print(f"[RESULT SAVE] Found {len(self.results)} seeds so far")
+                        last_result_save_time = now
             
             if not self.is_stopped:
                 print(f"[COMPLETE] Finished! Found {len(self.results)} seeds")
@@ -157,6 +175,8 @@ class Low32Worker(QThread):
                 print(f"[STOPPED] Worker stopped by user at {current:,}")
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self.error_occurred.emit(str(e))
     
     def prepare_structures(self):
@@ -210,15 +230,8 @@ class Low32Worker(QThread):
             with open(self.progress_file, 'w', encoding='utf-8') as f:
                 json.dump(progress_data, f, indent=2)
             print(f"[SAVE SUCCESS] Progress saved to {self.progress_file}")
-            print(f"[SAVE DATA] Current: {current:,}, Original Start: {self.original_start_value:,}, End: {self.end_value:,}")
         except Exception as e:
             print(f"[SAVE ERROR] Failed to save progress: {e}")
-    
-    def load_progress(self):
-        if os.path.exists(self.progress_file):
-            with open(self.progress_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return None
     
     def pause(self):
         self.is_paused = True

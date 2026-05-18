@@ -2,9 +2,65 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import time
 import json
 import os
+import sys
 import multiprocessing as mp
 import ctypes
-from pathlib import Path
+
+
+def get_dll_path():
+    if getattr(sys, 'frozen', False):
+        base_path = os.path.dirname(sys.executable)
+        return os.path.join(base_path, "_internal", "dll", "crack_high32", "crack_high32.dll")
+    return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_high32", "crack_high32.dll")
+
+
+class BiomeSample(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("biome_id", ctypes.c_int)]
+
+
+def crack_batch(args):
+    try:
+        start_high, end_high, low32, samples, y_coord, mc_version = args
+        
+        dll_path = get_dll_path()
+        
+        if not os.path.exists(dll_path):
+            print(f"[ERROR] DLL not found: {dll_path}")
+            return []
+        
+        dll = ctypes.CDLL(dll_path, winmode=0x00000008)
+        
+        dll.crack_high32_soa.argtypes = [
+            ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
+            ctypes.POINTER(BiomeSample), ctypes.c_int,
+            ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
+        ]
+        dll.crack_high32_soa.restype = ctypes.c_int
+        
+        num_samples = len(samples)
+        sample_array = (BiomeSample * num_samples)()
+        for i, (x, z, biome_id) in enumerate(samples):
+            sample_array[i].x = x
+            sample_array[i].z = z
+            sample_array[i].biome_id = biome_id
+        
+        MAX_RESULTS = 1000
+        results = (ctypes.c_uint64 * MAX_RESULTS)()
+        
+        found = dll.crack_high32_soa(
+            start_high, end_high, low32, y_coord,
+            sample_array, num_samples,
+            results, MAX_RESULTS, mc_version
+        )
+        
+        seeds = [results[i] for i in range(found)]
+        if seeds:
+            print(f"[DEBUG] Found {len(seeds)} seeds in batch {start_high}-{end_high}")
+        
+        return seeds
+    except Exception as e:
+        print(f"[ERROR] crack_batch exception: {e}")
+        return []
 
 
 class High32Worker(QThread):
@@ -42,10 +98,7 @@ class High32Worker(QThread):
     
     def run(self):
         try:
-            import json
-            from pathlib import Path
-            
-            biome_data_path = Path(__file__).parent.parent / "data" / "biomes.json"
+            biome_data_path = os.path.join(os.path.dirname(__file__), "..", "data", "biomes.json")
             with open(biome_data_path, 'r', encoding='utf-8') as f:
                 biome_data = json.load(f)
             
@@ -62,14 +115,20 @@ class High32Worker(QThread):
             
             num_processes = mp.cpu_count()
             batch_size = 1000000
+            dll_path = get_dll_path()
             
             print(f"[HIGH32 INFO] Using {num_processes} processes for parallel cracking")
             print(f"[HIGH32 INFO] Low32 value: {self.low32_value}")
             print(f"[HIGH32 INFO] Start value: {self.start_value}")
-            print(f"[HIGH32 INFO] Original start value: {self.original_start_value}")
             print(f"[HIGH32 INFO] End value: {self.end_value}")
             print(f"[HIGH32 INFO] Total range: {self.end_value - self.original_start_value:,}")
             print(f"[HIGH32 INFO] Biome samples: {len(biome_samples)}")
+            print(f"[HIGH32 INFO] DLL path: {dll_path}")
+            print(f"[HIGH32 INFO] DLL exists: {os.path.exists(dll_path)}")
+            
+            if not os.path.exists(dll_path):
+                self.error_occurred.emit(f"DLL not found: {dll_path}")
+                return
             
             tasks = []
             current = self.start_value
@@ -86,10 +145,10 @@ class High32Worker(QThread):
             last_save_time = start_time
             
             print(f"[HIGH32 INFO] Total tasks: {total_tasks}")
-            print(f"[HIGH32 INFO] Batch size: {batch_size:,}")
             
-            with mp.Pool(num_processes) as pool:
-                for result in pool.imap_unordered(self.crack_batch, tasks):
+            ctx = mp.get_context('spawn')
+            with ctx.Pool(num_processes) as pool:
+                for result in pool.imap_unordered(crack_batch, tasks):
                     if self.is_stopped:
                         break
                     
@@ -135,59 +194,6 @@ class High32Worker(QThread):
             traceback.print_exc()
             self.error_occurred.emit(str(e))
     
-    @staticmethod
-    def crack_batch(args):
-        start_high, end_high, low32, samples, y_coord, mc_version = args
-        try:
-            script_dir = Path(__file__).parent.parent.parent.parent.resolve()
-            dll_path = script_dir / "MCBEseedcracker" / "crack_high32" / "crack_high32.dll"
-            
-            if not dll_path.exists():
-                print(f"[ERROR] DLL not found: {dll_path}")
-                return []
-            
-            os.add_dll_directory(str(dll_path.parent))
-            dll = ctypes.CDLL(str(dll_path), winmode=0x00000008)
-            
-            class BiomeSample(ctypes.Structure):
-                _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("biome_id", ctypes.c_int)]
-            
-            dll.crack_high32_soa.argtypes = [
-                ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
-                ctypes.POINTER(BiomeSample), ctypes.c_int,
-                ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
-            ]
-            dll.crack_high32_soa.restype = ctypes.c_int
-            
-            num_samples = len(samples)
-            sample_array = (BiomeSample * num_samples)()
-            for i, (x, z, biome_id) in enumerate(samples):
-                sample_array[i].x = x
-                sample_array[i].z = z
-                sample_array[i].biome_id = biome_id
-            
-            MAX_RESULTS = 1000
-            results = (ctypes.c_uint64 * MAX_RESULTS)()
-            
-            found = dll.crack_high32_soa(
-                start_high, end_high, low32, y_coord,
-                sample_array, num_samples,
-                results, MAX_RESULTS, mc_version
-            )
-            
-            seeds = [results[i] for i in range(found)]
-            if seeds:
-                print(f"[DEBUG] Found {len(seeds)} seeds in batch {start_high}-{end_high}")
-                for seed in seeds:
-                    print(f"[DEBUG] Seed: {seed} (0x{seed:016X}), Low32: {low32} (0x{low32:08X})")
-            
-            return seeds
-        except Exception as e:
-            print(f"[ERROR] crack_batch failed: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
-    
     def save_progress(self, current):
         progress_data = {
             "mode": "high32",
@@ -206,7 +212,6 @@ class High32Worker(QThread):
             with open(self.progress_file, 'w', encoding='utf-8') as f:
                 json.dump(progress_data, f, indent=2)
             print(f"[HIGH32 SAVE SUCCESS] Progress saved to {self.progress_file}")
-            print(f"[HIGH32 SAVE DATA] Current: {current:,}, Start: {self.start_value:,}, End: {self.end_value:,}")
         except Exception as e:
             print(f"[HIGH32 SAVE ERROR] Failed to save progress: {e}")
     
