@@ -2,11 +2,15 @@
 
 [English](README.md) | 简体中文
 
-Minecraft 基岩版种子破解器 (Windows / Linux)
+Minecraft 基岩版种子研究工具 (Windows / Linux)
 
-> 作者是个MC小白，这个工具大部分代码是AI写的，我只是负责测试和提需求。如有问题欢迎指正。
+> **免责声明**：本工具仅供教育和研究目的使用。旨在帮助玩家理解 Minecraft 的群系生成算法，并验证单人世界的种子。本工具不用于多人服务器作弊或利用游戏机制。
 >
-> Java 版种子破解器推荐使用 [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX)。至于基岩版，我一直想要一个类似的工具，但至今没人做。虽然我这个实现可能不是最好的，但总得有人开头。
+> GitHub 上存在类似的开源项目：
+> - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库
+> - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java 版种子查找器
+>
+> 作者是个MC小白，这个工具大部分代码是AI写的，我只是负责测试和提需求。如有问题欢迎指正。
 >
 > **项目状态**：半成品，目前仅自用。欢迎反馈问题和建议。
 
@@ -14,7 +18,7 @@ Minecraft 基岩版种子破解器 (Windows / Linux)
 
 ## 功能
 
-通过服务器上的建筑位置和群系位置，反推出世界的种子。
+通过种子验证和群系分析，研究 Minecraft 的世界生成算法。
 
 ---
 

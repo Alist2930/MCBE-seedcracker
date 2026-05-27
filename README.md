@@ -2,11 +2,15 @@
 
 English | [简体中文](README_CN.md)
 
-Minecraft Bedrock Edition Seed Cracker (Windows / Linux)
+Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
 
-> I'm a Minecraft newbie. Most of this code was written by AI, and I'm mainly responsible for testing and feature requests. Feedback and corrections are welcome.
+> **Disclaimer**: This tool is for educational and research purposes only. It is designed to help players understand Minecraft's biome generation algorithms and verify seeds for single-player worlds. It is NOT intended for cheating on multiplayer servers or exploiting game mechanics.
 >
-> For Java Edition seed cracking, I recommend [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX). As for Bedrock Edition, I've always wanted a similar tool, but no one has made one yet. While my implementation may not be the best, someone has to start somewhere.
+> Similar open-source projects exist on GitHub:
+> - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library
+> - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java Edition seed finder
+>
+> I'm a Minecraft newbie. Most of this code was written by AI, and I'm mainly responsible for testing and feature requests. Feedback and corrections are welcome.
 >
 > **Project Status**: Work in progress, currently for personal use. Feedback and suggestions are welcome.
 
@@ -14,7 +18,7 @@ Minecraft Bedrock Edition Seed Cracker (Windows / Linux)
 
 ## Features
 
-Reverse-engineer world seeds using structure locations and biome samples from servers.
+Research tool for understanding Minecraft's world generation algorithms through seed verification and biome analysis.
 
 ---
 
