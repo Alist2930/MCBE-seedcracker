@@ -7,6 +7,7 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 > **免责声明**：本工具仅供教育和研究目的使用。旨在帮助玩家理解 Minecraft 的群系生成算法，并验证单人世界的种子。本工具不用于多人服务器作弊或利用游戏机制。
 >
 > GitHub 上存在类似的开源项目：
+>
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java 版种子查找器
 >
@@ -36,16 +37,16 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 
 ## 快速开始
 
-| 平台        | 版本       | 界面 | 使用方式               |
-| ----------- | ---------- | ---- | ---------------------- |
-| **Windows** | 图形界面版 | GUI  | 下载即用，无需编辑代码 |
-| **Linux**   | 命令行版   | 终端 | 编辑配置文件后运行     |
+| 平台        | 版本       | 界面 | 使用方式                       |
+| ----------- | ---------- | ---- | ------------------------------ |
+| **Windows** | 图形界面版 | GUI  | 从 Releases 获取，无需编辑代码 |
+| **Linux**   | 命令行版   | 终端 | 编辑配置文件后运行             |
 
 ### Windows 用户（推荐）
 
-**下载图形界面版本**，无需命令行操作，无需编辑配置文件！
+**从 Releases 获取图形界面版本**，无需命令行操作，无需编辑配置文件！
 
-从 [Releases](../../releases) 页面下载最新版本，解压后运行 `MCBE Seed Cracker.exe`。
+详见 [Releases](../../releases) 页面获取最新版本，解压后运行 `MCBE Seed Cracker.exe`。
 
 详见 [MCBEseedcracker_win_ui/README_CN.md](MCBEseedcracker_win_ui/README_CN.md)。
 
@@ -68,7 +69,7 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 
 ```
 MCBEseedcracker_win_ui/    # Windows 图形界面版（推荐）
-├── dist/                  # 预编译可执行文件（从 Releases 下载）
+├── dist/                  # 预编译可执行文件（可在 Releases 获取）
 ├── ui/                    # UI 源代码
 └── dll/                   # 预编译 DLL
 
@@ -244,7 +245,7 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ### Windows（图形界面）
 
-1. 下载并运行 `MCBE Seed Cracker.exe`
+1. 从 [Releases](../../releases) 获取可执行文件，解压并运行 `MCBE Seed Cracker.exe`
 2. 添加建筑 → 开始低32位破解
 3. 添加群系 → 开始高32位破解
 4. 在 [ChunkBase](https://www.chunkbase.com/apps/seed-map) 验证种子

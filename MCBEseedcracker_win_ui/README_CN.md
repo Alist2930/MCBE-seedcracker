@@ -19,11 +19,11 @@ Windows 桌面应用程序版本，提供图形化界面，无需命令行操作
 
 ---
 
-## 下载
+## 安装
 
-### 方式 1：下载可执行文件（推荐）
+### 方式 1：从 Releases 获取可执行文件（推荐）
 
-从 [Releases](../../releases) 页面下载最新版本的 ZIP 文件，解压后运行 `MCBE Seed Cracker.exe`。
+详见 [Releases](../../releases) 页面获取最新版本，解压后运行 `MCBE Seed Cracker.exe`。
 
 ### 方式 2：从源码运行
 

@@ -38,14 +38,14 @@ Research tool for understanding Minecraft's world generation algorithms through 
 
 | Platform    | Version      | Interface | Usage                                    |
 | ----------- | ------------ | --------- | ---------------------------------------- |
-| **Windows** | GUI Version  | GUI       | Download and run, no code editing needed |
+| **Windows** | GUI Version  | GUI       | Get from Releases, no code editing needed |
 | **Linux**   | Command Line | Terminal  | Edit config files then run               |
 
 ### Windows Users (Recommended)
 
-**Download the GUI version** - no command line or code editing needed!
+**Get the GUI version from Releases** - no command line or code editing needed!
 
-Download from [Releases](../../releases), extract, and run `MCBE Seed Cracker.exe`.
+See [Releases](../../releases) for the latest version. Extract and run `MCBE Seed Cracker.exe`.
 
 See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for details.
 
@@ -68,7 +68,7 @@ Use the command line version. See [MCBEseedcracker_linux/README.md](MCBEseedcrac
 
 ```
 MCBEseedcracker_win_ui/    # Windows GUI version (recommended)
-├── dist/                  # Pre-built executable (download from Releases)
+├── dist/                  # Pre-built executable (available in Releases)
 ├── ui/                    # UI source code
 └── dll/                   # Pre-compiled DLLs
 
@@ -244,7 +244,7 @@ Due to the need for complete traversal and complex biome calculations, it takes 
 
 ### Windows (GUI)
 
-1. Download and run `MCBE Seed Cracker.exe`
+1. Get the executable from [Releases](../../releases), extract and run `MCBE Seed Cracker.exe`
 2. Add structures → Start Low 32-bit cracking
 3. Add biomes → Start High 32-bit cracking
 4. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)

@@ -19,11 +19,11 @@ Windows desktop application with graphical interface, no command line required.
 
 ---
 
-## Download
+## Installation
 
-### Option 1: Download Executable (Recommended)
+### Option 1: Get Executable from Releases (Recommended)
 
-Download the latest ZIP file from [Releases](../../releases), extract and run `MCBE Seed Cracker.exe`.
+See [Releases](../../releases) for the latest version. Extract and run `MCBE Seed Cracker.exe`.
 
 ### Option 2: Run from Source
 
