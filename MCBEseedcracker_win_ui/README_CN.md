@@ -21,12 +21,6 @@ Windows 桌面应用程序版本，提供图形化界面，无需命令行操作
 
 ## 安装
 
-### 方式 1：从 Releases 获取可执行文件（推荐）
-
-详见 [Releases](../../releases) 页面获取最新版本，解压后运行 `MCBE Seed Cracker.exe`。
-
-### 方式 2：从源码运行
-
 ```bash
 # 安装依赖
 pip install PyQt5

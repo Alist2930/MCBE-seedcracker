@@ -21,12 +21,6 @@ Windows desktop application with graphical interface, no command line required.
 
 ## Installation
 
-### Option 1: Get Executable from Releases (Recommended)
-
-See [Releases](../../releases) for the latest version. Extract and run `MCBE Seed Cracker.exe`.
-
-### Option 2: Run from Source
-
 ```bash
 # Install dependencies
 pip install PyQt5

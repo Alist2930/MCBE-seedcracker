@@ -37,16 +37,14 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 
 ## 快速开始
 
-| 平台        | 版本       | 界面 | 使用方式                       |
-| ----------- | ---------- | ---- | ------------------------------ |
-| **Windows** | 图形界面版 | GUI  | 从 Releases 获取，无需编辑代码 |
-| **Linux**   | 命令行版   | 终端 | 编辑配置文件后运行             |
+| 平台        | 版本       | 界面 | 使用方式                 |
+| ----------- | ---------- | ---- | ------------------------ |
+| **Windows** | 图形界面版 | GUI  | 从源码运行，详见下方说明 |
+| **Linux**   | 命令行版   | 终端 | 编辑配置文件后运行       |
 
 ### Windows 用户（推荐）
 
-**从 Releases 获取图形界面版本**，无需命令行操作，无需编辑配置文件！
-
-详见 [Releases](../../releases) 页面获取最新版本，解压后运行 `MCBE Seed Cracker.exe`。
+**Windows 图形界面版**，无需命令行操作，无需编辑配置文件！
 
 详见 [MCBEseedcracker_win_ui/README_CN.md](MCBEseedcracker_win_ui/README_CN.md)。
 
@@ -69,7 +67,7 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 
 ```
 MCBEseedcracker_win_ui/    # Windows 图形界面版（推荐）
-├── dist/                  # 预编译可执行文件（可在 Releases 获取）
+├── dist/                  # 预编译可执行文件
 ├── ui/                    # UI 源代码
 └── dll/                   # 预编译 DLL
 
@@ -245,7 +243,7 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ### Windows（图形界面）
 
-1. 从 [Releases](../../releases) 获取可执行文件，解压并运行 `MCBE Seed Cracker.exe`
+1. 运行图形界面程序（详见 [MCBEseedcracker_win_ui/README_CN.md](MCBEseedcracker_win_ui/README_CN.md)）
 2. 添加建筑 → 开始低32位破解
 3. 添加群系 → 开始高32位破解
 4. 在 [ChunkBase](https://www.chunkbase.com/apps/seed-map) 验证种子

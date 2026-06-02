@@ -7,6 +7,7 @@ Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
 > **Disclaimer**: This tool is for educational and research purposes only. It is designed to help players understand Minecraft's biome generation algorithms and verify seeds for single-player worlds. It is NOT intended for cheating on multiplayer servers or exploiting game mechanics.
 >
 > Similar open-source projects exist on GitHub:
+>
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java Edition seed finder
 >
@@ -36,16 +37,14 @@ Research tool for understanding Minecraft's world generation algorithms through 
 
 ## Quick Start
 
-| Platform    | Version      | Interface | Usage                                    |
-| ----------- | ------------ | --------- | ---------------------------------------- |
-| **Windows** | GUI Version  | GUI       | Get from Releases, no code editing needed |
-| **Linux**   | Command Line | Terminal  | Edit config files then run               |
+| Platform    | Version      | Interface | Usage                              |
+| ----------- | ------------ | --------- | ---------------------------------- |
+| **Windows** | GUI Version  | GUI       | Run from source, see details below |
+| **Linux**   | Command Line | Terminal  | Edit config files then run         |
 
 ### Windows Users (Recommended)
 
-**Get the GUI version from Releases** - no command line or code editing needed!
-
-See [Releases](../../releases) for the latest version. Extract and run `MCBE Seed Cracker.exe`.
+**Windows GUI Version** - no command line or code editing needed!
 
 See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for details.
 
@@ -68,7 +67,7 @@ Use the command line version. See [MCBEseedcracker_linux/README.md](MCBEseedcrac
 
 ```
 MCBEseedcracker_win_ui/    # Windows GUI version (recommended)
-├── dist/                  # Pre-built executable (available in Releases)
+├── dist/                  # Pre-built executable
 ├── ui/                    # UI source code
 └── dll/                   # Pre-compiled DLLs
 
@@ -244,7 +243,7 @@ Due to the need for complete traversal and complex biome calculations, it takes 
 
 ### Windows (GUI)
 
-1. Get the executable from [Releases](../../releases), extract and run `MCBE Seed Cracker.exe`
+1. Run the GUI application (see [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md))
 2. Add structures → Start Low 32-bit cracking
 3. Add biomes → Start High 32-bit cracking
 4. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
