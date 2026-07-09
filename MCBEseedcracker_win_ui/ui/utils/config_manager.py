@@ -1,10 +1,23 @@
 import json
 import os
+import sys
+
+
+def get_base_path():
+    """获取程序所在目录的绝对路径"""
+    if getattr(sys, 'frozen', False):
+        # PyInstaller 打包后的路径
+        return os.path.dirname(sys.executable)
+    # 开发环境路径
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class ConfigManager:
-    def __init__(self, config_file="config.json"):
-        self.config_file = config_file
+    def __init__(self, config_file=None):
+        if config_file is None:
+            self.config_file = os.path.join(get_base_path(), "config.json")
+        else:
+            self.config_file = config_file
         self.config = self.load_config()
     
     def load_config(self):

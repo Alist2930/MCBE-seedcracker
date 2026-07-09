@@ -14,6 +14,13 @@ def get_dll_path():
     return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_low32", "crack_low32.dll")
 
 
+def get_base_path():
+    """获取程序所在目录的绝对路径"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 def crack_worker(args):
     try:
         start, end, r_base, ox, oz, offset_range, spread_type = args
@@ -70,7 +77,7 @@ class Low32Worker(QThread):
         if test_mode:
             self.end_value = min(end, 100000000)
         
-        self.progress_file = "progress_low32.json"
+        self.progress_file = os.path.join(get_base_path(), "progress_low32.json")
         
         data_file = os.path.join(
             os.path.dirname(__file__), "..", "data", "structures.json"

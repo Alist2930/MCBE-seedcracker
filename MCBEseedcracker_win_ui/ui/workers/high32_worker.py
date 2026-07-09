@@ -14,6 +14,13 @@ def get_dll_path():
     return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_high32", "crack_high32.dll")
 
 
+def get_base_path():
+    """获取程序所在目录的绝对路径"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 class BiomeSample(ctypes.Structure):
     _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("biome_id", ctypes.c_int)]
 
@@ -94,7 +101,7 @@ class High32Worker(QThread):
         if test_mode:
             self.end_value = min(end, 100000000)
         
-        self.progress_file = "progress_high32.json"
+        self.progress_file = os.path.join(get_base_path(), "progress_high32.json")
     
     def run(self):
         try:

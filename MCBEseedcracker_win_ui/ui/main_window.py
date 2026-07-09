@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 from ui.widgets.structure_list_widget import StructureListWidget
 from ui.widgets.biome_list_widget import BiomeListWidget
 from ui.widgets.progress_widget import ProgressWidget
-from ui.utils.config_manager import ConfigManager
+from ui.utils.config_manager import ConfigManager, get_base_path
 from ui.utils.language_manager import lang_manager
 from ui.workers.low32_worker import Low32Worker
 from ui.workers.high32_worker import High32Worker
@@ -352,7 +352,7 @@ class MainWindow(QMainWindow):
             return
         
         original_start = start
-        progress_file = "progress_low32.json"
+        progress_file = os.path.join(get_base_path(), "progress_low32.json")
         if os.path.exists(progress_file):
             print(f"[UI] Found progress file: {progress_file}")
             reply = QMessageBox.question(
@@ -443,9 +443,10 @@ class MainWindow(QMainWindow):
                 self.low32_worker = None
                 print(f"[UI] Worker stopped and cleared")
             
-            if os.path.exists("progress_low32.json"):
+            progress_low32_file = os.path.join(get_base_path(), "progress_low32.json")
+            if os.path.exists(progress_low32_file):
                 print(f"[UI] Removing progress file")
-                os.remove("progress_low32.json")
+                os.remove(progress_low32_file)
             
             self.start_low32_btn.setEnabled(True)
             self.pause_low32_btn.setEnabled(False)
@@ -509,7 +510,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("invalid_number"))
             return
         
-        progress_file = "progress_high32.json"
+        progress_file = os.path.join(get_base_path(), "progress_high32.json")
         if os.path.exists(progress_file):
             print(f"[UI] Found high32 progress file: {progress_file}")
             reply = QMessageBox.question(
@@ -595,8 +596,9 @@ class MainWindow(QMainWindow):
                 self.high32_worker.stop()
                 self.high32_worker = None
             
-            if os.path.exists("progress_high32.json"):
-                os.remove("progress_high32.json")
+            progress_high32_file = os.path.join(get_base_path(), "progress_high32.json")
+            if os.path.exists(progress_high32_file):
+                os.remove(progress_high32_file)
             
             self.start_high32_btn.setEnabled(True)
             self.pause_high32_btn.setEnabled(False)
@@ -916,15 +918,17 @@ class MainWindow(QMainWindow):
         }
         
         try:
-            with open("session_data.json", 'w', encoding='utf-8') as f:
+            session_file = os.path.join(get_base_path(), "session_data.json")
+            with open(session_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"[ERROR] Failed to save session data: {e}")
     
     def load_session_data(self):
-        if os.path.exists("session_data.json"):
+        session_file = os.path.join(get_base_path(), "session_data.json")
+        if os.path.exists(session_file):
             try:
-                with open("session_data.json", 'r', encoding='utf-8') as f:
+                with open(session_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 
                 if "structures" in data:
@@ -975,10 +979,12 @@ class MainWindow(QMainWindow):
                 if "high32_process_count" in data:
                     self.high32_process_count_input.setValue(data["high32_process_count"])
                 
-                if os.path.exists("progress_low32.json"):
+                progress_low32_file = os.path.join(get_base_path(), "progress_low32.json")
+                if os.path.exists(progress_low32_file):
                     self.restore_low32_progress_ui()
                 
-                if os.path.exists("progress_high32.json"):
+                progress_high32_file = os.path.join(get_base_path(), "progress_high32.json")
+                if os.path.exists(progress_high32_file):
                     self.restore_high32_progress_ui()
                 
             except Exception as e:
@@ -987,7 +993,8 @@ class MainWindow(QMainWindow):
     def restore_low32_progress_ui(self):
         try:
             print(f"[UI] Restoring low32 progress UI...")
-            with open("progress_low32.json", 'r', encoding='utf-8') as f:
+            progress_file = os.path.join(get_base_path(), "progress_low32.json")
+            with open(progress_file, 'r', encoding='utf-8') as f:
                 progress_data = json.load(f)
             
             print(f"[UI] Progress data: {progress_data}")
@@ -1018,7 +1025,8 @@ class MainWindow(QMainWindow):
     
     def restore_high32_progress_ui(self):
         try:
-            with open("progress_high32.json", 'r', encoding='utf-8') as f:
+            progress_file = os.path.join(get_base_path(), "progress_high32.json")
+            with open(progress_file, 'r', encoding='utf-8') as f:
                 progress_data = json.load(f)
             
             start = progress_data.get("start_value", 0)
