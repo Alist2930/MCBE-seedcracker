@@ -37,7 +37,7 @@ python main.py
 
 1. Collect structure coordinates in-game (recommend 5 different structure types)
 2. Click "Add Structure" button, enter structure type and coordinates
-3. Select cracking range (test mode 0~100M or full mode 0~4.3B)
+3. Select cracking range (test mode 0-100M or full mode 0-4.3B)
 4. Click "Start Cracking"
 5. Wait for completion, view candidate low 32-bit values
 
@@ -61,6 +61,15 @@ python main.py
 | bastion_remnant  | Bastion Remnant  | linear      |
 
 > **Tip**: Prioritize linear type structures (Desert Temple, Witch Hut), less computation and faster cracking.
+
+**Structure Chunk Location Method:**
+
+- **Desert Temple**: Chunk containing the center position
+- **Ocean Monument**: Chunk containing the center position
+- **Witch Hut**: Chunk with the largest building area
+- **Jungle Temple**: Chunk with the largest building area
+- **End City**: Chunk with the largest shulker box structure area at entrance
+- **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
 
 ### 2. High 32-bit Cracking (Biomes)
 

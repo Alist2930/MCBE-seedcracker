@@ -22,8 +22,8 @@ Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
 
 ```bash
 cd crack_low32
-python3 crack_low32.py                    # Full crack (0 ~ 2^32-1)
-python3 crack_low32.py --test             # Test mode (0 ~ 100M)
+python3 crack_low32.py                    # Full crack (0 - 2^32-1)
+python3 crack_low32.py --test             # Test mode (0 - 100M)
 python3 crack_low32.py --start 1000 --end 2000  # Custom range
 ```
 
@@ -48,7 +48,7 @@ Crack the low 32 bits of the seed using structure locations.
 | --------- | --------------------------------- |
 | `--start` | Start low32 value (default: 0)    |
 | `--end`   | End low32 value (default: 2^32-1) |
-| `--test`  | Test mode (0 ~ 100M)              |
+| `--test`  | Test mode (0 - 100M)              |
 
 ### Configure Target Structures
 
@@ -106,7 +106,7 @@ Crack the high 32 bits of the seed using biome samples.
 | ------------- | ---------------------------------------- |
 | `--start`     | Start high32 value (default: 0)          |
 | `--end`       | End high32 value (default: 2^32-1)       |
-| `--test`      | Test mode (0 ~ 100M)                     |
+| `--test`      | Test mode (0 - 100M)                     |
 | `--low32`     | Low 32-bit value                         |
 | `--processes` | Number of processes (default: CPU cores) |
 

@@ -22,8 +22,8 @@ Minecraft 基岩版种子破解器 - Linux 命令行版本
 
 ```bash
 cd crack_low32
-python3 crack_low32.py                    # 完整破解 (0 ~ 2^32-1)
-python3 crack_low32.py --test             # 测试模式 (0 ~ 100M)
+python3 crack_low32.py                    # 完整破解 (0 - 2^32-1)
+python3 crack_low32.py --test             # 测试模式 (0 - 100M)
 python3 crack_low32.py --start 1000 --end 2000  # 指定范围
 ```
 
@@ -48,7 +48,7 @@ python3 crack_high32.py --low32 1818588773      # 指定低32位值
 | --------- | ---------------------------- |
 | `--start` | 起始低32位值（默认: 0）      |
 | `--end`   | 结束低32位值（默认: 2^32-1） |
-| `--test`  | 测试模式（0 ~ 100M）         |
+| `--test`  | 测试模式（0 - 100M）         |
 
 ### 配置目标结构
 

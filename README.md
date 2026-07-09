@@ -128,7 +128,7 @@ Using MT19937 to generate random numbers, calculate offsets based on distributio
 
 #### Cracking Method
 
-Iterate through all possible low 32-bit values (0 ~ 2³²-1, about 4.3 billion). For each candidate:
+Iterate through all possible low 32-bit values (0 - 2³²-1, about 4.3 billion). For each candidate:
 
 1. Calculate region seed `r_seed = w + r_base`
 2. Initialize MT19937 and generate offset values
@@ -154,6 +154,15 @@ Multiple structures matching simultaneously can significantly narrow down candid
 | jungle_temple    | Jungle Temple           | **linear**  |
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster.
+
+#### Structure Chunk Location Method
+
+- **Desert Temple**: Chunk containing the center position
+- **Ocean Monument**: Chunk containing the center position
+- **Witch Hut**: Chunk with the largest building area
+- **Jungle Temple**: Chunk with the largest building area
+- **End City**: Chunk with the largest shulker box structure area at entrance
+- **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
 
 ---
 
@@ -194,7 +203,7 @@ This is the standard algorithm used in Java and Bedrock 1.18+.
 
 #### Cracking Method
 
-Iterate through all possible high 32-bit values (0 ~ 2³²-1). For each candidate seed:
+Iterate through all possible high 32-bit values (0 - 2³²-1). For each candidate seed:
 
 1. Calculate complete 64-bit seed: `seed = (high32 << 32) | low32`
 2. Initialize noise generator
