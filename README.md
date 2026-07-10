@@ -155,6 +155,8 @@ Multiple structures matching simultaneously can significantly narrow down candid
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster.
 
+**Coordinates just need to be within the same chunk.**
+
 #### Structure Chunk Location Method
 
 - **Desert Temple**: Chunk containing the center position
@@ -242,9 +244,11 @@ Due to the need for complete traversal and complex biome calculations, it takes 
 | ocean                    | 0   | 6.87%  | plains                | 1   | 10.52% |
 | forest                   | 4   | 12.07% | birch_forest_mutated  | 155 | 2.09%  |
 | dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
-| deep_dark                | 183 | -      |                       |     |        |
+| deep_dark                | 183 | -      | sulfur_caves          | -   | -      |
 
-> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting, default rarity is 1.
+> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
+
+> **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
 
 ---
 

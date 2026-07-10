@@ -155,6 +155,8 @@ Minecraft基岩版使用64位整数作为世界种子。结构生成时，系统
 
 > **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船等）。Linear 类型计算量更少，破解速度更快。
 
+**坐标只要是在一个区块内都行。**
+
 #### 结构定位区块确定方法
 
 - **沙漠神殿**：中心位置所在的区块
@@ -242,9 +244,11 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 | ocean（海洋）                        | 0   | 6.87%  | plains（平原）                        | 1   | 10.52% |
 | forest（森林）                       | 4   | 12.07% | birch_forest_mutated（原始桦木森林）  | 155 | 2.09%  |
 | dripstone_caves（溶洞）              | 174 | -      | lush_caves（繁茂洞穴）                | 175 | -      |
-| deep_dark（深暗之域）                | 183 | -      |                                       |     |        |
+| deep_dark（深暗之域）                | 183 | -      | sulfur_caves（硫磺洞穴）              | -   | -      |
 
-> **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark）不参与稀有度排序，默认稀有度为1。
+> **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
+
+> **警告**：`sulfur_caves`（硫磺洞穴）是 MC 1.26+ 新增的地下群系，cubiomes 库暂不支持此群系。请避免使用硫磺洞穴样本进行破解。
 
 ---
 
