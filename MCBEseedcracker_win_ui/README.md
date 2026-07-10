@@ -59,6 +59,8 @@ Windows desktop application with graphical interface, no command line required.
 
 ### 2. High 32-bit Cracking (Biomes)
 
+> **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
+
 1. Collect biome sample coordinates in-game (recommend 5 different biomes)
 2. Select MC version (1.18/1.19/1.20/1.21, for 26.XX use 1.21)
 3. Click "Add Biome" button, enter coordinates and biome type
