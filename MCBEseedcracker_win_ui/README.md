@@ -68,7 +68,7 @@ Windows desktop application with graphical interface, no command line required.
 5. Click "Start Cracking"
 6. Wait for completion, view complete seed
 
-**Biome ID Reference (1.21)**
+**Overworld Biome ID Reference (1.21)**
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |

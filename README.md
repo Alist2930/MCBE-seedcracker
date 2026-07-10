@@ -213,7 +213,9 @@ Iterate through all possible high 32-bit values (0 - 2³²-1). For each candidat
 
 Due to the need for complete traversal and complex biome calculations, it takes a long time, usually several hours.
 
-#### Biome ID Reference (1.21)
+> **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
+
+#### Overworld Biome ID Reference (1.21)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |

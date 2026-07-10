@@ -147,7 +147,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 
 > **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
-### Biome ID Reference (1.21)
+### Overworld Biome ID Reference (1.21)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
