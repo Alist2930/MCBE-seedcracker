@@ -345,9 +345,28 @@ Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
 | Last Update    | November 10, 2024         |
 | Max Supported  | Java 1.21.3 (Pale Garden) |
 
-**Not supported:**
+**cubiomes Update Status:**
 
-- Minecraft versions from 2025 onwards (Bedrock 1.26+)
+- cubiomes **stopped updating** after releasing 4.1.2 in November 2024
+- Does not support Bedrock 1.26+
+- Does not support Minecraft versions from 2025 onwards
+
+### Version Mapping
+
+| MC Version | New Biomes                                   |
+| ---------- | -------------------------------------------- |
+| 1.18       | Dripstone Caves, Lush Caves, Mountain biomes |
+| 1.19       | Deep Dark, Mangrove Swamp                    |
+| 1.20       | Cherry Grove                                 |
+| 1.21       | Pale Garden                                  |
+
+### Bedrock vs Java Differences
+
+Even with same version number, Java and Bedrock have biome generation differences:
+
+- **Y-axis Biome Changes**: Java biomes change significantly on Y-axis, Bedrock is more stable
+- **Biome Boundaries**: Biome boundary positions may differ slightly between versions
+- **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
 
 ### Biome Sample Selection Tips
 
@@ -367,7 +386,7 @@ Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
 
 **If you collected Pale Garden samples in 1.21.5+ but cracking failed**:
 
-This is likely because cubiomes 1.21 version (code 28) corresponds to 1.21.4, which has a smaller Pale Garden generation range than 1.21.5+. In 1.21.5+, some positions that were Dark Forest have become Pale Garden.
+This is likely because cubiomes 1.21 version (code 28) corresponds to 1.21.4, which has a smaller Pale Garden generation range than 1.21.5+.
 
 **Solution**:
 

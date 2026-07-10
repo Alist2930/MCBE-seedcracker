@@ -197,34 +197,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 
 ## Version Compatibility
 
-The program checks biome sample compatibility with MC version:
-
-```
-[!] Warning: Some biomes are not available in MC 1.18:
-  (-1922, 1231) -> cherry_grove (ID: 185) requires 1.20+
-```
-
-| Version | New Biomes                                   |
-| ------- | -------------------------------------------- |
-| 1.18    | dripstone_caves, lush_caves, mountain biomes |
-| 1.19    | deep_dark, mangrove_swamp                    |
-| 1.20    | cherry_grove                                 |
-| 1.21    | pale_garden                                  |
-
-### Supported Version Details
-
-High 32-bit cracking is based on cubiomes library, supporting the following versions:
-
-| Version | Enum Value | Notes                |
-| ------- | ---------- | -------------------- |
-| 1.18    | 22         | Includes 1.18.2      |
-| 1.19    | 24         | Includes 1.19.4      |
-| 1.20    | 25         | Includes 1.20.6      |
-| 1.21    | 28         | Winter Drop (1.21.4) |
-
-> **Note**: Currently only major version numbers are supported. Minor versions may have biome generation differences.
-
-### Important Limitation
+### ⚠️ Important Limitation
 
 **High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.3 and stopped updating after November 2024.**
 
@@ -234,10 +207,34 @@ High 32-bit cracking is based on cubiomes library, supporting the following vers
 | Last Update    | November 10, 2024         |
 | Max Supported  | Java 1.21.3 (Pale Garden) |
 
-**Not supported:**
+**cubiomes Update Status:**
 
-- Bedrock 1.26+
-- Minecraft versions from 2025 onwards
+- cubiomes **stopped updating** after releasing 4.1.2 in November 2024
+- Does not support Bedrock 1.26+
+- Does not support Minecraft versions from 2025 onwards
+
+### Version Mapping
+
+| MC Version | New Biomes                                   |
+| ---------- | -------------------------------------------- |
+| 1.18       | Dripstone Caves, Lush Caves, Mountain biomes |
+| 1.19       | Deep Dark, Mangrove Swamp                    |
+| 1.20       | Cherry Grove                                 |
+| 1.21       | Pale Garden                                  |
+
+### Bedrock vs Java Differences
+
+Even with same version number, Java and Bedrock have biome generation differences:
+
+- **Y-axis Biome Changes**: Java biomes change significantly on Y-axis, Bedrock is more stable
+- **Biome Boundaries**: Biome boundary positions may differ slightly between versions
+- **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
+
+### Biome Sample Selection Tips
+
+- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+- **Avoid sampling near biome boundaries**
+- If cracking fails, try different coordinates within the same biome
 
 ### Pale Garden Version Differences
 
