@@ -62,6 +62,8 @@ python main.py
 
 > **Tip**: Prioritize linear type structures (Desert Temple, Witch Hut), less computation and faster cracking.
 
+**Coordinates just need to be within the same chunk.**
+
 **Structure Chunk Location Method:**
 
 - **Desert Temple**: Chunk containing the center position
@@ -153,6 +155,44 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 
 ---
 
+## Biome ID Reference (1.21)
+
+| Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
+| ------------------------ | --- | ------ | --------------------- | --- | ------ |
+| pale_garden              | 186 | 0.08%  | extreme_hills_mutated | 131 | 0.10%  |
+| stony_peaks              | 182 | 0.10%  | jagged_peaks          | 180 | 0.15%  |
+| frozen_peaks             | 181 | 0.15%  | mushroom_island       | 14  | 0.14%  |
+| extreme_hills_plus_trees | 34  | 0.19%  | cherry_grove          | 185 | 0.28%  |
+| ice_spikes               | 140 | 0.23%  | extreme_hills         | 3   | 0.27%  |
+| savanna_mutated          | 163 | 0.22%  | mesa_bryce            | 165 | 0.33%  |
+| snowy_slopes             | 179 | 0.39%  | savanna_plateau       | 36  | 0.40%  |
+| mangrove_swamp           | 184 | 0.52%  | flower_forest         | 132 | 0.65%  |
+| bamboo_jungle            | 168 | 0.65%  | sunflower_plains      | 129 | 0.66%  |
+| mega_taiga               | 32  | 0.68%  | mesa_plateau_stone    | 38  | 0.64%  |
+| grove                    | 178 | 0.75%  | mesa                  | 37  | 0.90%  |
+| swamp                    | 6   | 1.00%  | cold_beach            | 26  | 0.35%  |
+| stone_beach              | 25  | 1.19%  | jungle_edge           | 23  | 1.26%  |
+| deep_frozen_ocean        | 50  | 1.21%  | meadow                | 177 | 1.18%  |
+| roofed_forest            | 29  | 2.00%  | jungle                | 21  | 1.90%  |
+| birch_forest             | 27  | 2.14%  | desert                | 2   | 2.47%  |
+| cold_taiga               | 30  | 2.56%  | frozen_river          | 11  | 0.82%  |
+| warm_ocean               | 44  | 2.24%  | deep_lukewarm_ocean   | 48  | 2.45%  |
+| deep_cold_ocean          | 49  | 2.40%  | frozen_ocean          | 10  | 2.27%  |
+| beach                    | 16  | 2.67%  | ice_plains            | 12  | 2.79%  |
+| taiga                    | 5   | 3.41%  | savanna               | 35  | 4.00%  |
+| deep_ocean               | 24  | 4.38%  | lukewarm_ocean        | 45  | 4.61%  |
+| cold_ocean               | 46  | 4.51%  | river                 | 7   | 6.17%  |
+| ocean                    | 0   | 6.87%  | plains                | 1   | 10.52% |
+| forest                   | 4   | 12.07% | birch_forest_mutated  | 155 | 2.09%  |
+| dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
+| deep_dark                | 183 | -      | sulfur_caves          | -   | -      |
+
+> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
+
+> **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
+
+---
+
 ## Version Compatibility
 
 ### ⚠️ Important Limitation
@@ -190,6 +230,24 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 **Recommendation**: Use Bedrock 1.21.0, closest to cubiomes-supported Java 1.21 biome algorithms.
 
+### Pale Garden Version Differences
+
+**Important**: cubiomes library currently only supports up to MC 1.21.4 (Winter Drop), while MC 1.21.5+ has adjusted Pale Garden generation range.
+
+| MC Version         | cubiomes Support | Pale Garden Generation                               |
+| ------------------ | ---------------- | ---------------------------------------------------- |
+| 1.21.3 and earlier | ✅ (code 27)     | Doesn't exist, position is Dark Forest               |
+| 1.21.4             | ✅ (code 28)     | Exists, but smaller range                            |
+| 1.21.5+            | ❌ Not supported | Expanded range, some Dark Forest becomes Pale Garden |
+
+**If you collected Pale Garden samples in 1.21.5+ but cracking failed**:
+
+This is likely because cubiomes 1.21 version (code 28) corresponds to 1.21.4, which has a smaller Pale Garden generation range than 1.21.5+.
+
+**Solution**:
+
+Change Pale Garden samples to Dark Forest (roofed_forest, ID: 29) and try again.
+
 ---
 
 ## FAQ
@@ -198,31 +256,36 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 **Possible causes:**
 
-1. Incorrect structure coordinates
-2. Insufficient structures (recommend at least 5)
-3. Poor structure type selection (prioritize linear types)
+1. **Incorrect structure coordinates** - Coordinates are wrong, or chunk location method is incorrect
+2. **Insufficient structures** - Too few structures will result in too many candidate seeds, recommend at least 5 different structure types
+3. **Poor structure type selection** - Some structures (like villages) have complex generation rules. Recommended:
+   - Desert Temple, Witch Hut, Jungle Temple (simple and stable generation rules)
+   - Ocean Monument, End City
+4. **Version incompatibility** - If the target world was generated in an older version (pre-1.18), structure positions may differ from current version
 
 **Solutions:**
 
 - Verify coordinates are correct
 - Add more structures
 - Change structure types
+- Confirm the target world's generation version
 
 ### High 32-bit Cracking Failed
 
 **Possible causes:**
 
-1. Incorrect low 32-bit value
-2. Incorrect biome sample coordinates or IDs
-3. Improper sampling height (recommend Y >= 200)
-4. Version incompatibility (Bedrock 1.26.x vs Java 1.21 differences)
+1. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
+2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
+3. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
+4. **Insufficient biome samples** - Recommend at least 5 samples
+5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
 **Solutions:**
 
 - Confirm low 32-bit value is correct
-- Verify biome samples
+- Verify biome sample coordinates and IDs
 - Increase sampling height
-- Use Bedrock 1.21.0 version
+- Choose rare biomes as samples
 
 ---
 

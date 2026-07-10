@@ -185,9 +185,11 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 | ocean                    | 0   | 6.87%  | plains                | 1   | 10.52% |
 | forest                   | 4   | 12.07% | birch_forest_mutated  | 155 | 2.09%  |
 | dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
-| deep_dark                | 183 | -      |                       |     |        |
+| deep_dark                | 183 | -      | sulfur_caves          | -   | -      |
 
-> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark) are not included in rarity sorting, default rarity is 1.
+> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
+
+> **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
 
 See the `BIOME_IDS` dictionary at the beginning of `crack_high32.py` for the complete list.
 
