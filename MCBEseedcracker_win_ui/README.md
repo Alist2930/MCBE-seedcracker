@@ -197,22 +197,6 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 
 ## Version Compatibility
 
-### ⚠️ Important Limitation
-
-**High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.3 and stopped updating after November 2024.**
-
-| cubiomes Info  | Details                   |
-| -------------- | ------------------------- |
-| Latest Version | 4.1.2                     |
-| Last Update    | November 10, 2024         |
-| Max Supported  | Java 1.21.3 (Pale Garden) |
-
-**cubiomes Update Status:**
-
-- cubiomes **stopped updating** after releasing 4.1.2 in November 2024
-- Does not support Bedrock 1.26+
-- Does not support Minecraft versions from 2025 onwards
-
 ### Version Mapping
 
 | MC Version | New Biomes                                   |
@@ -230,13 +214,29 @@ Even with same version number, Java and Bedrock have biome generation difference
 - **Biome Boundaries**: Biome boundary positions may differ slightly between versions
 - **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
 
-### Biome Sample Selection Tips
+#### Biome Sample Selection Tips
 
 - **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
 - **Avoid sampling near biome boundaries**
 - If cracking fails, try different coordinates within the same biome
 
-### Pale Garden Version Differences
+### ⚠️ Important Limitation
+
+**High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.3 and stopped updating after November 2024.**
+
+| cubiomes Info  | Details                   |
+| -------------- | ------------------------- |
+| Latest Version | 4.1.2                     |
+| Last Update    | November 10, 2024         |
+| Max Supported  | Java 1.21.3 (Pale Garden) |
+
+**cubiomes Update Status:**
+
+- cubiomes **stopped updating** after releasing 4.1.2 in November 2024
+- Does not support Bedrock 1.26+
+- Does not support Minecraft versions from 2025 onwards
+
+#### Pale Garden Version Differences
 
 **Important**: cubiomes library currently only supports up to MC 1.21.4 (Winter Drop), while MC 1.21.5+ has adjusted Pale Garden generation range.
 
