@@ -12,7 +12,7 @@ Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
 
 - **OS**: Linux (x86_64)
 - **Python**: 3.6+
-- **Game Version**: 1.21+ (recommended), also supports 1.18/1.19/1.20
+- **Game Version**: 1.18/1.19/1.20/1.21/26.XX
 
 ---
 
@@ -131,7 +131,7 @@ Edit the beginning of `crack_high32.py`:
 LOW32 = 1818588773
 
 # MC version
-MC_VERSION_STR = "1.21"  # Options: "1.18", "1.19", "1.20", "1.21"
+MC_VERSION_STR = "1.21"  # Options: "1.18", "1.19", "1.20", "1.21" (for 26.XX, use "1.21")
 
 # Biome samples (recommended: 5)
 SAMPLES = [

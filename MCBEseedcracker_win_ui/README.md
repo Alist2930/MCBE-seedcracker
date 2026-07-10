@@ -13,7 +13,7 @@ Windows desktop application with graphical interface, no command line required.
 - ✅ **High 32-bit Cracking** - Crack seed high 32 bits using biome samples
 - ✅ **Progress Save/Restore** - Resume cracking after interruption
 - ✅ **Chinese/English Support** - Bilingual interface
-- ✅ **Multi-version Support** - MC 1.18/1.19/1.20/1.21
+- ✅ **Multi-version Support** - MC 1.18/1.19/1.20/1.21/26.XX
 - ✅ **Structure Icons** - Display icons for structure types
 - ✅ **Biome Colors** - Display colors for biome types
 
@@ -76,7 +76,7 @@ python main.py
 ### 2. High 32-bit Cracking (Biomes)
 
 1. Collect biome sample coordinates in-game (recommend 5 different biomes)
-2. Select MC version (1.18/1.19/1.20/1.21)
+2. Select MC version (1.18/1.19/1.20/1.21, for 26.XX use 1.21)
 3. Click "Add Biome" button, enter coordinates and biome type
 4. Enter low 32-bit value (from low 32-bit cracking result)
 5. Click "Start Cracking"

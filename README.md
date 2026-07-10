@@ -26,7 +26,7 @@ Research tool for understanding Minecraft's world generation algorithms through 
 ## Requirements
 
 - **OS**: Windows 10+ or Linux (x86_64)
-- **Game Version**: 1.21+ (recommended), also supports 1.18/1.19/1.20 (please report issues)
+- **Game Version**: 1.18/1.19/1.20/1.21/26.XX
 
 > **Version Notes**:
 >
@@ -54,7 +54,7 @@ See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for det
 - ✅ Low 32-bit & High 32-bit cracking
 - ✅ Progress save/restore
 - ✅ Chinese/English support
-- ✅ MC 1.18/1.19/1.20/1.21 support
+- ✅ MC 1.18/1.19/1.20/1.21/26.XX support
 - ✅ Structure icons and biome colors
 
 ### Linux Users
