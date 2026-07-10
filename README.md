@@ -360,13 +360,13 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 ### ⚠️ Important Limitation
 
-**High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.3 and stopped updating after November 2024.**
+**High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.4 (Winter Drop) and stopped updating after November 2024.**
 
 | cubiomes Info  | Details                   |
 | -------------- | ------------------------- |
 | Latest Version | 4.1.2                     |
 | Last Update    | November 10, 2024         |
-| Max Supported  | Java 1.21.3 (Pale Garden) |
+| Max Supported  | Java 1.21.4 (Winter Drop) |
 
 **cubiomes Update Status:**
 

@@ -222,13 +222,13 @@ pyinstaller build.spec --noconfirm
 
 ### ⚠️ 重要限制
 
-**高32位破解功能基于 cubiomes 库，仅支持到 Java 版 1.21.3，之后不再更新。**
+**高32位破解功能基于 cubiomes 库，仅支持到 Java 版 1.21.4（Winter Drop），之后不再更新。**
 
 | cubiomes 信息  | 详情                         |
 | -------------- | ---------------------------- |
 | 最新版本       | 4.1.2                        |
 | 最后更新       | 2024年11月10日               |
-| 支持的最高版本 | Java 版 1.21.3 (Pale Garden) |
+| 支持的最高版本 | Java 版 1.21.4 (Winter Drop) |
 
 **cubiomes 更新状态：**
 
