@@ -236,7 +236,7 @@ High 32-bit cracking is based on cubiomes library, supporting the following vers
 
 **Not supported:**
 
-- Java 1.22+ or Bedrock 1.22+
+- Bedrock 1.26+
 - Minecraft versions from 2025 onwards
 
 ### Pale Garden Version Differences
@@ -276,6 +276,8 @@ chmod +x build.sh
 ---
 
 ## Performance Reference
+
+Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
 
 | Cracker     | Speed  | Estimated Time (2^32) |
 | ----------- | ------ | --------------------- |

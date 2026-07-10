@@ -97,6 +97,8 @@ After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/se
 
 ## Performance Reference
 
+Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
+
 | Cracker     | Speed  | Estimated Time (2^32) |
 | ----------- | ------ | --------------------- |
 | Low 32-bit  | ~3M/s  | ~24 minutes           |
@@ -208,7 +210,7 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 **cubiomes Update Status:**
 
 - cubiomes **stopped updating** after releasing 4.1.2 in November 2024
-- Does not support Java 1.22+ or Bedrock 1.22+
+- Does not support Bedrock 1.26+
 - Does not support Minecraft versions from 2025 onwards
 
 ### Version Mapping
@@ -226,9 +228,13 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 - **Y-axis Biome Changes**: Java biomes change significantly on Y-axis, Bedrock is more stable
 - **Biome Boundaries**: Biome boundary positions may differ slightly between versions
-- **New Version Differences**: Bedrock 1.26.x has significant differences from Java 1.21 biome algorithms
+- **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
 
-**Recommendation**: Use Bedrock 1.21.0, closest to cubiomes-supported Java 1.21 biome algorithms.
+### Biome Sample Selection Tips
+
+- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+- **Avoid sampling near biome boundaries**
+- If cracking fails, try different coordinates within the same biome
 
 ### Pale Garden Version Differences
 

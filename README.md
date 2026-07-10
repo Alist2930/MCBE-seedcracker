@@ -324,6 +324,8 @@ If significantly longer:
 
 ## Performance Reference
 
+Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
+
 | Cracker     | Speed  | Estimated Time (2^32) |
 | ----------- | ------ | --------------------- |
 | Low 32-bit  | ~3M/s  | ~24 minutes           |

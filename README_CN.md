@@ -324,6 +324,8 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ## 性能参考
 
+测试设备：Intel Core i5-2500K @ 3.30GHz，4核
+
 | 破解器 | 速度   | 预计时间 (2^32) |
 | ------ | ------ | --------------- |
 | 低32位 | ~3M/s  | ~24 分钟        |
