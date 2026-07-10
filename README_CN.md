@@ -250,6 +250,8 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 > **警告**：`sulfur_caves`（硫磺洞穴）是 MC 1.26+ 新增的地下群系，cubiomes 库暂不支持此群系。请避免使用硫磺洞穴样本进行破解。
 
+> **注意**：ChunkBase 等网站使用 Java 版群系名称，与基岩版不同。例如：Java 的 `stony_shore` 在基岩版是 `stone_beach`，Java 的 `dark_forest` 在基岩版是 `roofed_forest`。验证时请注意区分。
+
 ---
 
 ## 完整流程
@@ -266,8 +268,6 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 1. 编辑 `crack_low32.py` → 添加建筑 → 运行
 2. 编辑 `crack_high32.py` → 添加群系 → 运行
 3. 在 [ChunkBase](https://www.chunkbase.com/apps/seed-map) 验证种子
-
-> **注意**：ChunkBase 等网站上的群系命名是按照 Java 版的，与基岩版有所不同。例如：Java 版的 `stony_shore` 在基岩版中是 `stone_beach`，Java 版的 `dark_forest` 在基岩版中是 `roofed_forest`。验证时请注意区分。
 
 ---
 

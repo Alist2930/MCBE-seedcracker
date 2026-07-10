@@ -93,8 +93,6 @@ python main.py
 
 After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map).
 
-> **Note**: Biome names on ChunkBase follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
-
 ---
 
 ## Performance Reference
@@ -190,6 +188,8 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 > **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
 
 > **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
+
+> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
 ---
 
@@ -291,7 +291,8 @@ Change Pale Garden samples to Dark Forest (roofed_forest, ID: 29) and try again.
 
 ## Related Links
 
-- [cubiomes Library](https://github.com/Cubitect/cubiomes)
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking
+- [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 
 ---
 

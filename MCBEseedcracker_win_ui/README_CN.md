@@ -93,8 +93,6 @@ python main.py
 
 破解完成后，在 [ChunkBase](https://www.chunkbase.com/apps/seed-map) 验证种子是否正确。
 
-> **注意**：ChunkBase 等网站使用 Java 版群系名称，与基岩版不同。例如：Java 的 `stony_shore` 在基岩版是 `stone_beach`，Java 的 `dark_forest` 在基岩版是 `roofed_forest`。验证时请注意区分。
-
 ---
 
 ## 性能参考
@@ -190,6 +188,8 @@ pyinstaller build.spec --noconfirm
 > **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
 
 > **警告**：`sulfur_caves`（硫磺洞穴）是 MC 1.26+ 新增的地下群系，cubiomes 库暂不支持此群系。请避免使用硫磺洞穴样本进行破解。
+
+> **注意**：ChunkBase 等网站使用 Java 版群系名称，与基岩版不同。例如：Java 的 `stony_shore` 在基岩版是 `stone_beach`，Java 的 `dark_forest` 在基岩版是 `roofed_forest`。验证时请注意区分。
 
 ---
 
@@ -291,7 +291,8 @@ pyinstaller build.spec --noconfirm
 
 ## 相关链接
 
-- [cubiomes 库](https://github.com/Cubitect/cubiomes)
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算
+- [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 
 ---
 

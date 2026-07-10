@@ -250,6 +250,8 @@ Due to the need for complete traversal and complex biome calculations, it takes 
 
 > **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
 
+> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
+
 ---
 
 ## Complete Workflow
@@ -266,8 +268,6 @@ Due to the need for complete traversal and complex biome calculations, it takes 
 1. Edit `crack_low32.py` → Add structures → Run
 2. Edit `crack_high32.py` → Add biomes → Run
 3. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
-
-> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
 ---
 

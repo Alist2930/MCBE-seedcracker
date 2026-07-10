@@ -191,7 +191,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 
 > **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
 
-See the `BIOME_IDS` dictionary at the beginning of `crack_high32.py` for the complete list.
+> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
 ---
 
@@ -339,15 +339,12 @@ If significantly longer:
 
 After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map).
 
-> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
-
 ---
 
 ## Related Links
 
-- [Main README](../README.md)
-- [Windows GUI Version](../MCBEseedcracker_win_ui/README.md)
-- [cubiomes Library](https://github.com/Cubitect/cubiomes)
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking
+- [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 
 ---
 
