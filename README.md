@@ -55,7 +55,6 @@ See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for det
 - ✅ Progress save/restore
 - ✅ Chinese/English support
 - ✅ MC 1.18/1.19/1.20/1.21/26.XX support
-- ✅ Structure icons and biome colors
 
 ### Linux Users
 

@@ -147,15 +147,7 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 
 > **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
-### Biome Sample Selection Tips
-
-- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-- **Avoid sampling near biome boundaries**
-- If cracking fails, try different coordinates within the same biome
-
----
-
-## Biome ID Reference (1.21)
+### Biome ID Reference (1.21)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
@@ -192,6 +184,12 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 > **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
 
 > **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
+
+### Biome Sample Selection Tips
+
+- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+- **Avoid sampling near biome boundaries**
+- If cracking fails, try different coordinates within the same biome
 
 ---
 

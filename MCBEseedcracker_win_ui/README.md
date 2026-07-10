@@ -14,20 +14,6 @@ Windows desktop application with graphical interface, no command line required.
 - ✅ **Progress Save/Restore** - Resume cracking after interruption
 - ✅ **Chinese/English Support** - Bilingual interface
 - ✅ **Multi-version Support** - MC 1.18/1.19/1.20/1.21/26.XX
-- ✅ **Structure Icons** - Display icons for structure types
-- ✅ **Biome Colors** - Display colors for biome types
-
----
-
-## Installation
-
-```bash
-# Install dependencies
-pip install PyQt5
-
-# Run program
-python main.py
-```
 
 ---
 
@@ -43,24 +29,22 @@ python main.py
 
 **Supported Structures:**
 
-| Structure Type   | Description      | Spread Type |
-| ---------------- | ---------------- | ----------- |
-| desert_temple    | Desert Temple    | linear      |
-| swamp_hut        | Witch Hut        | linear      |
-| jungle_temple    | Jungle Temple    | linear      |
-| shipwreck        | Shipwreck        | linear      |
-| ocean_ruins      | Ocean Ruins      | linear      |
-| igloo            | Igloo            | linear      |
-| ocean_monument   | Ocean Monument   | triangular  |
-| end_city         | End City         | triangular  |
-| village          | Village          | triangular  |
-| mansion          | Woodland Mansion | triangular  |
-| ancient_city     | Ancient City     | triangular  |
-| pillager_outpost | Pillager Outpost | triangular  |
-| nether_fortress  | Nether Fortress  | linear      |
-| bastion_remnant  | Bastion Remnant  | linear      |
+| Structure Type   | Chinese Name            | Distribution |
+| ---------------- | ----------------------- | ------------ |
+| village          | Village/Zombie Village  | triangular   |
+| mansion          | Woodland Mansion        | triangular   |
+| end_city         | End City                | triangular   |
+| ocean_monument   | Ocean Monument          | triangular   |
+| ancient_city     | Ancient City            | triangular   |
+| ocean_ruins      | Ocean Ruins             | **linear**   |
+| shipwreck        | Shipwreck               | **linear**   |
+| nether_complexes | Nether Fortress/Bastion | **linear**   |
+| desert_temple    | Desert Temple           | **linear**   |
+| igloo            | Igloo                   | **linear**   |
+| swamp_hut        | Swamp Hut               | **linear**   |
+| jungle_temple    | Jungle Temple           | **linear**   |
 
-> **Tip**: Prioritize linear type structures (Desert Temple, Witch Hut), less computation and faster cracking.
+> **Tip**: Prioritize linear type structures (Desert Temple, Swamp Hut), less computation and faster cracking.
 
 **Coordinates just need to be within the same chunk.**
 
@@ -81,6 +65,44 @@ python main.py
 4. Enter low 32-bit value (from low 32-bit cracking result)
 5. Click "Start Cracking"
 6. Wait for completion, view complete seed
+
+**Biome ID Reference (1.21)**
+
+| Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
+| ------------------------ | --- | ------ | --------------------- | --- | ------ |
+| pale_garden              | 186 | 0.08%  | extreme_hills_mutated | 131 | 0.10%  |
+| stony_peaks              | 182 | 0.10%  | jagged_peaks          | 180 | 0.15%  |
+| frozen_peaks             | 181 | 0.15%  | mushroom_island       | 14  | 0.14%  |
+| extreme_hills_plus_trees | 34  | 0.19%  | cherry_grove          | 185 | 0.28%  |
+| ice_spikes               | 140 | 0.23%  | extreme_hills         | 3   | 0.27%  |
+| savanna_mutated          | 163 | 0.22%  | mesa_bryce            | 165 | 0.33%  |
+| snowy_slopes             | 179 | 0.39%  | savanna_plateau       | 36  | 0.40%  |
+| mangrove_swamp           | 184 | 0.52%  | flower_forest         | 132 | 0.65%  |
+| bamboo_jungle            | 168 | 0.65%  | sunflower_plains      | 129 | 0.66%  |
+| mega_taiga               | 32  | 0.68%  | mesa_plateau_stone    | 38  | 0.64%  |
+| grove                    | 178 | 0.75%  | mesa                  | 37  | 0.90%  |
+| swamp                    | 6   | 1.00%  | cold_beach            | 26  | 0.35%  |
+| stone_beach              | 25  | 1.19%  | jungle_edge           | 23  | 1.26%  |
+| deep_frozen_ocean        | 50  | 1.21%  | meadow                | 177 | 1.18%  |
+| roofed_forest            | 29  | 2.00%  | jungle                | 21  | 1.90%  |
+| birch_forest             | 27  | 2.14%  | desert                | 2   | 2.47%  |
+| cold_taiga               | 30  | 2.56%  | frozen_river          | 11  | 0.82%  |
+| warm_ocean               | 44  | 2.24%  | deep_lukewarm_ocean   | 48  | 2.45%  |
+| deep_cold_ocean          | 49  | 2.40%  | frozen_ocean          | 10  | 2.27%  |
+| beach                    | 16  | 2.67%  | ice_plains            | 12  | 2.79%  |
+| taiga                    | 5   | 3.41%  | savanna               | 35  | 4.00%  |
+| deep_ocean               | 24  | 4.38%  | lukewarm_ocean        | 45  | 4.61%  |
+| cold_ocean               | 46  | 4.51%  | river                 | 7   | 6.17%  |
+| ocean                    | 0   | 6.87%  | plains                | 1   | 10.52% |
+| forest                   | 4   | 12.07% | birch_forest_mutated  | 155 | 2.09%  |
+| dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
+| deep_dark                | 183 | -      | sulfur_caves          | -   | -      |
+
+> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
+
+> **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
+
+> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
 **Sampling Tips:**
 
@@ -139,9 +161,21 @@ MCBEseedcracker_win_ui/
 
 ---
 
-## Building
+## Run from Source / Building
 
-To build executable yourself:
+### Run from Source
+
+```bash
+# Install dependencies
+pip install PyQt5
+
+# Run the program
+python main.py
+```
+
+### Build Executable
+
+To build the executable yourself:
 
 ```bash
 # Install dependencies
@@ -152,46 +186,6 @@ pyinstaller build.spec --noconfirm
 ```
 
 Build output is in `dist/MCBE Seed Cracker/` directory.
-
----
-
-## Biome ID Reference (1.21)
-
-| Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
-| ------------------------ | --- | ------ | --------------------- | --- | ------ |
-| pale_garden              | 186 | 0.08%  | extreme_hills_mutated | 131 | 0.10%  |
-| stony_peaks              | 182 | 0.10%  | jagged_peaks          | 180 | 0.15%  |
-| frozen_peaks             | 181 | 0.15%  | mushroom_island       | 14  | 0.14%  |
-| extreme_hills_plus_trees | 34  | 0.19%  | cherry_grove          | 185 | 0.28%  |
-| ice_spikes               | 140 | 0.23%  | extreme_hills         | 3   | 0.27%  |
-| savanna_mutated          | 163 | 0.22%  | mesa_bryce            | 165 | 0.33%  |
-| snowy_slopes             | 179 | 0.39%  | savanna_plateau       | 36  | 0.40%  |
-| mangrove_swamp           | 184 | 0.52%  | flower_forest         | 132 | 0.65%  |
-| bamboo_jungle            | 168 | 0.65%  | sunflower_plains      | 129 | 0.66%  |
-| mega_taiga               | 32  | 0.68%  | mesa_plateau_stone    | 38  | 0.64%  |
-| grove                    | 178 | 0.75%  | mesa                  | 37  | 0.90%  |
-| swamp                    | 6   | 1.00%  | cold_beach            | 26  | 0.35%  |
-| stone_beach              | 25  | 1.19%  | jungle_edge           | 23  | 1.26%  |
-| deep_frozen_ocean        | 50  | 1.21%  | meadow                | 177 | 1.18%  |
-| roofed_forest            | 29  | 2.00%  | jungle                | 21  | 1.90%  |
-| birch_forest             | 27  | 2.14%  | desert                | 2   | 2.47%  |
-| cold_taiga               | 30  | 2.56%  | frozen_river          | 11  | 0.82%  |
-| warm_ocean               | 44  | 2.24%  | deep_lukewarm_ocean   | 48  | 2.45%  |
-| deep_cold_ocean          | 49  | 2.40%  | frozen_ocean          | 10  | 2.27%  |
-| beach                    | 16  | 2.67%  | ice_plains            | 12  | 2.79%  |
-| taiga                    | 5   | 3.41%  | savanna               | 35  | 4.00%  |
-| deep_ocean               | 24  | 4.38%  | lukewarm_ocean        | 45  | 4.61%  |
-| cold_ocean               | 46  | 4.51%  | river                 | 7   | 6.17%  |
-| ocean                    | 0   | 6.87%  | plains                | 1   | 10.52% |
-| forest                   | 4   | 12.07% | birch_forest_mutated  | 155 | 2.09%  |
-| dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
-| deep_dark                | 183 | -      | sulfur_caves          | -   | -      |
-
-> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
-
-> **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
-
-> **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
 ---
 
