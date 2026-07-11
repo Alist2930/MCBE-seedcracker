@@ -215,7 +215,31 @@ Due to the need for complete traversal and complex biome calculations, it takes 
 
 > **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
-#### Overworld Biome ID Reference (1.21)
+#### Version Mapping
+
+| Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
+| ------------------- | -------------------------- | ----------------------------------------------- |
+| **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden                                  |
+| **1.21-1.21.40**    | Java 1.21.3                | ❌ No Pale Garden                               |
+| **1.20.60-1.20.81** | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.20.0-1.20.51**  | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.19**            | Java 1.19                  | ✅ Deep Dark, Mangrove Swamp                    |
+| **1.18**            | Java 1.18                  | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
+
+#### Pale Garden Version Differences
+
+⚠️ **Important**: Pale Garden generation range differs between versions:
+
+| MC Version       | Pale Garden Generation                    |
+| ---------------- | ----------------------------------------- |
+| **1.21-1.21.40** | ❌ Doesn't exist, position is Dark Forest |
+| **1.21.50+**     | ✅ Exists, normal generation              |
+
+**If you collected Pale Garden samples in 1.21.50+**: The program will crack normally.
+
+**If in 1.21-1.21.40**: Cannot use Pale Garden samples (biome doesn't exist).
+
+#### Overworld Biome ID Reference (1.21.50)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |

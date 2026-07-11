@@ -54,3 +54,5 @@ progress_*.json
 # Compiled EXE (upload as Release instead)
 MCBEseedcracker_win_ui/dist/
 MCBEseedcracker_win_ui/build/
+
+docs/

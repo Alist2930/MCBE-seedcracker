@@ -13,6 +13,7 @@ from ui.widgets.biome_list_widget import BiomeListWidget
 from ui.widgets.progress_widget import ProgressWidget
 from ui.utils.config_manager import ConfigManager, get_base_path
 from ui.utils.language_manager import lang_manager
+from ui.utils.version_config import WINUI_VERSION_OPTIONS, get_cubiomes_version, get_version_warning
 from ui.workers.low32_worker import Low32Worker
 from ui.workers.high32_worker import High32Worker
 import json
@@ -197,7 +198,8 @@ class MainWindow(QMainWindow):
         
         self.mc_version_combo = QComboBox()
         self.update_mc_version_combo()
-        self.mc_version_combo.setCurrentIndex(4)
+        # Set default version to the highest version (first option)
+        self.mc_version_combo.setCurrentIndex(0)
         self.mc_version_combo.currentIndexChanged.connect(self.on_mc_version_changed)
         input_layout.addRow(lang_manager.get("mc_version"), self.mc_version_combo)
         
@@ -751,42 +753,76 @@ class MainWindow(QMainWindow):
         
         current_data = self.mc_version_combo.currentData()
         self.mc_version_combo.clear()
-        self.mc_version_combo.addItem(lang_manager.get("mc_1_17"), "1.17")
-        self.mc_version_combo.addItem(lang_manager.get("mc_1_18"), "1.18")
-        self.mc_version_combo.addItem(lang_manager.get("mc_1_19"), "1.19")
-        self.mc_version_combo.addItem(lang_manager.get("mc_1_20"), "1.20")
-        self.mc_version_combo.addItem(lang_manager.get("mc_1_21"), "1.21")
+        
+        # 使用新的版本配置（只显示基岩版）
+        for option in WINUI_VERSION_OPTIONS:
+            # 根据当前语言选择显示文本
+            text = option["text_zh"] if lang_manager.language == "zh_CN" else option["text_en"]
+            self.mc_version_combo.addItem(text, option["data"])
+        
+        # 默认选择最新版本（1.21.50）
+        if not current_data:
+            current_data = "1.21.50"
         
         if current_data:
             index = self.mc_version_combo.findData(current_data)
             if index >= 0:
                 self.mc_version_combo.setCurrentIndex(index)
+            else:
+                # 如果找不到，默认选择第一个
+                self.mc_version_combo.setCurrentIndex(0)
         
         self.mc_version_combo.blockSignals(False)
     
     def on_mc_version_changed(self):
-        mc_version = self.mc_version_combo.currentData()
-        self.biome_list.set_mc_version(mc_version)
+        version_key = self.mc_version_combo.currentData()
         
+        # Check biome version compatibility first (before updating version)
         biomes = self.biome_list.get_biomes()
         
         if biomes:
             from ui.utils.biome_version_filter import check_biome_version_compatibility
-            warnings = check_biome_version_compatibility(biomes, mc_version, self.biome_list.biome_data)
+            warnings = check_biome_version_compatibility(biomes, version_key, self.biome_list.biome_data)
             
             if warnings:
+                # User switched to lower version, but has higher version biomes
                 warning_msgs = []
                 for w in warnings:
                     warning_msgs.append(w['message'])
                 
-                reply = QMessageBox.warning(
-                    self, lang_manager.get("version_compatibility_warning"),
-                    lang_manager.get("biomes_not_available").format(mc_version, "\n".join(warning_msgs)),
-                    QMessageBox.Yes | QMessageBox.No
+                # Show error dialog
+                QMessageBox.critical(
+                    self, 
+                    lang_manager.get("version_compatibility_warning"),
+                    lang_manager.get("biomes_not_available").format(version_key, "\n".join(warning_msgs)) + 
+                    "\n\n" + ("请先删除不兼容的群系，或选择更高的版本。" if lang_manager.language == "zh_CN" else "Please remove incompatible biomes first, or select a higher version."),
+                    QMessageBox.Ok
                 )
                 
-                if reply == QMessageBox.No:
-                    self.biome_list.clear_biomes()
+                # Restore to previous version
+                self.mc_version_combo.blockSignals(True)
+                prev_index = self.mc_version_combo.findData(self.biome_list.mc_version)
+                if prev_index >= 0:
+                    self.mc_version_combo.setCurrentIndex(prev_index)
+                self.mc_version_combo.blockSignals(False)
+                return
+        
+        # Only update version after compatibility check passes
+        # Get actual cubiomes version code (for cracking)
+        mc_version_code = get_cubiomes_version(version_key)
+        
+        # Pass Bedrock version string (for version compatibility check)
+        self.biome_list.set_mc_version(version_key)
+        
+        # Check version warnings (sulfur caves, etc.)
+        version_warning = get_version_warning(version_key)
+        if version_warning:
+            QMessageBox.warning(
+                self,
+                "版本警告" if lang_manager.language == "zh_CN" else "Version Warning",
+                version_warning + ("\n\n详细信息请查看README文档。" if lang_manager.language == "zh_CN" else "\n\nSee README for details."),
+                QMessageBox.Ok
+            )
     
     def show_about(self):
         QMessageBox.about(
@@ -912,7 +948,7 @@ class MainWindow(QMainWindow):
             "low32_end_value": self.low32_end_input.text(),
             "high32_start_value": self.high32_start_input.text(),
             "high32_end_value": self.high32_end_input.text(),
-            "mc_version": self.mc_version_combo.currentText(),
+            "mc_version": self.mc_version_combo.currentData(),  # Save version data instead of display text
             "low32_process_count": self.low32_process_count_input.value(),
             "high32_process_count": self.high32_process_count_input.value()
         }
@@ -968,9 +1004,10 @@ class MainWindow(QMainWindow):
                 
                 if "mc_version" in data:
                     self.mc_version_combo.blockSignals(True)
-                    index = self.mc_version_combo.findText(data["mc_version"])
+                    index = self.mc_version_combo.findData(data["mc_version"])  # Use findData to search version data
                     if index >= 0:
                         self.mc_version_combo.setCurrentIndex(index)
+                        self.biome_list.set_mc_version(data["mc_version"])  # Update biome list version
                     self.mc_version_combo.blockSignals(False)
                 
                 if "low32_process_count" in data:

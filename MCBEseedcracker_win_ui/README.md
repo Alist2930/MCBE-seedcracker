@@ -13,7 +13,7 @@ Windows desktop application with graphical interface, no command line required.
 - ✅ **High 32-bit Cracking** - Crack seed high 32 bits using biome samples
 - ✅ **Progress Save/Restore** - Resume cracking after interruption
 - ✅ **Chinese/English Support** - Bilingual interface
-- ✅ **Multi-version Support** - MC 1.18/1.19/1.20/1.21/26.XX
+- ✅ **Sub-version Support** - Support Bedrock sub-version selection (e.g. 1.21.50, 1.21-1.21.40)
 
 ---
 
@@ -62,13 +62,43 @@ Windows desktop application with graphical interface, no command line required.
 > **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
 1. Collect biome sample coordinates in-game (recommend 5 different biomes)
-2. Select MC version (1.18/1.19/1.20/1.21, for 26.XX use 1.21)
+2. **Select Bedrock version** (see version mapping table below)
 3. Click "Add Biome" button, enter coordinates and biome type
 4. Enter low 32-bit value (from low 32-bit cracking result)
 5. Click "Start Cracking"
 6. Wait for completion, view complete seed
 
-**Overworld Biome ID Reference (1.21)**
+#### Version Mapping
+
+| Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
+| ------------------- | -------------------------- | ----------------------------------------------- |
+| **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden                                  |
+| **1.21-1.21.40**    | Java 1.21.3                | ❌ No Pale Garden                               |
+| **1.20.60-1.20.81** | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.20.0-1.20.51**  | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.19**            | Java 1.19                  | ✅ Deep Dark, Mangrove Swamp                    |
+| **1.18**            | Java 1.18                  | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
+
+#### Pale Garden Version Differences
+
+⚠️ **Important**: Pale Garden generation range differs between versions:
+
+| MC Version       | Pale Garden Generation                    |
+| ---------------- | ----------------------------------------- |
+| **1.21-1.21.40** | ❌ Doesn't exist, position is Dark Forest |
+| **1.21.50+**     | ✅ Exists, normal generation              |
+
+**If you collected Pale Garden samples in 1.21.50+**: The program will crack normally.
+
+**If in 1.21-1.21.40**: Cannot add Pale Garden samples (biome doesn't exist).
+
+#### Version Selection Tips
+
+- **Latest version first**: Recommend selecting your actual game version
+- **Biome version matching**: Ensure selected version supports your collected biomes
+- **Default recommendation**: Program defaults to 1.21.50 (supports all latest biomes)
+
+**Overworld Biome ID Reference (1.21.50)**
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |

@@ -12,7 +12,7 @@ Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
 
 - **OS**: Linux (x86_64)
 - **Python**: 3.6+
-- **Game Version**: 1.18/1.19/1.20/1.21/26.XX
+- **Game Version**: 1.18/1.19/1.20/1.21/26.XX (sub-version support)
 
 ---
 
@@ -130,8 +130,8 @@ Edit the beginning of `crack_high32.py`:
 # Low 32-bit value (from crack_low32 result)
 LOW32 = 1818588773
 
-# MC version
-MC_VERSION_STR = "1.21"  # Options: "1.18", "1.19", "1.20", "1.21" (for 26.XX, use "1.21")
+# MC version (sub-version support)
+MC_VERSION_STR = "1.21.50"  # See version mapping table below
 
 # Biome samples (recommended: 5)
 SAMPLES = [
@@ -145,9 +145,33 @@ SAMPLES = [
 Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground biome interference)
 ```
 
+#### Version Mapping
+
+| Bedrock Version  | MC_VERSION_STR Value | Supported Biomes                                |
+| ---------------- | -------------------- | ----------------------------------------------- |
+| **1.21.50**      | `"1.21.50"`          | ✅ Pale Garden                                  |
+| **1.21-1.21.40** | `"1.21-1.21.40"`     | ❌ No Pale Garden                               |
+| **1.20.60-81**   | `"1.20.60-81"`       | ✅ Cherry Grove                                 |
+| **1.20.0-51**    | `"1.20.0-51"`        | ✅ Cherry Grove                                 |
+| **1.19**         | `"1.19"`             | ✅ Deep Dark, Mangrove Swamp                    |
+| **1.18**         | `"1.18"`             | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
+
+#### Pale Garden Version Differences
+
+⚠️ **Important**: Pale Garden generation range differs between versions:
+
+| MC Version       | Pale Garden Generation                    |
+| ---------------- | ----------------------------------------- |
+| **1.21-1.21.40** | ❌ Doesn't exist, position is Dark Forest |
+| **1.21.50+**     | ✅ Exists, normal generation              |
+
+**If you collected Pale Garden samples in 1.21.50+**: The program will crack normally.
+
+**If using Pale Garden in 1.21-1.21.40**: Program will show version incompatibility warning.
+
 > **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
-### Overworld Biome ID Reference (1.21)
+### Overworld Biome ID Reference (1.21.50)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |

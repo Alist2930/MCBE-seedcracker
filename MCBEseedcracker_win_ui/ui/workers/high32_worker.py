@@ -77,14 +77,23 @@ class High32Worker(QThread):
     error_occurred = pyqtSignal(str)
     
     VERSION_MAP = {
+        # 基岩版版本 → cubiomes代码
+        "1.18": 22,  # MC_1_18_2
+        "1.19": 24,  # MC_1_19_4
+        "1.20": 25,  # MC_1_20_6
+        
+        # 基岩版小版本映射
+        "1.21.50": 28,  # MC_1_21_WD (支持苍白之园)
+        "1.21-1.21.40": 27,  # MC_1_21_3 (不支持苍白之园)
+        "1.20.60-81": 25,  # MC_1_20_6
+        "1.20.0-51": 25,  # MC_1_20_6
+        
+        # 兼容旧的版本字符串
+        "1.21": 28,  # 默认使用Winter Drop
         "1.17": 0,
-        "1.18": 22,
-        "1.19": 24,
-        "1.20": 25,
-        "1.21": 28,
     }
     
-    def __init__(self, low32_value, biomes, start=0, end=4294967295, test_mode=False, mc_version="1.21"):
+    def __init__(self, low32_value, biomes, start=0, end=4294967295, test_mode=False, mc_version="1.21.50"):
         super().__init__()
         self.low32_value = low32_value
         self.biomes = biomes
@@ -93,7 +102,7 @@ class High32Worker(QThread):
         self.end_value = end
         self.test_mode = test_mode
         self.mc_version_str = mc_version
-        self.mc_version = self.VERSION_MAP.get(mc_version, 28)
+        self.mc_version = self.VERSION_MAP.get(mc_version, 28)  # 默认使用Winter Drop
         self.is_paused = False
         self.is_stopped = False
         self.results = []

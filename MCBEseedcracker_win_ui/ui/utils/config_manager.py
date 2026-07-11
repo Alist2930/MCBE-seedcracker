@@ -4,11 +4,11 @@ import sys
 
 
 def get_base_path():
-    """获取程序所在目录的绝对路径"""
+    """Get absolute path of program directory"""
     if getattr(sys, 'frozen', False):
-        # PyInstaller 打包后的路径
+        # Path after PyInstaller packaging
         return os.path.dirname(sys.executable)
-    # 开发环境路径
+    # Development environment path
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -26,7 +26,7 @@ class ConfigManager:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"加载配置文件失败: {e}")
+                print(f"Failed to load config file: {e}")
                 return self.get_default_config()
         else:
             return self.get_default_config()
@@ -54,7 +54,7 @@ class ConfigManager:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"保存配置文件失败: {e}")
+            print(f"Failed to save config file: {e}")
     
     def get(self, key, default=None):
         return self.config.get(key, default)

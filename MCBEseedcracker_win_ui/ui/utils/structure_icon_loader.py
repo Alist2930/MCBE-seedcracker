@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Structure Icon Loader - 建筑图标加载器
-支持从本地文件加载图标，无文件时用纯色方块替代
+Structure Icon Loader - Structure icon loader
+Supports loading icons from local files, uses solid color blocks as fallback when files are missing
 """
 import os
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QPainter

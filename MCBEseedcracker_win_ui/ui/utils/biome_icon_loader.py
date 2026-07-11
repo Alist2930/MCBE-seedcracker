@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Biome Icon Loader - 纯色方块图标
+Biome Icon Loader - Solid color block icons
 """
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QPainter
 from PyQt5.QtCore import QSize, Qt

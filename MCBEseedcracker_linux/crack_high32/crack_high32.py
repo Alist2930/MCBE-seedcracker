@@ -164,7 +164,7 @@ SAMPLES = [
 LOW32 = 1818588773
 Y_COORD = 200
 
-MC_VERSION_STR = "1.21"
+MC_VERSION_STR = "1.21.50"  # Default to Winter Drop version (supports Pale Garden)
 
 MC_1_18 = 22
 MC_1_19 = 24
@@ -172,10 +172,22 @@ MC_1_20 = 25
 MC_1_21 = 28
 
 VERSION_MAP = {
+    "1.17": MC_1_17,
     "1.18": MC_1_18,
     "1.19": MC_1_19,
     "1.20": MC_1_20,
     "1.21": MC_1_21,
+    "1.21.1": MC_1_21_1,
+    "1.21.3": MC_1_21_3,
+    "1.21.4": MC_1_21_WD,  # Winter Drop
+    
+    # Bedrock version auto-mapping (matching WinUI version keys)
+    "1.21.50": MC_1_21_WD,  # Supports Pale Garden
+    "1.21-1.21.40": MC_1_21_3,  # Does not support Pale Garden
+    "1.20.60-81": MC_1_20,
+    "1.20.0-51": MC_1_20,
+    "1.19": MC_1_19,
+    "1.18": MC_1_18,
 }
 
 MC_VERSION = VERSION_MAP.get(MC_VERSION_STR, MC_1_21)

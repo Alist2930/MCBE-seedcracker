@@ -18,7 +18,7 @@ class BiomeListWidget(QWidget):
         super().__init__()
         self.biomes = []
         self.biome_data = self.load_biome_data()
-        self.mc_version = "1.21"
+        self.mc_version = "1.21.50"  # 默认使用支持苍白之园的版本
         self.init_ui()
     
     def load_biome_data(self):
@@ -95,23 +95,9 @@ class BiomeListWidget(QWidget):
         self.update_table()
     
     def add_biome(self):
-        dialog = AddBiomeDialog(self.biome_data, self, edit_mode=False)
+        dialog = AddBiomeDialog(self.biome_data, self.mc_version, self, edit_mode=False)
         if dialog.exec_() == QDialog.Accepted:
             biome_type, x, z, y = dialog.get_data()
-            
-            from ui.utils.biome_version_filter import is_biome_available, get_biome_version
-            biome_id = self.biome_data[biome_type]["id"]
-            
-            if not is_biome_available(biome_id, self.mc_version):
-                biome_version = get_biome_version(biome_id)
-                biome_name = self.biome_data[biome_type]['name_zh'] if lang_manager.language == "zh_CN" else self.biome_data[biome_type]['name_en']
-                reply = QMessageBox.warning(
-                    self, lang_manager.get("version_compatibility_warning"),
-                    lang_manager.get("biome_not_available").format(biome_name, biome_version, self.mc_version),
-                    QMessageBox.Yes | QMessageBox.No
-                )
-                if reply == QMessageBox.No:
-                    return
             
             self.biomes.append({
                 "type": biome_type,
@@ -167,7 +153,7 @@ class BiomeListWidget(QWidget):
             return
         
         biome = self.biomes[row]
-        dialog = AddBiomeDialog(self.biome_data, self, edit_mode=True)
+        dialog = AddBiomeDialog(self.biome_data, self.mc_version, self, edit_mode=True)
         
         index = dialog.type_combo.findData(biome["type"])
         if index >= 0:
@@ -197,9 +183,10 @@ class BiomeListWidget(QWidget):
 
 
 class AddBiomeDialog(QDialog):
-    def __init__(self, biome_data, parent=None, edit_mode=False):
+    def __init__(self, biome_data, mc_version="1.21.50", parent=None, edit_mode=False):
         super().__init__(parent)
         self.biome_data = biome_data
+        self.mc_version = mc_version
         self.edit_mode = edit_mode
         self.init_ui()
     
@@ -291,10 +278,26 @@ class AddBiomeDialog(QDialog):
         layout.addRow(buttons)
     
     def _validate_and_accept(self):
-        if self._get_biome_type() is None:
+        biome_type = self._get_biome_type()
+        if biome_type is None:
             QMessageBox.warning(self, lang_manager.get("warning"),
                                 lang_manager.get("invalid_biome_type"))
             return
+        
+        # 检查群系版本兼容性
+        from ui.utils.biome_version_filter import check_single_biome_version
+        result = check_single_biome_version(biome_type, self.mc_version, self.biome_data)
+        
+        if not result['available']:
+            # 低版本不存在高版本群系，直接禁止添加
+            QMessageBox.critical(
+                self, 
+                lang_manager.get("version_compatibility_warning"),
+                result['message'],
+                QMessageBox.Ok
+            )
+            return  # 直接返回，不允许添加
+        
         self.accept()
     
     def _get_biome_type(self):

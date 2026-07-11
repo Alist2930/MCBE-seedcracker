@@ -1,0 +1,30 @@
+--- a/net/minecraft/world/gen/ChunkGenSettings.java
++++ b/net/minecraft/world/gen/ChunkGenSettings.java
+@@ -4,8 +4,8 @@
+ import net.minecraft.init.Blocks;
+ 
+ public class ChunkGenSettings implements IChunkGenSettings {
+-   protected int villageDistance = 32;
+-   protected int villageSeparation = 8;
++   protected int villageDistance = 40; // BEDROCK
++   protected int villageSeparation = 12; // BEDROCK
+    protected int oceanMonumentSpacing = 32;
+    protected int oceanMonumentSeparation = 5;
+    protected int strongholdDistance = 32;
+@@ -13,12 +13,12 @@
+    protected int strongholdSpread = 3;
+    protected int biomeFeatureDistance = 32;
+    protected int biomeFeatureSeparation = 8;
+-   protected int field_204027_h = 16;
+-   protected int field_211734_k = 8;
++   protected int field_204027_h = 12; // BEDROCK
++   protected int field_211734_k = 7; // BEDROCK
+    protected int endCityDistance = 20;
+    protected int endCitySeparation = 11;
+-   protected int field_204749_j = 16;
+-   protected int field_211736_o = 8;
++   protected int field_204749_j = 10; // BEDROCK
++   protected int field_211736_o = 5; // BEDROCK
+    protected int mansionDistance = 80;
+    protected int field_211737_q = 20;
+    protected IBlockState defaultBlock = Blocks.STONE.getDefaultState();
