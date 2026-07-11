@@ -163,11 +163,39 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 | MC Version       | Pale Garden Generation                    |
 | ---------------- | ----------------------------------------- |
 | **1.21-1.21.40** | ❌ Doesn't exist, position is Dark Forest |
-| **1.21.50+**     | ✅ Exists, normal generation              |
+| **1.21.50**      | ⚠️ Exists but smaller range               |
 
-**If you collected Pale Garden samples in 1.21.50+**: The program will crack normally.
+**Current version (Bedrock 1.21.50)**:
 
-**If using Pale Garden in 1.21-1.21.40**: Program will show version incompatibility warning.
+- Corresponds to Java 1.21.4 (Winter Drop)
+- Pale Garden exists but with smaller generation range
+- If cracking fails, recommend using Dark Forest (roofed_forest, ID: 29)
+
+**If in 1.21-1.21.40**: Cannot use Pale Garden samples (biome doesn't exist).
+
+#### Bedrock vs Java Differences
+
+Even with same version number, Java and Bedrock have biome generation differences:
+
+- **Y-axis Biome Changes**: Java biomes change significantly on Y-axis, Bedrock is more stable
+- **Biome Boundaries**: Biome boundary positions may differ slightly between versions
+- **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
+
+#### Important Limitation
+
+**High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.4 (Winter Drop) and stopped updating after November 2024.**
+
+| cubiomes Info  | Details                   |
+| -------------- | ------------------------- |
+| Latest Version | 4.1.2                     |
+| Last Update    | November 10, 2024         |
+| Max Supported  | Java 1.21.4 (Winter Drop) |
+
+**cubiomes Update Status:**
+
+- cubiomes **stopped updating** after releasing 4.1.2 in November 2024
+- Does not support Bedrock 1.26+
+- Does not support Minecraft versions from 2025 onwards
 
 > **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
@@ -214,67 +242,6 @@ Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground 
 - **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
 - **Avoid sampling near biome boundaries**
 - If cracking fails, try different coordinates within the same biome
-
----
-
-## Version Compatibility
-
-### Version Mapping
-
-| MC Version | New Biomes                                   |
-| ---------- | -------------------------------------------- |
-| 1.18       | Dripstone Caves, Lush Caves, Mountain biomes |
-| 1.19       | Deep Dark, Mangrove Swamp                    |
-| 1.20       | Cherry Grove                                 |
-| 1.21       | Pale Garden                                  |
-
-### Bedrock vs Java Differences
-
-Even with same version number, Java and Bedrock have biome generation differences:
-
-- **Y-axis Biome Changes**: Java biomes change significantly on Y-axis, Bedrock is more stable
-- **Biome Boundaries**: Biome boundary positions may differ slightly between versions
-- **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
-
-#### Biome Sample Selection Tips
-
-- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-- **Avoid sampling near biome boundaries**
-- If cracking fails, try different coordinates within the same biome
-
-### ⚠️ Important Limitation
-
-**High 32-bit cracking is based on cubiomes library, which only supports up to Java 1.21.4 (Winter Drop) and stopped updating after November 2024.**
-
-| cubiomes Info  | Details                   |
-| -------------- | ------------------------- |
-| Latest Version | 4.1.2                     |
-| Last Update    | November 10, 2024         |
-| Max Supported  | Java 1.21.4 (Winter Drop) |
-
-**cubiomes Update Status:**
-
-- cubiomes **stopped updating** after releasing 4.1.2 in November 2024
-- Does not support Bedrock 1.26+
-- Does not support Minecraft versions from 2025 onwards
-
-#### Pale Garden Version Differences
-
-**Important**: cubiomes library currently only supports up to MC 1.21.4 (Winter Drop), while MC 1.21.5+ has adjusted Pale Garden generation range.
-
-| MC Version         | cubiomes Support | Pale Garden Generation                               |
-| ------------------ | ---------------- | ---------------------------------------------------- |
-| 1.21.3 and earlier | ✅ (code 27)     | Doesn't exist, position is Dark Forest               |
-| 1.21.4             | ✅ (code 28)     | Exists, but smaller range                            |
-| 1.21.5+            | ❌ Not supported | Expanded range, some Dark Forest becomes Pale Garden |
-
-**If you collected Pale Garden samples in 1.21.5+ but cracking failed**:
-
-This is likely because cubiomes 1.21 version (code 28) corresponds to 1.21.4, which has a smaller Pale Garden generation range than 1.21.5+.
-
-**Solution**:
-
-Change Pale Garden samples to Dark Forest (roofed_forest, ID: 29) and try again.
 
 ---
 
