@@ -371,18 +371,19 @@ class MainWindow(QMainWindow):
                     
                     saved_start = progress_data.get("current_position", start)
                     original_start = progress_data.get("original_start_value", start)
-                    
+
                     print(f"[UI] Saved start: {saved_start:,}")
                     print(f"[UI] Original start: {original_start:,}")
                     print(f"[UI] Current start: {start:,}")
-                    
+
                     if saved_start > start:
                         start = saved_start
                         print(f"[UI] Resuming from position: {start:,}")
                         print(f"[UI] Original start value: {original_start:,}")
-                    
+
+                    # Calculate progress relative to original start value
                     total_range = end - original_start
-                    progress = (start - original_start) / total_range * 100
+                    progress = (start - original_start) / total_range * 100 if total_range > 0 else 100
                     print(f"[UI] Calculated progress: {progress:.2f}%")
                     self.low32_progress.update_progress(progress, 0, 0)
                     self.low32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
@@ -513,6 +514,8 @@ class MainWindow(QMainWindow):
             return
         
         progress_file = os.path.join(get_base_path(), "progress_high32.json")
+        original_start = start  # Default: use user input start value as original
+
         if os.path.exists(progress_file):
             print(f"[UI] Found high32 progress file: {progress_file}")
             reply = QMessageBox.question(
@@ -528,16 +531,19 @@ class MainWindow(QMainWindow):
                     print(f"[UI] High32 progress data loaded: {progress_data}")
                     
                     saved_start = progress_data.get("current_position", 0)
-                    
+                    original_start = progress_data.get("original_start_value", start)
+
                     print(f"[UI] Saved start: {saved_start:,}")
+                    print(f"[UI] Original start: {original_start:,}")
                     print(f"[UI] Current start: {start:,}")
-                    
+
                     if saved_start > start:
                         start = saved_start
                         print(f"[UI] Resuming from position: {start:,}")
-                    
-                    total_range = end - 0
-                    progress = (start - 0) / total_range * 100
+
+                    # Calculate progress relative to original start value
+                    total_range = end - original_start
+                    progress = (start - original_start) / total_range * 100 if total_range > 0 else 100
                     print(f"[UI] Calculated progress: {progress:.2f}%")
                     self.high32_progress.update_progress(progress, 0, 0)
                     self.high32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
@@ -560,14 +566,20 @@ class MainWindow(QMainWindow):
         self.pause_low32_btn.setEnabled(False)
         self.restart_low32_btn.setEnabled(True)
         
-        self.high32_worker = High32Worker(low32_value, biomes, start, end, mc_version=self.mc_version_combo.currentData())
+        self.high32_worker = High32Worker(low32_value, biomes, start, end, original_start=original_start, mc_version=self.mc_version_combo.currentData())
         self.high32_worker.progress_updated.connect(self.update_high32_progress)
         self.high32_worker.found_seed.connect(self.add_high32_result)
         self.high32_worker.finished.connect(self.high32_finished)
         self.high32_worker.error_occurred.connect(self.show_error)
-        
+        self.high32_worker.biome_info_updated.connect(self.update_high32_biome_info)  # Connect new signal
+
         self.high32_worker.start()
-        self.high32_status_label.setText(lang_manager.get("start_high32_cracking"))
+
+    def update_high32_biome_info(self, biome_info):
+        """Update high32 status label with biome sorting info"""
+        # Keep both the status and biome info visible
+        current_text = lang_manager.get("start_high32_cracking")
+        self.high32_status_label.setText(current_text + "\n" + biome_info)
     
     def pause_high32_cracking(self):
         if self.high32_worker:

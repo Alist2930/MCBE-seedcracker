@@ -162,7 +162,10 @@ class Low32Worker(QThread):
                     print(f"[PROGRESS] {progress:.2f}% | Current: {current:,} | Speed: {speed:,}/s | ETA: {eta}s")
                     
                     self.progress_updated.emit(progress, speed, eta)
-                    
+
+                    # Save current position for stop() to use
+                    self.last_current_position = current
+
                     last_progress_time = now
                     last_progress_current = current
                     
@@ -248,3 +251,7 @@ class Low32Worker(QThread):
     
     def stop(self):
         self.is_stopped = True
+        # Force save progress before stopping
+        if hasattr(self, 'last_current_position'):
+            self.save_progress(self.last_current_position)
+            print(f"[LOW32 STOP] Saved progress before stopping: {self.last_current_position:,}")

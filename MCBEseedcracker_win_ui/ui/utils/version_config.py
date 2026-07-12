@@ -8,39 +8,39 @@ For WinUI and Linux version selection
 
 # Bedrock version -> cubiomes code mapping (based on ChunkBase version correspondence)
 BEDROCK_VERSION_MAP = {
-    # Bedrock 1.21.50
+    # Bedrock 1.21.50 (Java 1.21.4 Winter Drop)
     "1.21.50": {
-        "cubiomes_code": 21,  # MC_1_21_WD
+        "cubiomes_code": 28,  # MC_1_21_WD
         "warning": None
     },
-    
-    # Bedrock 1.21-1.21.40 (no Pale Garden)
+
+    # Bedrock 1.21-1.21.40 (Java 1.21-1.21.3, no Pale Garden)
     "1.21-1.21.40": {
-        "cubiomes_code": 21,  # MC_1_21_3
+        "cubiomes_code": 27,  # MC_1_21_3
         "warning": None
     },
-    
-    # Bedrock 1.20.60-1.20.81
+
+    # Bedrock 1.20.60-1.20.81 (Java 1.20.5-1.20.6)
     "1.20.60-81": {
-        "cubiomes_code": 20,  # MC_1_20
+        "cubiomes_code": 25,  # MC_1_20
         "warning": None
     },
-    
-    # Bedrock 1.20.0-1.20.51
+
+    # Bedrock 1.20.0-1.20.51 (Java 1.20-1.20.4)
     "1.20.0-51": {
-        "cubiomes_code": 20,  # MC_1_20
+        "cubiomes_code": 25,  # MC_1_20
         "warning": None
     },
-    
-    # Bedrock 1.19
+
+    # Bedrock 1.19 (Java 1.19)
     "1.19": {
-        "cubiomes_code": 19,  # MC_1_19
+        "cubiomes_code": 24,  # MC_1_19
         "warning": None
     },
-    
-    # Bedrock 1.18
+
+    # Bedrock 1.18 (Java 1.18)
     "1.18": {
-        "cubiomes_code": 18,  # MC_1_18
+        "cubiomes_code": 22,  # MC_1_18
         "warning": None
     }
 }
@@ -60,8 +60,8 @@ def get_cubiomes_version(bedrock_version_key):
     """Get cubiomes version code"""
     mapping = BEDROCK_VERSION_MAP.get(bedrock_version_key)
     if mapping:
-        return mapping.get("cubiomes_code", 21)
-    return 21  # Default to latest version
+        return mapping.get("cubiomes_code", 28)
+    return 28  # Default to latest version (1.21.50)
 
 def get_version_warning(version_key):
     """Get version warning message"""
