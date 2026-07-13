@@ -18,7 +18,7 @@ class BiomeListWidget(QWidget):
         super().__init__()
         self.biomes = []
         self.biome_data = self.load_biome_data()
-        self.mc_version = "1.21.50"  # 默认使用支持苍白之园的版本
+        self.mc_version = "1.21.50"  # Default to version supporting Pale Garden
         self.init_ui()
     
     def load_biome_data(self):
@@ -305,7 +305,7 @@ class AddBiomeDialog(QDialog):
                                 lang_manager.get("invalid_biome_type"))
             return
         
-        # 检查群系版本兼容性
+        # Check biome version compatibility
         from ui.utils.biome_version_filter import check_single_biome_version
         result = check_single_biome_version(biome_type, self.mc_version, self.biome_data)
         
@@ -317,7 +317,7 @@ class AddBiomeDialog(QDialog):
                 result['message'],
                 QMessageBox.Ok
             )
-            return  # 直接返回，不允许添加
+            return  # Return directly, not allowing addition
         
         self.accept()
     

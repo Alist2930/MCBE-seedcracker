@@ -768,11 +768,11 @@ class MainWindow(QMainWindow):
         
         # 使用新的版本配置（只显示基岩版）
         for option in WINUI_VERSION_OPTIONS:
-            # 根据当前语言选择显示文本
+            # Select display text based on current language
             text = option["text_zh"] if lang_manager.language == "zh_CN" else option["text_en"]
             self.mc_version_combo.addItem(text, option["data"])
         
-        # 默认选择最新版本（1.21.50）
+        # Default to latest version (1.21.60-1.21.132)
         if not current_data:
             current_data = "1.21.50"
         
@@ -781,7 +781,7 @@ class MainWindow(QMainWindow):
             if index >= 0:
                 self.mc_version_combo.setCurrentIndex(index)
             else:
-                # 如果找不到，默认选择第一个
+                # If not found, default to first option
                 self.mc_version_combo.setCurrentIndex(0)
         
         self.mc_version_combo.blockSignals(False)

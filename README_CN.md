@@ -404,7 +404,7 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 - [Windows 图形界面版](MCBEseedcracker_win_ui/README_CN.md)
 - [Linux 命令行版](MCBEseedcracker_linux/README_CN.md)
-- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算；集成 [Praveenkumar801 的 fork 版本](https://github.com/Praveenkumar801/cubiomes) 支持 1.21.5+ 群系生成
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 
 ---

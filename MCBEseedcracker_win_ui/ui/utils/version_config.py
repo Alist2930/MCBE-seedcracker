@@ -67,8 +67,8 @@ def get_cubiomes_version(bedrock_version_key):
     """Get cubiomes version code"""
     mapping = BEDROCK_VERSION_MAP.get(bedrock_version_key)
     if mapping:
-        return mapping.get("cubiomes_code", 28)
-    return 28  # Default to latest version (1.21.50)
+        return mapping.get("cubiomes_code", 29)
+    return 29  # Default to latest version (1.21.60-1.21.132)
 
 def get_version_warning(version_key):
     """Get version warning message"""

@@ -15,7 +15,7 @@ def get_dll_path():
 
 
 def get_base_path():
-    """获取程序所在目录的绝对路径"""
+    """Get absolute path of program directory"""
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
