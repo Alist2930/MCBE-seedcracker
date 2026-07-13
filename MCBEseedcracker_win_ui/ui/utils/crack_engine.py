@@ -81,16 +81,16 @@ class CrackEngine:
             print(f"[ERROR] crack_low32 call failed: {e}")
             raise
     
-    def crack_high32(self, low32_value, samples, start, end):
+    def crack_high32(self, low32_value, samples, start, end, mc_version="1.21.60-1.21.132"):
         try:
             from ui.utils.crack_high32_engine import crack_high32_parallel
             import json
             from pathlib import Path
-            
+
             biome_data_path = Path(__file__).parent.parent / "data" / "biomes.json"
             with open(biome_data_path, 'r', encoding='utf-8') as f:
                 biome_data = json.load(f)
-            
+
             biome_samples = []
             for s in samples:
                 biome_name = s['type']
@@ -99,14 +99,14 @@ class CrackEngine:
                     biome_samples.append((s['x'], s['z'], biome_id))
                 else:
                     print(f"[WARNING] Unknown biome: {biome_name}")
-            
+
             results = crack_high32_parallel(
                 low32=low32_value,
                 samples=biome_samples,
                 start=start,
                 end=end,
                 y_coord=200,
-                mc_version="1.21"
+                mc_version=mc_version
             )
             
             return results

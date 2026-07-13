@@ -136,12 +136,12 @@
         <translation>语言设置已更改，重启应用后生效。</translation>
     </message>
     <message>
-        <source>MCBE Seed Cracker v1.0.0
+        <source>MCBE Seed Cracker v1.2.0
 
 Minecraft Bedrock Edition Seed Cracking Tool
 
 Used to reverse-engineer world seeds from structure positions and biome information</source>
-        <translation>MCBE 种子破解器 v1.0.0
+        <translation>MCBE 种子破解器 v1.2.0
 
 Minecraft 基岩版种子破解工具
 

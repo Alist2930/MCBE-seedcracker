@@ -30,6 +30,7 @@ verify_*.py
 check_*.py
 biomes_zh.txt
 get_biome.py
+measure_biome_rarity.py
 
 # Documentation (root level)
 UI_DEVELOPMENT_PLAN.md

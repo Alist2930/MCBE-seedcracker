@@ -79,7 +79,8 @@ class High32Worker(QThread):
     
     VERSION_MAP = {
         # Bedrock version auto-mapping (based on ChunkBase)
-        "1.21.50": 28,  # MC_1_21_WD (Pale Garden supported)
+        "1.21.60-1.21.132": 29,  # MC_1_21_5 (1.21.5-1.21.11, Pale Garden expanded range)
+        "1.21.50": 28,  # MC_1_21_WD (Pale Garden supported with narrow range)
         "1.21-1.21.40": 27,  # MC_1_21_3 (Pale Garden not supported)
         "1.20.60-81": 25,  # MC_1_20
         "1.20.0-51": 25,  # MC_1_20

@@ -17,12 +17,12 @@ VSVersionInfo(
           [
             StringStruct(u'CompanyName', u'MCBE Seed Cracker'),
             StringStruct(u'FileDescription', u'Minecraft Bedrock Edition Seed Cracking Tool'),
-            StringStruct(u'FileVersion', u'1.0.0.0'),
+            StringStruct(u'FileVersion', u'1.2.0.0'),
             StringStruct(u'InternalName', u'MCBESeedCracker'),
             StringStruct(u'LegalCopyright', u'Copyright (c) 2024'),
             StringStruct(u'OriginalFilename', u'MCBE Seed Cracker.exe'),
             StringStruct(u'ProductName', u'MCBE Seed Cracker'),
-            StringStruct(u'ProductVersion', u'1.0.0.0'),
+            StringStruct(u'ProductVersion', u'1.2.0.0'),
           ]
         )
       ]

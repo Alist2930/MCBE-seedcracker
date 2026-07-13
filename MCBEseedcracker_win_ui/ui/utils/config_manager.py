@@ -34,7 +34,7 @@ class ConfigManager:
     def get_default_config(self):
         return {
             "language": "zh_CN",
-            "mc_version": "1.21",
+            "mc_version": "1.21.60-1.21.132",
             "process_count": 4,
             "low32": {
                 "start": 0,
