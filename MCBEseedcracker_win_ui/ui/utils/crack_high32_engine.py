@@ -24,7 +24,7 @@ MC_1_21_WD = 28
 MC_1_21_5 = 29
 
 VERSION_MAP = {
-    "1.21.60-1.21.132": MC_1_21_5,
+    "1.21.60-26.23": MC_1_21_5,
     "1.21.50": MC_1_21_WD,
     "1.21-1.21.40": MC_1_21_3,
     "1.20.60-81": MC_1_20,
@@ -77,7 +77,7 @@ def crack_batch_soa(args):
         print(f"[ERROR] crack_batch_soa failed: {e}")
         return []
 
-def crack_high32_parallel(low32, samples, start=0, end=0xFFFFFFFF, y_coord=200, mc_version="1.21.60-1.21.132", num_processes=None):
+def crack_high32_parallel(low32, samples, start=0, end=0xFFFFFFFF, y_coord=200, mc_version="1.21.60-26.23", num_processes=None):
     if not samples:
         return []
 

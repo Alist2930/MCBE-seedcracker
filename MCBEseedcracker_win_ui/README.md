@@ -70,29 +70,37 @@ Windows desktop application with graphical interface, no command line required.
 
 #### Version Mapping
 
-| Bedrock Version      | Corresponding Java Version | Supported Biomes                                |
-| -------------------- | -------------------------- | ----------------------------------------------- |
-| **1.21.60-1.21.132** | Java 1.21.5-1.21.11        | ✅ Pale Garden (expanded range)                 |
-| **1.21.50**          | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
-| **1.21-1.21.40**     | Java 1.21.3                | ❌ No Pale Garden                               |
-| **1.20.60-1.20.81**  | Java 1.20                  | ✅ Cherry Grove                                 |
-| **1.20.0-1.20.51**   | Java 1.20                  | ✅ Cherry Grove                                 |
-| **1.19**             | Java 1.19                  | ✅ Deep Dark, Mangrove Swamp                    |
-| **1.18**             | Java 1.18                  | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
+| Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
+| ------------------- | -------------------------- | ----------------------------------------------- |
+| **26.30+**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
+| **1.21.60-26.23**   | Java 1.21.5-26.1           | ✅ Pale Garden (expanded range)                 |
+| **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
+| **1.21-1.21.40**    | Java 1.21.3                | ❌ No Pale Garden                               |
+| **1.20.60-1.20.81** | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.20.0-1.20.51**  | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.19**            | Java 1.19                  | ✅ Deep Dark, Mangrove Swamp                    |
+| **1.18**            | Java 1.18                  | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
 
 #### Pale Garden Version Differences
 
 ⚠️ **Important**: Pale Garden generation range differs between versions:
 
-| MC Version           | Pale Garden Generation                    |
-| -------------------- | ----------------------------------------- |
-| **1.21-1.21.40**     | ❌ Doesn't exist, position is Dark Forest |
-| **1.21.50**          | ⚠️ Exists but smaller range               |
-| **1.21.60-1.21.132** | ✅ Expanded generation range              |
+| MC Version        | Pale Garden Generation                    |
+| ----------------- | ----------------------------------------- |
+| **1.21-1.21.40**  | ❌ Doesn't exist, position is Dark Forest |
+| **1.21.50**       | ⚠️ Exists but smaller range               |
+| **1.21.60-26.23** | ✅ Expanded generation range              |
 
-**Latest version (Bedrock 1.21.60-1.21.132)**:
+**Latest version (Bedrock 26.30+)**:
 
-- Corresponds to Java 1.21.5-1.21.11
+- Corresponds to Java 26.2 (Chaos Cubed Drop)
+- New biome: Sulfur Caves (ID: 187)
+- Requires low Y coordinate (Y≤60) for cave biome cracking
+- Recommended: Use surface biomes for cracking (rarity data available)
+
+**Version 1.21.60-26.23**:
+
+- Corresponds to Java 1.21.5-26.1
 - Pale Garden has expanded generation range (weirdness threshold lowered)
 - Best for Pale Garden-based cracking
 - Rarity: ~0.12% (increased from 1.21.50's ~0.08%)
@@ -114,26 +122,25 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 **High 32-bit cracking is based on cubiomes library, which supports up to Java 1.21.11 (via community fork).**
 
-| cubiomes Info  | Details                                        |
-| -------------- | ---------------------------------------------- |
-| Latest Version | 4.1.2 (fork)                                   |
-| Last Update    | January 2025 (fork)                            |
-| Max Supported  | Java 1.21.5-1.21.11 (Bedrock 1.21.60-1.21.132) |
+| cubiomes Info  | Details                                  |
+| -------------- | ---------------------------------------- |
+| Latest Version | 4.1.2 (fork)                             |
+| Last Update    | January 2025 (fork)                      |
+| Max Supported  | Java 1.21.5-26.1 (Bedrock 1.21.60-26.23) |
 
 **cubiomes Update Status:**
 
 - Official cubiomes stopped updating after November 2024
-- Integrated Praveenkumar801's fork for 1.21.5+ support
-- Supports Pale Garden expanded generation range in 1.21.60+
-- Does not support Bedrock 1.26+ (sulfur_caves biome)
+- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
+- Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30+)
 
 #### Version Selection Tips
 
 - **Latest version first**: Recommend selecting your actual game version
 - **Biome version matching**: Ensure selected version supports your collected biomes
-- **Default recommendation**: Program defaults to 1.21.60-1.21.132 (latest version with expanded Pale Garden)
+- **Default recommendation**: Program defaults to 26.30+ (latest version with Sulfur Caves support)
 
-**Overworld Biome ID Reference (1.21.60-1.21.132)**
+**Overworld Biome ID Reference (1.21.60-26.23)**
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
@@ -163,9 +170,12 @@ Even with same version number, Java and Bedrock have biome generation difference
 | cold_ocean               | 46  | 4.59%  | river                 | 7   | 6.22%  |
 | ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
 | forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
-| lush_caves               | 175 | -      | deep_dark             | 183 | -      |> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
+| lush_caves               | 175 | -      | deep_dark             | 183 | -      |
+| sulfur_caves             | 187 | -      |                       |     |        |
 
-> **Warning**: `sulfur_caves` (Sulfur Caves) is a new biome added in MC 1.26+. cubiomes library does not support this biome. Avoid using sulfur_caves samples for cracking.
+> **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
+
+> **Note**: Sulfur Caves (ID: 187) is now supported for cracking. Use low Y coordinate (Y≤60) for accurate detection. Cave biomes are not recommended for primary cracking due to lack of rarity data.
 
 > **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
@@ -295,7 +305,7 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 
 ## Related Links
 
-- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 
 ---

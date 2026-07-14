@@ -5,6 +5,7 @@ import os
 import sys
 import multiprocessing as mp
 import ctypes
+from ui.utils.language_manager import lang_manager
 
 
 def get_dll_path():
@@ -22,7 +23,7 @@ def get_base_path():
 
 
 class BiomeSample(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("biome_id", ctypes.c_int)]
+    _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("y", ctypes.c_int), ("biome_id", ctypes.c_int)]
 
 
 def crack_batch(args):
@@ -46,9 +47,10 @@ def crack_batch(args):
         
         num_samples = len(samples)
         sample_array = (BiomeSample * num_samples)()
-        for i, (x, z, biome_id) in enumerate(samples):
+        for i, (x, z, y, biome_id) in enumerate(samples):
             sample_array[i].x = x
             sample_array[i].z = z
+            sample_array[i].y = y
             sample_array[i].biome_id = biome_id
         
         MAX_RESULTS = 1000
@@ -79,7 +81,8 @@ class High32Worker(QThread):
     
     VERSION_MAP = {
         # Bedrock version auto-mapping (based on ChunkBase)
-        "1.21.60-1.21.132": 29,  # MC_1_21_5 (1.21.5-1.21.11, Pale Garden expanded range)
+        "26.30+": 38,  # MC_26_2 (Java 26.2, Sulfur Caves)
+        "1.21.60-26.23": 29,  # MC_1_21_5 (1.21.5-1.21.11, Pale Garden expanded range)
         "1.21.50": 28,  # MC_1_21_WD (Pale Garden supported with narrow range)
         "1.21-1.21.40": 27,  # MC_1_21_3 (Pale Garden not supported)
         "1.20.60-81": 25,  # MC_1_20
@@ -97,7 +100,7 @@ class High32Worker(QThread):
         self.end_value = end
         self.test_mode = test_mode
         self.mc_version_str = mc_version
-        self.mc_version = self.VERSION_MAP.get(mc_version, 28)  # Default to 1.21.50
+        self.mc_version = self.VERSION_MAP.get(mc_version, 38)  # Default to 26.30+
         self.is_paused = False
         self.is_stopped = False
         self.results = []
@@ -117,8 +120,9 @@ class High32Worker(QThread):
             for b in self.biomes:
                 biome_name = b['type']
                 biome_id = biome_data.get(biome_name, {}).get('id')
+                y_coord = b.get('y', 200)  # Default to 200 if Y not provided
                 if biome_id is not None:
-                    biome_samples.append((b['x'], b['z'], biome_id))
+                    biome_samples.append((b['x'], b['z'], y_coord, biome_id))
 
             if not biome_samples:
                 self.error_occurred.emit("No valid biome data")
@@ -137,14 +141,14 @@ class High32Worker(QThread):
                     return rarity_dict.get(self.mc_version_str, 1.0)
                 return 1.0
 
-            biome_samples_sorted = sorted(biome_samples, key=lambda s: get_rarity(s[2]))
+            biome_samples_sorted = sorted(biome_samples, key=lambda s: get_rarity(s[3]))  # s[3] is biome_id
 
             # Print sorted biome info (temporary verification)
             biome_info_lines = []
             biome_info_lines.append("="*60)
             biome_info_lines.append("Biome samples (sorted by rarity, rarest first):")
             biome_info_lines.append("="*60)
-            for i, (x, z, biome_id) in enumerate(biome_samples_sorted, 1):
+            for i, (x, z, y, biome_id) in enumerate(biome_samples_sorted, 1):
                 biome_name = None
                 for name, data in biome_data.items():
                     if data.get('id') == biome_id:
@@ -152,8 +156,12 @@ class High32Worker(QThread):
                         break
                 rarity = get_rarity(biome_id)
                 if biome_name:
-                    name_zh = biome_data[biome_name].get('name_zh', biome_name)
-                    biome_info_lines.append(f"    {i}. ({x}, {z}) -> {name_zh} (ID: {biome_id}, {rarity*100:.4f}%)")
+                    # Use appropriate language for biome name
+                    if lang_manager.language == "zh_CN":
+                        biome_display_name = biome_data[biome_name].get('name_zh', biome_name)
+                    else:
+                        biome_display_name = biome_data[biome_name].get('name_en', biome_name)
+                    biome_info_lines.append(f"    {i}. ({x}, {z}, Y={y}) -> {biome_display_name} (ID: {biome_id}, {rarity*100:.4f}%)")
             biome_info_lines.append("="*60)
 
             # Send biome info to UI
@@ -182,7 +190,7 @@ class High32Worker(QThread):
             current = self.start_value
             while current <= self.end_value:
                 batch_end = min(current + batch_size - 1, self.end_value)
-                tasks.append((current, batch_end + 1, self.low32_value, biome_samples_sorted, 200, self.mc_version))
+                tasks.append((current, batch_end + 1, self.low32_value, biome_samples_sorted, 0, self.mc_version))  # Y coord is now per-sample
                 current = batch_end + 1
             
             total_tasks = len(tasks)

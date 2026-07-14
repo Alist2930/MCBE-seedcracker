@@ -21,7 +21,7 @@ def main():
     app = QApplication(sys.argv)
     
     app.setApplicationName("MCBE Seed Cracker")
-    app.setApplicationVersion("1.2.0")
+    app.setApplicationVersion("1.3.0")
     app.setOrganizationName("MCBE Seed Cracker")
     
     config_manager = ConfigManager()

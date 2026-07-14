@@ -75,6 +75,7 @@ BIOME_COLORS = {
     "mangrove_swamp": (80, 112, 64),
     "cherry_grove": (255, 160, 192),
     "pale_garden": (160, 160, 176),
+    "sulfur_caves": (200, 210, 50),
 }
 
 

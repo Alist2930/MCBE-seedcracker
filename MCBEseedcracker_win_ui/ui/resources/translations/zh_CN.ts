@@ -141,7 +141,7 @@
 Minecraft Bedrock Edition Seed Cracking Tool
 
 Used to reverse-engineer world seeds from structure positions and biome information</source>
-        <translation>MCBE 种子破解器 v1.2.0
+        <translation>MCBE 种子破解器 v1.3.0
 
 Minecraft 基岩版种子破解工具
 

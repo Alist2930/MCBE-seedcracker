@@ -81,7 +81,7 @@ class CrackEngine:
             print(f"[ERROR] crack_low32 call failed: {e}")
             raise
     
-    def crack_high32(self, low32_value, samples, start, end, mc_version="1.21.60-1.21.132"):
+    def crack_high32(self, low32_value, samples, start, end, mc_version="1.21.60-26.23"):
         try:
             from ui.utils.crack_high32_engine import crack_high32_parallel
             import json

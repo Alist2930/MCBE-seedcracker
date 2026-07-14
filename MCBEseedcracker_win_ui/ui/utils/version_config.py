@@ -8,8 +8,14 @@ For WinUI and Linux version selection
 
 # Bedrock version -> cubiomes code mapping (based on ChunkBase version correspondence)
 BEDROCK_VERSION_MAP = {
-    # Bedrock 1.21.60-1.21.132 (Java 1.21.5-1.21.11, Pale Garden expanded range)
-    "1.21.60-1.21.132": {
+    # Bedrock 26.30+ (Java 26.2 Chaos Cubed Drop, Sulfur Caves)
+    "26.30+": {
+        "cubiomes_code": 38,  # MC_26_2
+        "warning": None
+    },
+
+    # Bedrock 1.21.60-26.23 (Java 1.21.5-26.1, Pale Garden expanded range)
+    "1.21.60-26.23": {
         "cubiomes_code": 29,  # MC_1_21_5 (1.21.5 through 1.21.11 share same biome generation)
         "warning": None
     },
@@ -54,7 +60,8 @@ BEDROCK_VERSION_MAP = {
 # WinUI version selector display options (only show Bedrock versions)
 WINUI_VERSION_OPTIONS = [
     # Bedrock options
-    {"text_zh": "1.21.60-1.21.132", "text_en": "1.21.60-1.21.132", "data": "1.21.60-1.21.132", "type": "bedrock"},
+    {"text_zh": "26.30+", "text_en": "26.30+", "data": "26.30+", "type": "bedrock"},
+    {"text_zh": "1.21.60-26.23", "text_en": "1.21.60-26.23", "data": "1.21.60-26.23", "type": "bedrock"},
     {"text_zh": "1.21.50", "text_en": "1.21.50", "data": "1.21.50", "type": "bedrock"},
     {"text_zh": "1.21-1.21.40", "text_en": "1.21-1.21.40", "data": "1.21-1.21.40", "type": "bedrock"},
     {"text_zh": "1.20.60-1.20.81", "text_en": "1.20.60-1.20.81", "data": "1.20.60-81", "type": "bedrock"},
@@ -67,8 +74,8 @@ def get_cubiomes_version(bedrock_version_key):
     """Get cubiomes version code"""
     mapping = BEDROCK_VERSION_MAP.get(bedrock_version_key)
     if mapping:
-        return mapping.get("cubiomes_code", 29)
-    return 29  # Default to latest version (1.21.60-1.21.132)
+        return mapping.get("cubiomes_code", 38)
+    return 38  # Default to latest version (26.30+)
 
 def get_version_warning(version_key):
     """Get version warning message"""

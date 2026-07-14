@@ -70,29 +70,37 @@ Windows 桌面应用程序版本，提供图形化界面，无需命令行操作
 
 #### 版本对应关系
 
-| 基岩版版本           | 对应 Java 版本            | 支持的群系                  |
-| -------------------- | ------------------------- | --------------------------- |
-| **1.21.60-1.21.132** | Java 1.21.5-1.21.11       | ✅ 苍白之园（扩大范围）     |
-| **1.21.50**          | Java 1.21.4 (Winter Drop) | ✅ 苍白之园（较小范围）     |
-| **1.21-1.21.40**     | Java 1.21.3               | ❌ 不支持苍白之园           |
-| **1.20.60-1.20.81**  | Java 1.20                 | ✅ 樱花树林                 |
-| **1.20.0-1.20.51**   | Java 1.20                 | ✅ 樱花树林                 |
-| **1.19**             | Java 1.19                 | ✅ 深暗之域、红树林沼泽     |
-| **1.18**             | Java 1.18                 | ✅ 溶洞、繁茂洞穴、山地群系 |
+| 基岩版版本          | 对应 Java 版本            | 支持的群系                  |
+| ------------------- | ------------------------- | --------------------------- |
+| **26.30+**          | Java 26.2 (Chaos Cubed)   | ✅ 硫磺洞穴（新地下群系）   |
+| **1.21.60-26.23**   | Java 1.21.5-26.1          | ✅ 苍白之园（扩大范围）     |
+| **1.21.50**         | Java 1.21.4 (Winter Drop) | ✅ 苍白之园（较小范围）     |
+| **1.21-1.21.40**    | Java 1.21.3               | ❌ 不支持苍白之园           |
+| **1.20.60-1.20.81** | Java 1.20                 | ✅ 樱花树林                 |
+| **1.20.0-1.20.51**  | Java 1.20                 | ✅ 樱花树林                 |
+| **1.19**            | Java 1.19                 | ✅ 深暗之域、红树林沼泽     |
+| **1.18**            | Java 1.18                 | ✅ 溶洞、繁茂洞穴、山地群系 |
 
 #### 苍白之园版本差异
 
 ⚠️ **重要**：苍白之园在不同版本的生成范围不同：
 
-| MC 版本              | 苍白之园生成情况          |
-| -------------------- | ------------------------- |
-| **1.21-1.21.40**     | ❌ 不存在，原位置为黑森林 |
-| **1.21.50**          | ⚠️ 存在但范围较小         |
-| **1.21.60-1.21.132** | ✅ 扩大的生成范围         |
+| MC 版本           | 苍白之园生成情况          |
+| ----------------- | ------------------------- |
+| **1.21-1.21.40**  | ❌ 不存在，原位置为黑森林 |
+| **1.21.50**       | ⚠️ 存在但范围较小         |
+| **1.21.60-26.23** | ✅ 扩大的生成范围         |
 
-**最新版本（基岩版 1.21.60-1.21.132）**：
+**最新版本（基岩版 26.30+）**：
 
-- 对应 Java 1.21.5-1.21.11
+- 对应 Java 26.2（混沌立方更新）
+- 新增群系：硫磺洞穴（ID: 187）
+- 洞穴群系破解需使用低 Y 坐标（Y≤60）
+- 推荐：使用地表群系进行破解（有稀有度数据）
+
+**版本 1.21.60-26.23**：
+
+- 对应 Java 1.21.5-26.1
 - 苍白之园生成范围扩大（weirdness阈值降低）
 - 最适合用于苍白之园破解
 - 稀有度：约0.12%（从1.21.50的约0.08%增加）
@@ -114,58 +122,64 @@ Windows 桌面应用程序版本，提供图形化界面，无需命令行操作
 
 **高32位破解功能基于 cubiomes 库，支持到 Java 版 1.21.11（通过社区 fork 版本）。**
 
-| cubiomes 信息  | 详情                                             |
-| -------------- | ------------------------------------------------ |
-| 最新版本       | 4.1.2 (fork 版本)                                |
-| 最后更新       | 2025年1月 (fork 版本)                            |
-| 支持的最高版本 | Java 版 1.21.5-1.21.11 (基岩版 1.21.60-1.21.132) |
+| cubiomes 信息  | 详情                                          |
+| -------------- | --------------------------------------------- |
+| 最新版本       | 4.1.2 (fork 版本)                             |
+| 最后更新       | 2025年1月 (fork 版本)                         |
+| 支持的最高版本 | Java 版 1.21.5-1.21.11 (基岩版 1.21.60-26.23) |
 
 **cubiomes 更新状态：**
 
 - 官方 cubiomes 在 2024年11月后停止更新
-- 集成 Praveenkumar801 的 fork 版本支持 1.21.5+
-- 支持 1.21.60+ 的苍白之园扩大生成范围
-- 不支持 基岩版 1.26+ (sulfur_caves 群系)
+- 集成 SeedMapper 的 cubiomes fork 版本支持 1.21.5+ 和 26.2+
+- 支持苍白之园（1.21.50+）和硫磺洞穴（26.30+）
 
 #### 版本选择建议
 
 - **最新版本优先**：建议选择你游戏实际使用的版本
 - **群系版本匹配**：确保选择的版本支持你采集的群系
-- **默认推荐**：程序默认选择 1.21.60-1.21.132（最新版本，苍白之园范围扩大）
+- **默认推荐**：程序默认选择 1.21.60-26.23（最新版本，苍白之园范围扩大）
 
-**主世界群系ID参考（1.21.60-1.21.132）**
+**主世界群系ID参考（1.21.60-26.23）**
 
-| 群系                                 | ID  | 稀有度 | 群系                                  | ID  | 稀有度 |
-| ------------------------------------ | --- | ------ | ------------------------------------- | --- | ------ |
-| extreme_hills_mutated                | 131 | 0.10%  | stony_peaks                           | 182 | 0.10%  |
-| pale_garden                          | 186 | 0.12%  | mushroom_island                       | 14  | 0.14%  |
-| frozen_peaks                         | 181 | 0.16%  | jagged_peaks                          | 180 | 0.18%  |
-| extreme_hills_plus_trees             | 34  | 0.19%  | savanna_mutated                       | 163 | 0.21%  |
-| ice_spikes                           | 140 | 0.24%  | extreme_hills                         | 3   | 0.26%  |
-| cherry_grove                         | 185 | 0.29%  | mesa_bryce                            | 165 | 0.33%  |
-| cold_beach                           | 26  | 0.36%  | snowy_slopes                          | 179 | 0.39%  |
-| savanna_plateau                      | 36  | 0.40%  | mangrove_swamp                        | 184 | 0.51%  |
-| mesa_plateau_stone                   | 38  | 0.62%  | bamboo_jungle                         | 168 | 0.64%  |
-| sunflower_plains                     | 129 | 0.67%  | mega_taiga                            | 32  | 0.69%  |
-| flower_forest                        | 132 | 0.69%  | redwood_taiga_mutated                 | 160 | 0.71%  |
-| grove                                | 178 | 0.72%  | frozen_river                          | 11  | 0.83%  |
-| mesa                                 | 37  | 0.89%  | swamp                                 | 6   | 0.98%  |
-| meadow                               | 177 | 1.16%  | stone_beach                           | 25  | 1.17%  |
-| deep_frozen_ocean                    | 50  | 1.25%  | jungle_edge                           | 23  | 1.38%  |
-| roofed_forest                        | 29  | 1.84%  | jungle                                | 21  | 2.04%  |
-| warm_ocean                           | 44  | 2.13%  | birch_forest_mutated                  | 155 | 2.15%  |
-| frozen_ocean                         | 10  | 2.26%  | birch_forest                          | 27  | 2.29%  |
-| desert                               | 2   | 2.33%  | deep_lukewarm_ocean                   | 48  | 2.37%  |
-| cold_taiga                           | 30  | 2.40%  | deep_cold_ocean                       | 49  | 2.42%  |
-| beach                                | 16  | 2.45%  | ice_plains                            | 12  | 2.78%  |
-| taiga                                | 5   | 3.40%  | deep_ocean                            | 24  | 3.60%  |
-| savanna                              | 35  | 3.91%  | lukewarm_ocean                        | 45  | 4.55%  |
-| cold_ocean                           | 46  | 4.59%  | river                                 | 7   | 6.22%  |
-| ocean                                | 0   | 6.87%  | plains                                | 1   | 10.69% |
-| forest                               | 4   | 12.31% | dripstone_caves                       | 174 | -      |
-| lush_caves                           | 175 | -      | deep_dark                             | 183 | -      |
+| 群系                     | ID  | 稀有度 | 群系                  | ID  | 稀有度 |
+| ------------------------ | --- | ------ | --------------------- | --- | ------ |
+| extreme_hills_mutated    | 131 | 0.10%  | stony_peaks           | 182 | 0.10%  |
+| pale_garden              | 186 | 0.12%  | mushroom_island       | 14  | 0.14%  |
+| frozen_peaks             | 181 | 0.16%  | jagged_peaks          | 180 | 0.18%  |
+| extreme_hills_plus_trees | 34  | 0.19%  | savanna_mutated       | 163 | 0.21%  |
+| ice_spikes               | 140 | 0.24%  | extreme_hills         | 3   | 0.26%  |
+| cherry_grove             | 185 | 0.29%  | mesa_bryce            | 165 | 0.33%  |
+| cold_beach               | 26  | 0.36%  | snowy_slopes          | 179 | 0.39%  |
+| savanna_plateau          | 36  | 0.40%  | mangrove_swamp        | 184 | 0.51%  |
+| mesa_plateau_stone       | 38  | 0.62%  | bamboo_jungle         | 168 | 0.64%  |
+| sunflower_plains         | 129 | 0.67%  | mega_taiga            | 32  | 0.69%  |
+| flower_forest            | 132 | 0.69%  | redwood_taiga_mutated | 160 | 0.71%  |
+| grove                    | 178 | 0.72%  | frozen_river          | 11  | 0.83%  |
+| mesa                     | 37  | 0.89%  | swamp                 | 6   | 0.98%  |
+| meadow                   | 177 | 1.16%  | stone_beach           | 25  | 1.17%  |
+| deep_frozen_ocean        | 50  | 1.25%  | jungle_edge           | 23  | 1.38%  |
+| roofed_forest            | 29  | 1.84%  | jungle                | 21  | 2.04%  |
+| warm_ocean               | 44  | 2.13%  | birch_forest_mutated  | 155 | 2.15%  |
+| frozen_ocean             | 10  | 2.26%  | birch_forest          | 27  | 2.29%  |
+| desert                   | 2   | 2.33%  | deep_lukewarm_ocean   | 48  | 2.37%  |
+| cold_taiga               | 30  | 2.40%  | deep_cold_ocean       | 49  | 2.42%  |
+| beach                    | 16  | 2.45%  | ice_plains            | 12  | 2.78%  |
+| taiga                    | 5   | 3.40%  | deep_ocean            | 24  | 3.60%  |
+| savanna                  | 35  | 3.91%  | lukewarm_ocean        | 45  | 4.55%  |
+| cold_ocean               | 46  | 4.59%  | river                 | 7   | 6.22%  |
+| ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
+| forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
+| lush_caves               | 175 | -      | deep_dark             | 183 | -      |
+| sulfur_caves             | 187 | -      |                       |     |        |
 
 ---
+
+> **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
+
+> **注**：硫磺洞穴（ID: 187）现已支持破解。请使用低 Y 坐标（Y≤60）以获得准确检测。由于缺乏稀有度数据，不推荐作为主要破解群系。
+
+> **注意**：ChunkBase 等网站使用 Java 版群系名称，与基岩版不同。例如：Java 的 `stony_shore` 在基岩版是 `stone_beach`，Java 的 `dark_forest` 在基岩版是 `roofed_forest`。验证时请注意区分。
 
 ## 性能参考
 
@@ -280,7 +294,7 @@ pyinstaller build.spec --noconfirm
 
 ## 相关链接
 
-- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算
+- [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算；集成 [SeedMapper 的 fork 版本](https://github.com/xpple/SeedMapper) 支持 1.21.5+ 和 26.2+ 群系生成
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 
 ---

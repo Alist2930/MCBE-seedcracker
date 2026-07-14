@@ -45,6 +45,7 @@ typedef struct
 {
     int x;
     int z;
+    int y;
     int biome_id;
 } BiomeSample;
 
@@ -483,7 +484,7 @@ EXPORT int crack_high32_soa(
     uint32_t start_high,
     uint32_t end_high,
     uint32_t low32,
-    int y_coord,
+    int y_coord_unused, // Kept for compatibility, but samples now have their own Y
     BiomeSample *samples,
     int num_samples,
     uint64_t *results,
@@ -526,7 +527,7 @@ EXPORT int crack_high32_soa(
 
             for (int s = 0; s < batch_size; s++)
             {
-                voronoiAccess3D(sha[s], samples[i].x, y_coord, samples[i].z, &x4[s], &y4[s], &z4[s]);
+                voronoiAccess3D(sha[s], samples[i].x, samples[i].y, samples[i].z, &x4[s], &y4[s], &z4[s]);
             }
 
             sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4, mc_version);
