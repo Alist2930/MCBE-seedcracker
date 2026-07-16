@@ -66,24 +66,40 @@ Use the command line version. See [MCBEseedcracker_linux/README.md](MCBEseedcrac
 
 ```
 MCBEseedcracker_win_ui/    # Windows GUI version (recommended)
-├── dist/                  # Pre-built executable
 ├── ui/                    # UI source code
-└── dll/                   # Pre-compiled DLLs
+├── crack_low32/           # Low 32-bit compilation source
+│   ├── crack_low32.c      # CPU version
+│   ├── crack_low32_opencl.c  # GPU version
+│   └── crack_low32.cl     # OpenCL kernel
+├── crack_high32/          # High 32-bit compilation source
+│   ├── crack_high32.c     # High 32-bit source
+│   └── cubiomes/          # Biome generation library
+├── dll/                   # Compiled DLLs
+│   ├── crack_low32/
+│   │   ├── crack_low32.dll
+│   │   ├── crack_low32_opencl.dll
+│   │   └── crack_low32.cl
+│   └── crack_high32/
+│       └── crack_high32.dll
+├── compile.bat            # Compilation script
+├── build.bat              # Packaging script
+└── version_info.txt       # Version information
 
 MCBEseedcracker_linux/     # Linux command line version
-├── build.sh
+├── build.sh               # Compilation script
 ├── crack_low32/
-│   ├── crack_low32.so
-│   ├── crack_low32.c
-│   └── crack_low32.py
+│   ├── crack_low32.c      # Compilation source
+│   ├── crack_low32_opencl.c  # GPU version
+│   ├── crack_low32.cl     # OpenCL kernel
+│   ├── crack_low32.so     # CPU library
+│   ├── crack_low32_opencl.so  # GPU library
+│   └── crack_low32.py     # Command line script
 └── crack_high32/
-    ├── crack_high32.so
-    ├── crack_high32.c
-    ├── crack_high32.py
-    └── cubiomes/
+    ├── crack_high32.c     # Compilation source
+    ├── crack_high32.so    # Compiled library
+    ├── crack_high32.py    # Command line script
+    └── cubiomes/          # Biome generation library
 ```
-
-> **Note**: The Windows command line version (`MCBEseedcracker/`) is no longer maintained. Please use the GUI version (`MCBEseedcracker_win_ui/`).
 
 ---
 
@@ -398,12 +414,19 @@ If significantly longer:
 
 ## Performance Reference
 
-Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
+Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
-| Cracker     | Speed  | Estimated Time (2^32) |
-| ----------- | ------ | --------------------- |
-| Low 32-bit  | ~3M/s  | ~24 minutes           |
-| High 32-bit | ~70K/s | ~17 hours             |
+| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
+| ----------- | ---- | ------- | ---------------- | ------------------- |
+| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
+| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
+| High 32-bit | CPU  | ~250K/s | ~5 hours         | 32 processes (auto) |
+
+**Notes**:
+
+- Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
+- Old GPUs (compute units < 10) automatically use CPU mode for stability
+- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
 
 ---
 

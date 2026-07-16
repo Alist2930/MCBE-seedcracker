@@ -410,7 +410,8 @@ class MainWindow(QMainWindow):
         self.low32_worker.found_seed.connect(self.add_low32_result)
         self.low32_worker.finished.connect(self.low32_finished)
         self.low32_worker.error_occurred.connect(self.show_error)
-        
+        self.low32_worker.compute_device_info.connect(self.update_low32_compute_device)
+
         self.low32_worker.start()
         self.low32_status_label.setText(lang_manager.get("start_low32_cracking"))
     
@@ -652,7 +653,12 @@ class MainWindow(QMainWindow):
         UINT64_MAX = 18446744073709551615
         display_seed = seed if seed <= SIGNED64_MAX else seed - UINT64_MAX - 1
         self.high32_results_list.addItem(f"{lang_manager.get('full_seed')}: {display_seed}")
-    
+
+    def update_low32_compute_device(self, device_info):
+        """Update status label with compute device info (GPU/CPU)"""
+        current_text = self.low32_status_label.text()
+        self.low32_status_label.setText(f"{current_text} | {device_info}")
+
     def low32_finished(self, results):
         self.start_low32_btn.setEnabled(True)
         self.pause_low32_btn.setEnabled(False)
@@ -839,7 +845,7 @@ class MainWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(
             self, lang_manager.get("about_title"),
-            f"MCBE Seed Cracker v1.3.0\n\n{lang_manager.get('about_text')}"
+            f"MCBE Seed Cracker v1.3.1\n\n{lang_manager.get('about_text')}"
         )
     
     def copy_low32_seed(self, item):

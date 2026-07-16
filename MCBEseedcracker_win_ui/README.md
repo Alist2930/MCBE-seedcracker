@@ -6,14 +6,131 @@ Windows desktop application with graphical interface, no command line required.
 
 ---
 
+## Project Structure
+
+```
+MCBEseedcracker_win_ui/
+├── ui/                          # UI source code
+│   ├── main_window.py           # Main window
+│   ├── workers/                 # Worker threads
+│   │   ├── low32_worker.py      # Low 32-bit cracking (GPU/CPU)
+│   │   └── high32_worker.py     # High 32-bit cracking
+│   ├── widgets/                 # UI widgets
+│   ├── data/                    # Data files
+│   └── utils/                   # Utilities
+├── crack_low32/                 # Low 32-bit cracking library
+│   ├── crack_low32.c            # CPU version source
+│   ├── crack_low32_opencl.c     # GPU version source
+│   ├── crack_low32.cl           # OpenCL kernel
+│   └── compile_opencl.bat       # OpenCL compilation script
+├── crack_high32/                # High 32-bit cracking library
+│   ├── crack_high32.c           # High 32-bit source
+│   └── cubiomes/                # Biome generation library
+├── dll/                         # Compiled libraries
+│   ├── crack_low32/
+│   │   ├── crack_low32.dll      # CPU version
+│   │   ├── crack_low32_opencl.dll  # GPU version
+│   │   └── crack_low32.cl       # OpenCL kernel
+│   └── crack_high32/
+│       └── crack_high32.dll     # High 32-bit library
+├── compile.bat                  # Compilation script
+├── build.bat                    # PyInstaller packaging script
+├── crack_config.json            # GPU configuration
+└── main.py                      # Application entry point
+```
+
+---
+
+## Compilation
+
+### Prerequisites
+
+1. **GCC Compiler**: [MinGW-w64](https://github.com/niXman/mingw-builds-binaries/releases) or TDM-GCC
+2. **OpenCL Support** (optional for GPU): [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
+
+### Compile DLLs
+
+Run compilation script:
+
+```cmd
+compile.bat
+```
+
+This will generate:
+
+- `dll/crack_low32/crack_low32.dll` - CPU version
+- `dll/crack_low32/crack_low32_opencl.dll` - GPU version (if CUDA installed)
+- `dll/crack_high32/crack_high32.dll` - High 32-bit library
+
+### Manual Compilation
+
+**Low 32-bit (CPU):**
+
+```cmd
+cd crack_low32
+gcc -O3 -shared -fPIC -o crack_low32.dll crack_low32.c -lgomp
+```
+
+**Low 32-bit (GPU):**
+
+```cmd
+cd crack_low32
+gcc -O3 -shared -fPIC -o crack_low32_opencl.dll crack_low32_opencl.c -I"CUDA_PATH\include" -lOpenCL
+```
+
+**High 32-bit:**
+
+```cmd
+cd crack_high32
+gcc -O3 -shared -fPIC -o crack_high32.dll crack_high32.c -Icubiomes -lgomp
+```
+
+---
+
 ## Features
 
 - ✅ **Graphical Interface** - Intuitive Windows desktop app
+- ✅ **GPU Acceleration** - Low 32-bit cracking with OpenCL GPU acceleration (15x faster)
 - ✅ **Low 32-bit Cracking** - Crack seed low 32 bits using structure coordinates
 - ✅ **High 32-bit Cracking** - Crack seed high 32 bits using biome samples
 - ✅ **Progress Save/Restore** - Resume cracking after interruption
 - ✅ **Chinese/English Support** - Bilingual interface
 - ✅ **Sub-version Support** - Support Bedrock sub-version selection (e.g. 1.21.50, 1.21-1.21.40)
+
+### GPU Acceleration (Low 32-bit)
+
+**Automatically detects and uses GPU if available, with automatic fallback to CPU.**
+
+| Feature             | GPU Mode       | CPU Mode     |
+| ------------------- | -------------- | ------------ |
+| **Speed**           | ~150M seeds/s  | ~10M seeds/s |
+| **Full Range Time** | ~30 seconds    | ~7 minutes   |
+| **Speedup**         | **15x faster** | Baseline     |
+
+**GPU Requirements:**
+
+- NVIDIA GPU with Compute Capability 2.0+ (Fermi architecture or newer)
+- AMD GPU with OpenCL 1.1+ support
+- **Recommended**: RTX 20/30/40 series for best performance
+
+**Old GPU Behavior:**
+
+- GPUs with <10 compute units (e.g., MX330, GTX 550 Ti) are automatically detected and will use CPU mode
+- Status bar shows current compute device (GPU/CPU)
+- No manual configuration needed
+
+**Configuration:**
+
+Edit `crack_config.json` in the application directory:
+
+```json
+{
+  "use_gpu": true,
+  "auto_fallback": true,
+  "seeds_per_thread": 256,
+  "max_results": 10000
+}
+```
 
 ---
 
@@ -194,12 +311,15 @@ After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/se
 
 ## Performance Reference
 
-Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
+Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
-| Cracker     | Speed  | Estimated Time (2^32) |
-| ----------- | ------ | --------------------- |
-| Low 32-bit  | ~3M/s  | ~24 minutes           |
-| High 32-bit | ~70K/s | ~17 hours             |
+| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
+| ----------- | ---- | ------- | ---------------- | ------------------- |
+| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
+| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
+| High 32-bit | CPU  | ~250K/s | ~5 hours         | 32 processes (auto) |
+
+**Note**: Old GPUs (compute units < 10) automatically use CPU mode for stability.
 
 ---
 

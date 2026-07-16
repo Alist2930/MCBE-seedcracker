@@ -1,0 +1,12 @@
+{
+    "use_gpu": true,
+    "auto_fallback": true,
+    "seeds_per_thread": 256,
+    "max_results": 10000,
+    "comment": {
+        "use_gpu": "Set to true to enable GPU acceleration (OpenCL), false for CPU mode",
+        "auto_fallback": "If GPU fails, automatically fall back to CPU",
+        "seeds_per_thread": "Number of seeds each GPU thread checks (auto-adjusted based on GPU)",
+        "max_results": "Maximum number of matching seeds to return"
+    }
+}

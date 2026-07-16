@@ -34,6 +34,7 @@ cd crack_high32
 python3 crack_high32.py                         # Full crack (0 ~ 2^32-1)
 python3 crack_high32.py --test                  # Test mode (0 ~ 100M)
 python3 crack_high32.py --low32 1818588773      # Specify low32 value
+python3 crack_high32.py --start 0 --end 1000000000  # Custom range
 ```
 
 ---
@@ -42,13 +43,56 @@ python3 crack_high32.py --low32 1818588773      # Specify low32 value
 
 Crack the low 32 bits of the seed using structure locations.
 
+### GPU Acceleration (OpenCL)
+
+**Automatically detects and uses GPU if available, with automatic fallback to CPU.**
+
+| Feature             | GPU Mode       | CPU Mode     |
+| ------------------- | -------------- | ------------ |
+| **Speed**           | ~150M seeds/s  | ~10M seeds/s |
+| **Full Range Time** | ~30 seconds    | ~7 minutes   |
+| **Speedup**         | **15x faster** | Baseline     |
+
+**GPU Requirements:**
+
+- NVIDIA GPU with Compute Capability 2.0+ (Fermi architecture or newer)
+- AMD GPU with OpenCL 1.1+ support
+- **Recommended**: RTX 20/30/40 series for best performance
+
+**Old GPU Behavior:**
+
+- GPUs with <10 compute units (e.g., MX330, GTX 550 Ti) are automatically detected and will use CPU mode
+- This prevents timeout/crash issues on low-end GPUs
+
 ### Command Line Arguments
 
-| Argument  | Description                       |
-| --------- | --------------------------------- |
-| `--start` | Start low32 value (default: 0)    |
-| `--end`   | End low32 value (default: 2^32-1) |
-| `--test`  | Test mode (0 - 100M)              |
+| Argument  | Description                                          |
+| --------- | ---------------------------------------------------- |
+| `--start` | Start low32 value (default: 0)                       |
+| `--end`   | End low32 value (default: 2^32-1)                    |
+| `--test`  | Test mode (0 - 100M)                                 |
+| `--cpu`   | Force CPU mode                                       |
+| `--gpu`   | Force GPU mode (auto-fallback to CPU if unavailable) |
+
+### GPU Configuration
+
+Edit `crack_config.json` to customize GPU behavior:
+
+```json
+{
+  "use_gpu": true,
+  "auto_fallback": true,
+  "seeds_per_thread": 256,
+  "max_results": 10000
+}
+```
+
+| Setting            | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `use_gpu`          | Enable/disable GPU acceleration (default: true)        |
+| `auto_fallback`    | Auto-fallback to CPU if GPU fails (default: true)      |
+| `seeds_per_thread` | Seeds per GPU thread (auto-adjusted by GPU capability) |
+| `max_results`      | Maximum results to store (default: 10000)              |
 
 ### Configure Target Structures
 
@@ -124,26 +168,31 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ### Configuration
 
-Edit the beginning of `crack_high32.py`:
+Edit the beginning of `crack_high32.py` to configure low32 value, MC version, and biome samples:
 
 ```python
+# Biome samples (recommended: 5, each sample includes X, Z, Y coordinates and biome ID)
+SAMPLES = [
+    (-1922, 1231, 200, 185),   # cherry_grove
+    (-4706, 3302, 200, 132),   # flower_forest
+    (-935, 2592, 200, 5),      # taiga
+    (-2697, 1363, 200, 4),     # forest
+    (-270, 470, 200, 186),     # pale_garden
+]
+
 # Low 32-bit value (from crack_low32 result)
 LOW32 = 1818588773
 
 # MC version (sub-version support)
-MC_VERSION_STR = "1.21.50"  # See version mapping table below
-
-# Biome samples (recommended: 5)
-SAMPLES = [
-    (-1922, 1231, 185),   # cherry_grove
-    (-4706, 3302, 132),   # flower_forest
-    (-935, 2592, 5),      # taiga
-    (-2697, 1363, 4),     # forest
-    (-270, 470, 186),     # pale_garden
-]
-
-Y_COORD = 200  # Sampling height (surface recommended Y>=200, avoid underground biome interference)
+MC_VERSION_STR = "26.30+"  # See version mapping table below
 ```
+
+> **Note**:
+>
+> - Sample format: `(x, z, y, biome_id)`
+> - Surface sampling recommended `Y>=200`, avoid underground biome interference
+> - Cave biomes (e.g., Sulfur Caves) require low Y coordinates (`Y≤60`)
+> - High 32-bit cracker only supports CPU mode (multiprocessing), no GPU acceleration
 
 #### Version Mapping
 
@@ -264,6 +313,8 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 Pre-compiled library files are included. To build yourself:
 
+### CPU Version
+
 ```bash
 # Install dependencies
 sudo apt install -y gcc libomp-dev  # Debian/Ubuntu
@@ -274,16 +325,53 @@ chmod +x build.sh
 ./build.sh
 ```
 
+### GPU Version (OpenCL)
+
+**For GPU acceleration, install OpenCL development packages:**
+
+```bash
+# Ubuntu/Debian
+sudo apt install -y ocl-icd-opencl-dev ocl-icd-libopencl1
+
+# Fedora/RHEL
+sudo dnf install -y ocl-icd-devel
+
+# Arch Linux
+sudo pacman -S ocl-icd
+```
+
+**For NVIDIA GPUs:**
+
+```bash
+# Ensure NVIDIA driver is installed
+nvidia-smi  # Check GPU status
+
+# If OpenCL is not detected, manually configure:
+sudo mkdir -p /etc/OpenCL/vendors
+echo "libnvidia-opencl.so.1" | sudo tee /etc/OpenCL/vendors/nvidia.icd
+```
+
+Then rebuild with GPU support:
+
+```bash
+chmod +x build.sh
+./build.sh
+# Should see: [OK] crack_low32_opencl.so created
+```
+
 ---
 
 ## Performance Reference
 
-Test device: Intel Core i5-2500K @ 3.30GHz, 4 cores
+Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
-| Cracker     | Speed  | Estimated Time (2^32) |
-| ----------- | ------ | --------------------- |
-| Low 32-bit  | ~3M/s  | ~24 minutes           |
-| High 32-bit | ~70K/s | ~17 hours             |
+| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
+| ----------- | ---- | ------- | ---------------- | ------------------- |
+| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
+| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
+| High 32-bit | CPU  | ~250K/s | ~5 hours         | 32 processes (auto) |
+
+**Note**: Old GPUs (compute units < 10) automatically use CPU mode for stability.
 
 ---
 

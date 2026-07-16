@@ -1,0 +1,14 @@
+{
+    "use_gpu": false,
+    "auto_fallback": true,
+    "gpu_preferred_device": "auto",
+    "seeds_per_thread": 256,
+    "max_results": 10000,
+    "comment": {
+        "use_gpu": "Set to false for old GPUs (GTX 550 Ti) - use CPU mode instead",
+        "auto_fallback": "If GPU fails, automatically fall back to CPU",
+        "gpu_preferred_device": "GPU device to use: 'auto', 'nvidia', 'amd', 'intel', or specific device name",
+        "seeds_per_thread": "Number of seeds each GPU thread checks (256-1024 recommended)",
+        "max_results": "Maximum number of matching seeds to return"
+    }
+}

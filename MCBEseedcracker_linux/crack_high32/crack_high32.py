@@ -272,11 +272,19 @@ def main():
     search_start = args.start
     search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
     search_end_exclusive = search_end + 1
-    num_processes = args.processes if args.processes else mp.cpu_count()
-    
+    # Limit processes to avoid resource exhaustion on high-core systems
+    # Default to 32 processes max, but respect user's --processes setting
+    if args.processes:
+        max_processes = args.processes
+    else:
+        max_processes = min(mp.cpu_count(), 32)
+
     print(f"\n[*] Low 32-bit: {args.low32}")
     print(f"[*] MC Version: {MC_VERSION_STR}")
-    print(f"[*] Processes: {num_processes}")
+    if args.processes:
+        print(f"[*] Processes: {max_processes} (user specified)")
+    else:
+        print(f"[*] Processes: {max_processes} (auto-limited from {mp.cpu_count()} cores)")
     
     sorted_samples = sort_samples_by_rarity(SAMPLES, MC_VERSION_STR)
     
@@ -313,15 +321,17 @@ def main():
     start_time = time.time()
     total_done = 0
     batch_size = BATCH_SIZE
-    
-    pool = mp.Pool(num_processes)
-    
-    for batch_start in range(search_start, search_end_exclusive, batch_size * num_processes):
-        batch_end = min(batch_start + batch_size * num_processes, search_end_exclusive)
-        
+
+    # Use 'spawn' context to avoid issues with fork and DLL loading
+    ctx = mp.get_context('spawn')
+    pool = ctx.Pool(max_processes)
+
+    for batch_start in range(search_start, search_end_exclusive, batch_size * max_processes):
+        batch_end = min(batch_start + batch_size * max_processes, search_end_exclusive)
+
         tasks = []
         chunk = batch_size
-        for i in range(num_processes):
+        for i in range(max_processes):
             start = batch_start + i * chunk
             end = start + chunk
             if start < batch_end:

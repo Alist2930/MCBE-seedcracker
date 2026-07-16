@@ -67,24 +67,40 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 
 ```
 MCBEseedcracker_win_ui/    # Windows 图形界面版（推荐）
-├── dist/                  # 预编译可执行文件
 ├── ui/                    # UI 源代码
-└── dll/                   # 预编译 DLL
+├── crack_low32/           # 低32位编译源码
+│   ├── crack_low32.c      # CPU 版本
+│   ├── crack_low32_opencl.c  # GPU 版本
+│   └── crack_low32.cl     # OpenCL 内核
+├── crack_high32/          # 高32位编译源码
+│   ├── crack_high32.c     # 高32位源码
+│   └── cubiomes/          # 群系生成库
+├── dll/                   # 编译后的 DLL
+│   ├── crack_low32/
+│   │   ├── crack_low32.dll
+│   │   ├── crack_low32_opencl.dll
+│   │   └── crack_low32.cl
+│   └── crack_high32/
+│       └── crack_high32.dll
+├── compile.bat            # 编译脚本
+├── build.bat              # 打包脚本
+└── version_info.txt       # 版本信息
 
 MCBEseedcracker_linux/     # Linux 命令行版
-├── build.sh
+├── build.sh               # 编译脚本
 ├── crack_low32/
-│   ├── crack_low32.so
-│   ├── crack_low32.c
-│   └── crack_low32.py
+│   ├── crack_low32.c      # 编译源码
+│   ├── crack_low32_opencl.c  # GPU 版本
+│   ├── crack_low32.cl     # OpenCL 内核
+│   ├── crack_low32.so     # CPU 库
+│   ├── crack_low32_opencl.so  # GPU 库
+│   └── crack_low32.py     # 命令行脚本
 └── crack_high32/
-    ├── crack_high32.so
-    ├── crack_high32.c
-    ├── crack_high32.py
-    └── cubiomes/
+    ├── crack_high32.c     # 编译源码
+    ├── crack_high32.so    # 编译后的库
+    ├── crack_high32.py    # 命令行脚本
+    └── cubiomes/          # 群系生成库
 ```
-
-> **注意**：Windows 命令行版本（`MCBEseedcracker/`）已不再维护，请使用图形界面版本（`MCBEseedcracker_win_ui/`）。
 
 ---
 
@@ -385,9 +401,9 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ### 破解时间过长
 
-**低32位破解：** 正常情况下约 20-30 分钟（4核CPU）
+**低32位破解：** GPU约30秒，CPU约6分钟（112核）
 
-**高32位破解：** 正常情况下约 10-20 小时（4核CPU）
+**高32位破解：** 约5小时（112核，32进程）
 
 如果时间明显超出：
 
@@ -399,12 +415,19 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ## 性能参考
 
-测试设备：Intel Core i5-2500K @ 3.30GHz，4核
+测试环境：Intel Xeon Gold 6330 (112核) + NVIDIA RTX 3090
 
-| 破解器 | 速度   | 预计时间 (2^32) |
-| ------ | ------ | --------------- |
-| 低32位 | ~3M/s  | ~24 分钟        |
-| 高32位 | ~70K/s | ~17 小时        |
+| 破解器 | 模式 | 速度    | 预计时间 (2^32) | 备注                |
+| ------ | ---- | ------- | --------------- | ------------------- |
+| 低32位 | GPU  | ~156M/s | **~30秒**       | RTX 3090 OpenCL加速 |
+| 低32位 | CPU  | ~12M/s  | ~6 分钟         | 112核并行           |
+| 高32位 | CPU  | ~250K/s | ~5 小时         | 32进程（自动限制）  |
+
+**注**：
+
+- 低32位破解支持 OpenCL GPU 加速，兼容 NVIDIA/AMD/Intel 显卡
+- 旧显卡（计算单元 < 10）会自动使用 CPU 模式以确保稳定性
+- 高32位破解因算法复杂度高，暂不支持 GPU 加速
 
 ---
 

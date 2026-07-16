@@ -6,14 +6,85 @@ Windows 桌面应用程序版本，提供图形化界面，无需命令行操作
 
 ---
 
+## 项目结构
+
+```
+MCBEseedcracker_win_ui/
+├── ui/                          # UI源代码
+│   ├── main_window.py           # 主窗口
+│   ├── workers/                 # 工作线程
+│   │   ├── low32_worker.py      # 低32位破解（GPU/CPU）
+│   │   └── high32_worker.py     # 高32位破解
+│   ├── widgets/                 # UI组件
+│   ├── data/                    # 数据文件
+│   └── utils/                   # 工具类
+├── crack_low32/                 # 低32位破解库
+│   ├── crack_low32.c            # CPU版本源码
+│   ├── crack_low32_opencl.c     # GPU版本源码
+│   ├── crack_low32.cl           # OpenCL内核
+│   └── compile_opencl.bat       # OpenCL编译脚本
+├── crack_high32/                # 高32位破解库
+│   ├── crack_high32.c           # 高32位源码
+│   └── cubiomes/                # 群系生成库
+├── dll/                         # 编译后的库文件
+│   ├── crack_low32/
+│   │   ├── crack_low32.dll      # CPU版本
+│   │   ├── crack_low32_opencl.dll  # GPU版本
+│   │   └── crack_low32.cl       # OpenCL内核
+│   └── crack_high32/
+│       └── crack_high32.dll     # 高32位库
+├── compile.bat                  # 编译脚本
+├── build.bat                    # PyInstaller打包脚本
+├── crack_config.json            # GPU配置文件
+└── main.py                      # 应用程序入口
+```
+
+---
+
 ## 功能特性
 
 - ✅ **图形化界面** - 直观的 Windows 桌面应用
+- ✅ **GPU加速** - 低32位破解支持OpenCL GPU加速（15倍速度提升）
 - ✅ **低32位破解** - 使用建筑坐标破解种子低32位
 - ✅ **高32位破解** - 使用群系样本破解种子高32位
 - ✅ **进度保存/恢复** - 支持中断后继续破解
 - ✅ **中英文切换** - 支持中文和英文界面
 - ✅ **小版本支持** - 支持基岩版小版本选择（如 1.21.50, 1.21-1.21.40）
+
+### GPU加速（低32位破解）
+
+**自动检测并使用GPU，如不可用自动回退到CPU模式。**
+
+| 特性             | GPU模式       | CPU模式      |
+| ---------------- | ------------- | ------------ |
+| **速度**         | ~150M seeds/s | ~10M seeds/s |
+| **完整范围时间** | ~30秒         | ~7分钟       |
+| **性能提升**     | **15倍加速**  | 基准         |
+
+**GPU要求：**
+
+- NVIDIA GPU，Compute Capability 2.0+（Fermi架构或更新）
+- AMD GPU，支持OpenCL 1.1+
+- **推荐**：RTX 20/30/40系列以获得最佳性能
+
+**旧显卡行为：**
+
+- Compute units < 10的显卡（如MX330、GTX 550 Ti）会自动检测并使用CPU模式
+- 状态栏显示当前计算设备（GPU/CPU）
+- 无需手动配置
+
+**配置文件：**
+
+编辑应用程序目录中的 `crack_config.json`：
+
+```json
+{
+  "use_gpu": true,
+  "auto_fallback": true,
+  "seeds_per_thread": 256,
+  "max_results": 10000
+}
+```
 
 ---
 
@@ -183,12 +254,15 @@ Windows 桌面应用程序版本，提供图形化界面，无需命令行操作
 
 ## 性能参考
 
-测试设备：Intel Core i5-2500K @ 3.30GHz，4核
+测试环境：Intel Xeon Gold 6330 (112核) + NVIDIA RTX 3090
 
-| 破解器 | 速度   | 预计时间 (2^32) |
-| ------ | ------ | --------------- |
-| 低32位 | ~3M/s  | ~24 分钟        |
-| 高32位 | ~70K/s | ~17 小时        |
+| 破解器 | 模式 | 速度    | 预计时间 (2^32) | 备注                |
+| ------ | ---- | ------- | --------------- | ------------------- |
+| 低32位 | GPU  | ~156M/s | **~30秒**       | RTX 3090 OpenCL加速 |
+| 低32位 | CPU  | ~12M/s  | ~6 分钟         | 112核并行           |
+| 高32位 | CPU  | ~250K/s | ~5 小时         | 32进程（自动限制）  |
+
+**注**：旧显卡（计算单元 < 10）会自动使用CPU模式以确保稳定性。
 
 ---
 
@@ -221,6 +295,52 @@ MCBEseedcracker_win_ui/
 │   └── crack_high32/
 ├── build.spec               # PyInstaller 配置
 └── requirements.txt         # Python 依赖
+```
+
+---
+
+## 编译说明
+
+### 前置要求
+
+1. **GCC编译器**：[MinGW-w64](https://github.com/niXman/mingw-builds-binaries/releases) 或 TDM-GCC
+2. **OpenCL支持**（GPU可选）：[CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
+
+### 编译DLL
+
+运行编译脚本：
+
+```cmd
+compile.bat
+```
+
+这将生成：
+
+- `dll/crack_low32/crack_low32.dll` - CPU版本
+- `dll/crack_low32/crack_low32_opencl.dll` - GPU版本（如已安装CUDA）
+- `dll/crack_high32/crack_high32.dll` - 高32位库
+
+### 手动编译
+
+**低32位（CPU）：**
+
+```cmd
+cd crack_low32
+gcc -O3 -shared -fPIC -o crack_low32.dll crack_low32.c -lgomp
+```
+
+**低32位（GPU）：**
+
+```cmd
+cd crack_low32
+gcc -O3 -shared -fPIC -o crack_low32_opencl.dll crack_low32_opencl.c -I"CUDA_PATH\include" -lOpenCL
+```
+
+**高32位：**
+
+```cmd
+cd crack_high32
+gcc -O3 -shared -fPIC -o crack_high32.dll crack_high32.c -Icubiomes -lgomp
 ```
 
 ---
