@@ -145,7 +145,7 @@ class Low32Worker(QThread):
     error_occurred = pyqtSignal(str)
     compute_device_info = pyqtSignal(str)  # Signal for GPU/CPU device info
 
-    def __init__(self, structures, start=0, end=4294967295, test_mode=False, force_gpu=None):
+    def __init__(self, structures, start=0, end=4294967295, test_mode=False, force_gpu=None, process_count=None):
         super().__init__()
         self.structures = structures
         self.start_value = start
@@ -153,6 +153,7 @@ class Low32Worker(QThread):
         self.end_value = end
         self.test_mode = test_mode
         self.force_gpu = force_gpu  # None=auto, True=force GPU, False=force CPU
+        self.user_process_count = process_count  # User-specified process count
         self.is_paused = False
         self.is_stopped = False
         self.results = []
@@ -203,7 +204,22 @@ class Low32Worker(QThread):
                 print("[INFO] CPU mode (from config)")
                 use_gpu = False
 
-            num_processes = mp.cpu_count()
+            # Determine process count
+            # User can specify process count, but it's limited to 16 to avoid resource exhaustion
+            max_processes = min(mp.cpu_count(), 16)
+
+            if self.user_process_count is not None:
+                # User specified process count
+                num_processes = min(self.user_process_count, max_processes)
+                if self.user_process_count > max_processes:
+                    print(f"[WARNING] Limiting processes from {self.user_process_count} to {max_processes} (to prevent resource exhaustion)")
+            else:
+                # Default: use maximum allowed (up to 16)
+                num_processes = max_processes
+
+            if mp.cpu_count() > 16:
+                print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes} (to prevent resource exhaustion)")
+
             print(f"[INFO] CPU cores: {num_processes}")
 
             # Compute device info
@@ -290,6 +306,8 @@ class Low32Worker(QThread):
 
                 processed = min(current, self.end_value + 1)
                 progress = (processed - self.original_start_value) / total_range * 100
+                # Clamp progress to valid range [0, 100]
+                progress = max(0, min(100, progress))
                 speed = int(step_processed / step_elapsed) if step_elapsed > 0 else 0
                 eta = int((self.end_value - processed + 1) / speed) if speed > 0 else 0
 
@@ -383,7 +401,9 @@ class Low32Worker(QThread):
                 batch_start_time = time.time()
 
                 # Emit progress before batch
-                progress_pct = (processed - self.start_value) / total_range * 100
+                progress_pct = (processed - self.original_start_value) / total_range * 100
+                # Clamp progress to valid range [0, 100]
+                progress_pct = max(0, min(100, progress_pct))
                 elapsed = time.time() - global_start
                 speed = (processed - self.start_value) / elapsed if elapsed > 0 else 0
                 eta = (self.end_value - processed) / speed if speed > 0 else 0
@@ -399,7 +419,14 @@ class Low32Worker(QThread):
                     print(f"[ERROR] GPU crack failed at batch {processed:,}")
                     if config.get('auto_fallback', True):
                         print("[INFO] Falling back to CPU mode...")
-                        num_processes = mp.cpu_count()
+                        # Use user-specified process count when falling back to CPU
+                        max_processes = min(mp.cpu_count(), 16)
+                        if self.user_process_count is not None:
+                            num_processes = min(self.user_process_count, max_processes)
+                        else:
+                            num_processes = max_processes
+                        if mp.cpu_count() > 16:
+                            print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes}")
                         self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
                     else:
                         self.error_occurred.emit(f"GPU crack failed: {found}")
@@ -413,12 +440,14 @@ class Low32Worker(QThread):
                 processed = batch_end + 1
 
                 # Progress report (simplified, similar to CPU)
-                progress_pct = (processed - self.start_value) / total_range * 100
+                progress_pct = (processed - self.original_start_value) / total_range * 100
+                # Clamp progress to valid range [0, 100]
+                progress_pct = max(0, min(100, progress_pct))
                 elapsed = time.time() - global_start
                 speed = (processed - self.start_value) / elapsed if elapsed > 0 else 0
                 eta = (self.end_value - processed) / speed if speed > 0 else 0
 
-                print(f"[-] {processed - self.start_value:,}/{total_range:,} ({progress_pct:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta:.0f}s")
+                print(f"[-] {processed - self.original_start_value:,}/{total_range:,} ({progress_pct:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta:.0f}s")
 
                 self.progress_updated.emit(progress_pct, int(speed), int(eta))
 

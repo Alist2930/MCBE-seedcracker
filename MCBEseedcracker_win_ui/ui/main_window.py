@@ -18,6 +18,7 @@ from ui.workers.low32_worker import Low32Worker
 from ui.workers.high32_worker import High32Worker
 import json
 import os
+import multiprocessing as mp
 
 
 class MainWindow(QMainWindow):
@@ -137,9 +138,13 @@ class MainWindow(QMainWindow):
         settings_layout.addLayout(mode_layout)
         
         config_layout = QFormLayout()
+
+        # Determine optimal process count (max 16 to avoid resource exhaustion)
+        max_processes = min(mp.cpu_count(), 16)
+
         self.low32_process_count_input = QSpinBox()
-        self.low32_process_count_input.setRange(1, 32)
-        self.low32_process_count_input.setValue(4)
+        self.low32_process_count_input.setRange(1, max_processes)
+        self.low32_process_count_input.setValue(max_processes)
         config_layout.addRow(lang_manager.get("process_count"), self.low32_process_count_input)
         
         settings_layout.addLayout(config_layout)
@@ -240,9 +245,13 @@ class MainWindow(QMainWindow):
         settings_layout.addLayout(mode_layout)
         
         config_layout = QFormLayout()
+
+        # Determine optimal process count (max 16 to avoid resource exhaustion)
+        max_processes = min(mp.cpu_count(), 16)
+
         self.high32_process_count_input = QSpinBox()
-        self.high32_process_count_input.setRange(1, 32)
-        self.high32_process_count_input.setValue(4)
+        self.high32_process_count_input.setRange(1, max_processes)
+        self.high32_process_count_input.setValue(max_processes)
         config_layout.addRow(lang_manager.get("process_count"), self.high32_process_count_input)
         
         settings_layout.addLayout(config_layout)
@@ -382,8 +391,10 @@ class MainWindow(QMainWindow):
                         print(f"[UI] Original start value: {original_start:,}")
 
                     # Calculate progress relative to original start value
-                    total_range = end - original_start
+                    total_range = end - original_start + 1
                     progress = (start - original_start) / total_range * 100 if total_range > 0 else 100
+                    # Clamp progress to valid range [0, 100]
+                    progress = max(0, min(100, progress))
                     print(f"[UI] Calculated progress: {progress:.2f}%")
                     self.low32_progress.update_progress(progress, 0, 0)
                     self.low32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
@@ -404,7 +415,10 @@ class MainWindow(QMainWindow):
         self.pause_high32_btn.setEnabled(False)
         self.restart_high32_btn.setEnabled(True)
         
-        self.low32_worker = Low32Worker(structures, start, end)
+        # Get user-specified process count
+        process_count = self.low32_process_count_input.value()
+
+        self.low32_worker = Low32Worker(structures, start, end, process_count=process_count)
         self.low32_worker.original_start_value = original_start
         self.low32_worker.progress_updated.connect(self.update_low32_progress)
         self.low32_worker.found_seed.connect(self.add_low32_result)
@@ -543,8 +557,10 @@ class MainWindow(QMainWindow):
                         print(f"[UI] Resuming from position: {start:,}")
 
                     # Calculate progress relative to original start value
-                    total_range = end - original_start
+                    total_range = end - original_start + 1
                     progress = (start - original_start) / total_range * 100 if total_range > 0 else 100
+                    # Clamp progress to valid range [0, 100]
+                    progress = max(0, min(100, progress))
                     print(f"[UI] Calculated progress: {progress:.2f}%")
                     self.high32_progress.update_progress(progress, 0, 0)
                     self.high32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
@@ -567,7 +583,10 @@ class MainWindow(QMainWindow):
         self.pause_low32_btn.setEnabled(False)
         self.restart_low32_btn.setEnabled(True)
         
-        self.high32_worker = High32Worker(low32_value, biomes, start, end, original_start=original_start, mc_version=self.mc_version_combo.currentData())
+        # Get user-specified process count
+        process_count = self.high32_process_count_input.value()
+
+        self.high32_worker = High32Worker(low32_value, biomes, start, end, original_start=original_start, mc_version=self.mc_version_combo.currentData(), process_count=process_count)
         self.high32_worker.progress_updated.connect(self.update_high32_progress)
         self.high32_worker.found_seed.connect(self.add_high32_result)
         self.high32_worker.finished.connect(self.high32_finished)
@@ -1068,7 +1087,9 @@ class MainWindow(QMainWindow):
                 print(f"[UI] Progress already completed, skipping restore")
                 return
             
-            progress = (current - original_start) / (end - original_start) * 100 if end > original_start else 0
+            progress = (current - original_start) / (end - original_start + 1) * 100 if end > original_start else 0
+            # Clamp progress to valid range [0, 100]
+            progress = max(0, min(100, progress))
             print(f"[UI] Calculated progress: {progress:.2f}%")
             self.low32_progress.update_progress(progress, 0, 0)
             
@@ -1087,11 +1108,14 @@ class MainWindow(QMainWindow):
             start = progress_data.get("start_value", 0)
             end = progress_data.get("end_value", 4294967295)
             current = progress_data.get("current_position", start)
+            original_start = progress_data.get("original_start_value", start)  # Use original_start_value for progress calculation
             
             if current >= end:
                 return
             
-            progress = (current - start) / (end - start) * 100 if end > start else 0
+            progress = (current - original_start) / (end - original_start + 1) * 100 if end > original_start else 0
+            # Clamp progress to valid range [0, 100]
+            progress = max(0, min(100, progress))
             self.high32_progress.update_progress(progress, 0, 0)
             
             self.high32_status_label.setText(lang_manager.get("progress_restored"))

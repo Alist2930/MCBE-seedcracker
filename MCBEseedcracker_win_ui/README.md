@@ -322,7 +322,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | ----------- | ---- | ------- | ---------------- | ------------------- |
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
-| High 32-bit | CPU  | ~250K/s | ~5 hours         | 32 processes (auto) |
+| High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
 
 **Note**: Old GPUs (compute units < 10) automatically use CPU mode for stability.
 

@@ -91,7 +91,7 @@ class High32Worker(QThread):
         "1.18": 22,  # MC_1_18
     }
     
-    def __init__(self, low32_value, biomes, start=0, end=4294967295, original_start=None, test_mode=False, mc_version="1.21.50"):
+    def __init__(self, low32_value, biomes, start=0, end=4294967295, original_start=None, test_mode=False, mc_version="1.21.50", process_count=None):
         super().__init__()
         self.low32_value = low32_value
         self.biomes = biomes
@@ -101,13 +101,14 @@ class High32Worker(QThread):
         self.test_mode = test_mode
         self.mc_version_str = mc_version
         self.mc_version = self.VERSION_MAP.get(mc_version, 38)  # Default to 26.30+
+        self.user_process_count = process_count  # User-specified process count
         self.is_paused = False
         self.is_stopped = False
         self.results = []
-        
+
         if test_mode:
             self.end_value = min(end, 100000000)
-        
+
         self.progress_file = os.path.join(get_base_path(), "progress_high32.json")
     
     def run(self):
@@ -169,7 +170,26 @@ class High32Worker(QThread):
             print(biome_info_text)  # Keep console output for debugging
             self.biome_info_updated.emit(biome_info_text)
 
-            num_processes = mp.cpu_count()
+            # Determine process count
+            # User can specify process count, but it's limited to 16 to avoid resource exhaustion
+            # On systems with >16 cores, using all cores causes:
+            # - DLL loading conflicts (multiple processes loading same .dll)
+            # - Memory bandwidth saturation
+            # - Cache contention
+            max_processes = min(mp.cpu_count(), 16)
+
+            if self.user_process_count is not None:
+                # User specified process count
+                num_processes = min(self.user_process_count, max_processes)
+                if self.user_process_count > max_processes:
+                    print(f"[HIGH32 WARNING] Limiting processes from {self.user_process_count} to {max_processes} (to prevent resource exhaustion)")
+            else:
+                # Default: use maximum allowed (up to 16)
+                num_processes = max_processes
+
+            if mp.cpu_count() > 16:
+                print(f"[HIGH32 INFO] Limiting processes from {mp.cpu_count()} to {num_processes} (to prevent resource exhaustion)")
+
             batch_size = 1000000
             dll_path = get_dll_path()
 
@@ -227,9 +247,11 @@ class High32Worker(QThread):
                     current_position = self.start_value + completed_tasks * batch_size
 
                     # Calculate progress relative to original start value (user's initial setting)
-                    total_range = self.end_value - self.original_start_value
+                    total_range = self.end_value - self.original_start_value + 1
                     processed_range = current_position - self.original_start_value
                     progress = (processed_range / total_range) * 100 if total_range > 0 else 100
+                    # Clamp progress to valid range [0, 100]
+                    progress = max(0, min(100, progress))
 
                     # Calculate speed (seeds per second)
                     speed = int(step_processed / step_elapsed) if step_elapsed > 0 else 0
