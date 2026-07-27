@@ -3,9 +3,9 @@
 Minecraft Bedrock High 32-bit Seed Cracker
 
 Usage:
-    python crack_high32.py              # Full search
-    python crack_high32.py --test       # Test mode (0 ~ 100M)
-    python crack_high32.py --start 0 --end 1000000  # Custom range
+    python crack_high32.py              # Load config from config.json
+    python crack_high32.py --test       # Test mode (0 ~ 100M), overrides config
+    python crack_high32.py --start 0 --end 1000000  # Custom range, overrides config
 """
 import ctypes
 import time
@@ -14,6 +14,15 @@ import os
 import argparse
 import multiprocessing as mp
 from pathlib import Path
+
+# Disable output buffering for real-time progress updates
+# This is critical for multiprocessing to show progress immediately
+import functools
+print = functools.partial(print, flush=True)  # Always flush print output
+
+# Add parent directory to path to import config_loader
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import config_loader
 
 script_dir = Path(__file__).parent.resolve()
 dll_path = script_dir / "crack_high32.so"
@@ -175,7 +184,13 @@ def check_biome_version(samples, mc_version):
     
     return warnings
 
-SAMPLES = [
+# ===== Configuration (loaded from config.json) =====
+_cfg = config_loader.get_high32_config()
+
+# Biome samples (x, z, y, biome_id)
+# Load from config file
+_cfg_samples = _cfg.get('samples', [])
+SAMPLES = [(s['x'], s['z'], s['y'], s['biome_id']) for s in _cfg_samples] if _cfg_samples else [
     (-1922, 1231, 200, 185),   # cherry_grove
     (-4706, 3302, 200, 132),   # flower_forest
     (-935, 2592, 200, 5),      # taiga
@@ -183,11 +198,13 @@ SAMPLES = [
     (-270, 470, 200, 186),     # pale_garden
 ]
 
-LOW32 = 1818588773
-# Y_COORD is no longer used - each sample has its own Y coordinate
-# Y_COORD = 200
+LOW32 = _cfg.get('low32', 1818588773)
 
-MC_VERSION_STR = "26.30+"  # Default to latest version (Sulfur Caves)
+# MC Version (string like '1.21.60', '1.21.50', etc.)
+MC_VERSION_STR = _cfg.get('mc_version', '26.30+')
+
+# Convert MC version to cubiomes version constant
+MC_VERSION = config_loader.mc_version_to_cubiomes(MC_VERSION_STR)
 
 MC_1_18 = 22
 MC_1_19 = 24
@@ -211,7 +228,11 @@ VERSION_MAP = {
 
 MC_VERSION = VERSION_MAP.get(MC_VERSION_STR, MC_26_2)
 
-BATCH_SIZE = 500000
+# Batch size for multiprocessing
+# Lower value = more frequent progress updates, but slightly slower
+# Higher value = less frequent updates, but slightly faster
+# Recommended: 100000-500000 for production, 10000-50000 for testing
+BATCH_SIZE = 100000  # Reduced from 500000 for more frequent progress updates
 MAX_RESULTS = 1000
 
 class BiomeSample(ctypes.Structure):
@@ -258,33 +279,55 @@ def crack_batch_soa(args):
 
 def main():
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
-    parser.add_argument('--start', type=int, default=0, help='Start high value (inclusive)')
-    parser.add_argument('--end', type=int, default=0xFFFFFFFF, help='End high value (inclusive, use 0xFFFFFFFF for full range)')
-    parser.add_argument('--test', action='store_true', help='Test mode: 0 ~ 100M')
-    parser.add_argument('--low32', type=int, default=LOW32, help='Low 32-bit value')
+    parser.add_argument('--start', type=int, default=None, help='Start high value (inclusive), overrides config')
+    parser.add_argument('--end', type=int, default=None, help='End high value (inclusive), overrides config')
+    parser.add_argument('--test', action='store_true', help='Test mode: 0 ~ 100M, overrides config')
+    parser.add_argument('--low32', type=int, default=None, help='Low 32-bit value, overrides config')
     parser.add_argument('--processes', type=int, default=None, help='Number of processes')
     args = parser.parse_args()
+    
+    # Load configuration
+    cfg = config_loader.get_high32_config()
+    
+    # Override config with command-line arguments
+    if args.test:
+        test_mode = True
+        search_start = 0
+        search_end = 100000000
+    else:
+        test_mode = args.test if args.test is not None else cfg.get('test_mode', False)
+        search_start = args.start if args.start is not None else cfg.get('start', 0)
+        search_end = args.end if args.end is not None else cfg.get('end', 0xFFFFFFFF)
+    
+    low32 = args.low32 if args.low32 is not None else cfg.get('low32', LOW32)
     
     print("=" * 60)
     print("Minecraft Bedrock High 32-bit Seed Cracker")
     print("=" * 60)
     
-    search_start = args.start
-    search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
     search_end_exclusive = search_end + 1
-    # Limit processes to avoid resource exhaustion on high-core systems
-    # Default to 32 processes max, but respect user's --processes setting
+    
+    # CRITICAL: Limit processes to prevent resource exhaustion
+    # On high-core systems (>32 cores), using all cores causes:
+    # - DLL loading conflicts (multiple processes loading same .so)
+    # - Memory exhaustion
+    # - Lock contention
+    # Solution: Use max 8-16 processes regardless of core count
     if args.processes:
-        max_processes = args.processes
+        max_processes = min(args.processes, 16)  # Never exceed 16
+        if args.processes > 16:
+            print(f"[WARNING] Limiting processes from {args.processes} to 16 (to prevent resource exhaustion)")
     else:
-        max_processes = min(mp.cpu_count(), 32)
-
-    print(f"\n[*] Low 32-bit: {args.low32}")
+        # Auto-limit: use min(cpu_count, 16), but never more than 1/4 of cores
+        cpu_count = mp.cpu_count()
+        max_processes = min(cpu_count, 16, max(1, cpu_count // 4))
+    
+    print(f"\n[*] Low 32-bit: {low32}")
     print(f"[*] MC Version: {MC_VERSION_STR}")
     if args.processes:
-        print(f"[*] Processes: {max_processes} (user specified)")
+        print(f"[*] Processes: {max_processes} (user specified, limited to 16)")
     else:
-        print(f"[*] Processes: {max_processes} (auto-limited from {mp.cpu_count()} cores)")
+        print(f"[*] Processes: {max_processes} (auto-limited to prevent resource exhaustion)")
     
     sorted_samples = sort_samples_by_rarity(SAMPLES, MC_VERSION_STR)
     
@@ -309,22 +352,30 @@ def main():
         sys.exit(1)
     
     total_search = search_end - search_start + 1
-    
+
     print(f"\n[*] Search range: {search_start:,} ~ {search_end:,}")
     print("-" * 60)
     print("[*] Cracking with SOA optimization (4 seeds per batch)...")
     print("-" * 60)
-    
+
     all_results = []
     found_count = 0
-    
+
     start_time = time.time()
     total_done = 0
     batch_size = BATCH_SIZE
 
     # Use 'spawn' context to avoid issues with fork and DLL loading
+    # This is CRITICAL for stability on high-core systems
     ctx = mp.get_context('spawn')
+    print(f"\n[*] Initializing {max_processes} worker processes (using spawn)...")
     pool = ctx.Pool(max_processes)
+    print("[*] Workers initialized! Starting crack...")
+    print("[*] Progress will be updated in real-time...\n")
+
+    # Progress heartbeat: output progress even if no seeds found
+    last_output_time = time.time()
+    output_interval = 2.0  # Output progress every 2 seconds
 
     for batch_start in range(search_start, search_end_exclusive, batch_size * max_processes):
         batch_end = min(batch_start + batch_size * max_processes, search_end_exclusive)
@@ -336,7 +387,7 @@ def main():
             end = start + chunk
             if start < batch_end:
                 actual_end = min(end, batch_end)
-                tasks.append((start, actual_end, args.low32, sorted_samples, 0, MC_VERSION))  # Y coord is now per-sample
+                tasks.append((start, actual_end, low32, sorted_samples, 0, MC_VERSION))  # Y coord is now per-sample
         
         if tasks:
             for r in pool.imap_unordered(crack_batch_soa, tasks):
@@ -344,7 +395,20 @@ def main():
                     for seed in r:
                         all_results.append(seed)
                         found_count += 1
-                        print(format_seed_output(seed, args.low32))
+                        print(format_seed_output(seed, low32))
+                
+                # Progress heartbeat: output every 2 seconds even if batch is not complete
+                current_time = time.time()
+                if current_time - last_output_time >= output_interval:
+                    elapsed = current_time - start_time
+                    estimated_done = int(elapsed * speed) if 'speed' in dir() else total_done
+                    percent = estimated_done / total_search * 100
+                    bar_len = 30
+                    filled = int(bar_len * percent / 100)
+                    bar = '#' * filled + '-' * (bar_len - filled)
+                    sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | ~{estimated_done:,}/{total_search:,} | Working... | Found: {found_count}')
+                    sys.stdout.flush()
+                    last_output_time = current_time
         
         total_done = batch_end - search_start
         elapsed = time.time() - start_time
@@ -358,6 +422,7 @@ def main():
         
         sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {total_done:,}/{total_search:,} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}')
         sys.stdout.flush()
+        last_output_time = time.time()  # Reset heartbeat timer
     
     pool.close()
     pool.join()
@@ -377,7 +442,7 @@ def main():
         for seed in all_results:
             high32 = seed >> 32
             display_seed = to_signed64(seed)
-            print(f"\n  Low 32-bit:  {args.low32} (0x{args.low32:08X})")
+            print(f"\n  Low 32-bit:  {low32} (0x{low32:08X})")
             print(f"  High 32-bit: {high32} (0x{high32:08X})")
             print(f"  Full seed:   {display_seed} (0x{seed:016X})")
     

@@ -100,24 +100,27 @@ MCBEseedcracker_win_ui/
 
 **支持的建筑类型：**
 
-| 建筑类型         | 中文名            | 分布类型   |
-| ---------------- | ----------------- | ---------- |
-| village          | 村庄/僵尸村庄     | triangular |
-| mansion          | 林地府邸          | triangular |
-| end_city         | 末地城            | triangular |
-| ocean_monument   | 海底神殿          | triangular |
-| ancient_city     | 远古城市          | triangular |
-| ocean_ruins      | 海底废墟          | **linear** |
-| shipwreck        | 沉船              | **linear** |
-| nether_complexes | 下界要塞/堡垒遗迹 | **linear** |
-| desert_temple    | 沙漠神殿          | **linear** |
-| igloo            | 雪屋              | **linear** |
-| swamp_hut        | 女巫屋            | **linear** |
-| jungle_temple    | 丛林神庙          | **linear** |
+| 建筑类型                | 中文名               | 分布类型   |
+| ----------------------- | -------------------- | ---------- |
+| village                 | 村庄/僵尸村庄        | triangular |
+| mansion                 | 林地府邸             | triangular |
+| end_city                | 末地城               | triangular |
+| ocean_monument          | 海底神殿             | triangular |
+| ancient_city            | 远古城市             | triangular |
+| pillager_outpost        | 掠夺者哨塔           | triangular |
+| ocean_ruins             | 海底废墟             | **linear** |
+| shipwreck               | 沉船                 | **linear** |
+| nether_complexes        | 下界要塞/堡垒遗迹    | **linear** |
+| desert_temple           | 沙漠神殿             | **linear** |
+| igloo                   | 雪屋                 | **linear** |
+| swamp_hut               | 女巫屋               | **linear** |
+| jungle_temple           | 丛林神庙             | **linear** |
+| ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
+| ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
 
-> **提示**：优先使用 linear 类型建筑（如沙漠神殿、女巫小屋），计算量更小，破解更快。
+> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。避免使用村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑，因为生成规则复杂，在游戏中可能有一个区块的偏移。
 
-**坐标只要是在一个区块内都行。**
+**填入的建筑坐标只需在结构定位的区块内的任意坐标即可。**
 
 **建筑定位区块确定方法：**
 
@@ -304,7 +307,9 @@ MCBEseedcracker_win_ui/
 ### 前置要求
 
 1. **GCC编译器**：[MinGW-w64](https://github.com/niXman/mingw-builds-binaries/releases) 或 TDM-GCC
-2. **OpenCL支持**（GPU可选）：[CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
+2. **OpenCL支持**（GPU可选）：
+   - NVIDIA GPU：安装[CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)或显卡驱动
+   - AMD/Intel GPU：安装显卡驱动即可（已包含OpenCL支持）
 
 ### 编译DLL
 

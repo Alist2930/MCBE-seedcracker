@@ -4,9 +4,7 @@
 
 Minecraft 基岩版种子研究工具 (Windows / Linux)
 
-> **免责声明**：本工具仅供教育和研究目的使用。旨在帮助玩家理解 Minecraft 的群系生成算法，并验证单人世界的种子。本工具不用于多人服务器作弊或利用游戏机制。
->
-> GitHub 上存在类似的开源项目：
+> **免责声明**：本工具专为 Minecraft 基岩版种子破解设计。通过建筑坐标和群系样本帮助玩家查找世界种子。本工具仅供教育和研究目的使用，请勿用于多人服务器作弊或利用游戏机制。GitHub 上存在类似的开源项目：
 >
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java 版种子查找器
@@ -87,6 +85,8 @@ MCBEseedcracker_win_ui/    # Windows 图形界面版（推荐）
 └── version_info.txt       # 版本信息
 
 MCBEseedcracker_linux/     # Linux 命令行版
+├── config.json            # 配置文件（低32位和高32位）
+├── config_loader.py       # 配置加载器
 ├── build.sh               # 编译脚本
 ├── crack_low32/
 │   ├── crack_low32.c      # 编译源码
@@ -154,24 +154,27 @@ Minecraft基岩版使用64位整数作为世界种子。结构生成时，系统
 
 #### 支持的结构
 
-| 英文名           | 中文名            | 分布类型   |
-| ---------------- | ----------------- | ---------- |
-| village          | 村庄/僵尸村庄     | triangular |
-| mansion          | 林地府邸          | triangular |
-| end_city         | 末地城            | triangular |
-| ocean_monument   | 海底神殿          | triangular |
-| ancient_city     | 远古城市          | triangular |
-| ocean_ruins      | 海底废墟          | **linear** |
-| shipwreck        | 沉船              | **linear** |
-| nether_complexes | 下界要塞/堡垒遗迹 | **linear** |
-| desert_temple    | 沙漠神殿          | **linear** |
-| igloo            | 雪屋              | **linear** |
-| swamp_hut        | 女巫屋            | **linear** |
-| jungle_temple    | 丛林神庙          | **linear** |
+| 英文名                  | 中文名               | 分布类型   |
+| ----------------------- | -------------------- | ---------- |
+| village                 | 村庄/僵尸村庄        | triangular |
+| mansion                 | 林地府邸             | triangular |
+| end_city                | 末地城               | triangular |
+| ocean_monument          | 海底神殿             | triangular |
+| ancient_city            | 远古城市             | triangular |
+| pillager_outpost        | 掠夺者哨塔           | triangular |
+| ocean_ruins             | 海底废墟             | **linear** |
+| shipwreck               | 沉船                 | **linear** |
+| nether_complexes        | 下界要塞/堡垒遗迹    | **linear** |
+| desert_temple           | 沙漠神殿             | **linear** |
+| igloo                   | 雪屋                 | **linear** |
+| swamp_hut               | 女巫屋               | **linear** |
+| jungle_temple           | 丛林神庙             | **linear** |
+| ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
+| ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
 
-> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船等）。Linear 类型计算量更少，破解速度更快。
+> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。避免使用村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑，因为生成规则复杂，在游戏中可能有一个区块的偏移。
 
-**坐标只要是在一个区块内都行。**
+**填入的建筑坐标只需在结构定位的区块内的任意坐标即可。**
 
 #### 结构定位区块确定方法
 

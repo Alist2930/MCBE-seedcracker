@@ -4,9 +4,7 @@ English | [简体中文](README_CN.md)
 
 Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
 
-> **Disclaimer**: This tool is for educational and research purposes only. It is designed to help players understand Minecraft's biome generation algorithms and verify seeds for single-player worlds. It is NOT intended for cheating on multiplayer servers or exploiting game mechanics.
->
-> Similar open-source projects exist on GitHub:
+> **Disclaimer**: This tool is designed for Minecraft Bedrock Edition seed cracking. It helps players find world seeds through structure coordinates and biome samples. This tool is for educational and research purposes only, and should not be used for cheating on multiplayer servers or exploiting game mechanics. Similar open-source projects exist on GitHub:
 >
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java Edition seed finder
@@ -86,18 +84,20 @@ MCBEseedcracker_win_ui/    # Windows GUI version (recommended)
 └── version_info.txt       # Version information
 
 MCBEseedcracker_linux/     # Linux command line version
+├── config.json            # Configuration file (low32 and high32)
+├── config_loader.py       # Configuration loader
 ├── build.sh               # Compilation script
 ├── crack_low32/
-│   ├── crack_low32.c      # Compilation source
+│   ├── crack_low32.c      # Compiled source
 │   ├── crack_low32_opencl.c  # GPU version
 │   ├── crack_low32.cl     # OpenCL kernel
 │   ├── crack_low32.so     # CPU library
 │   ├── crack_low32_opencl.so  # GPU library
-│   └── crack_low32.py     # Command line script
+│   └── crack_low32.py     # Command-line script
 └── crack_high32/
-    ├── crack_high32.c     # Compilation source
+    ├── crack_high32.c     # Compiled source
     ├── crack_high32.so    # Compiled library
-    ├── crack_high32.py    # Command line script
+    ├── crack_high32.py    # Command-line script
     └── cubiomes/          # Biome generation library
 ```
 
@@ -153,24 +153,27 @@ Multiple structures matching simultaneously can significantly narrow down candid
 
 #### Supported Structures
 
-| Name             | Description             | Spread Type |
-| ---------------- | ----------------------- | ----------- |
-| village          | Village/Zombie Village  | triangular  |
-| mansion          | Woodland Mansion        | triangular  |
-| end_city         | End City                | triangular  |
-| ocean_monument   | Ocean Monument          | triangular  |
-| ancient_city     | Ancient City            | triangular  |
-| ocean_ruins      | Ocean Ruins             | **linear**  |
-| shipwreck        | Shipwreck               | **linear**  |
-| nether_complexes | Nether Fortress/Bastion | **linear**  |
-| desert_temple    | Desert Temple           | **linear**  |
-| igloo            | Igloo                   | **linear**  |
-| swamp_hut        | Witch Hut               | **linear**  |
-| jungle_temple    | Jungle Temple           | **linear**  |
+| Name                    | Description               | Spread Type |
+| ----------------------- | ------------------------- | ----------- |
+| village                 | Village/Zombie Village    | triangular  |
+| mansion                 | Woodland Mansion          | triangular  |
+| end_city                | End City                  | triangular  |
+| ocean_monument          | Ocean Monument            | triangular  |
+| ancient_city            | Ancient City              | triangular  |
+| pillager_outpost        | Pillager Outpost          | triangular  |
+| ocean_ruins             | Ocean Ruins               | **linear**  |
+| shipwreck               | Shipwreck                 | **linear**  |
+| nether_complexes        | Nether Fortress/Bastion   | **linear**  |
+| desert_temple           | Desert Temple             | **linear**  |
+| igloo                   | Igloo                     | **linear**  |
+| swamp_hut               | Witch Hut                 | **linear**  |
+| jungle_temple           | Jungle Temple             | **linear**  |
+| ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
+| ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Avoid using Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether structures due to complex generation rules that may cause one-chunk offset in-game.
 
-**Coordinates just need to be within the same chunk.**
+**The input structure coordinates can be any position within the structure's locating chunk.**
 
 #### Structure Chunk Location Method
 

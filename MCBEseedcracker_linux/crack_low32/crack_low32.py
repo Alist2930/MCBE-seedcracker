@@ -5,13 +5,13 @@ Minecraft Bedrock Low 32-bit Seed Cracker (Linux)
 Supports both CPU (multiprocessing) and GPU (OpenCL) acceleration.
 
 Usage:
-    python crack_low32.py              # Full crack (2^32), auto-detect GPU/CPU
-    python crack_low32.py --test       # Test mode (100M seeds)
+    python crack_low32.py              # Load config from config.json
+    python crack_low32.py --test       # Test mode (100M seeds), overrides config
     python crack_low32.py --cpu        # Force CPU mode
     python crack_low32.py --gpu        # Force GPU mode
-    python crack_low32.py --start 1000 --end 2000  # Custom range
+    python crack_low32.py --start 1000 --end 2000  # Custom range, overrides config
 
-Configuration file: crack_config.json
+Configuration file: ../config.json
 """
 import ctypes
 import time
@@ -21,6 +21,10 @@ import json
 import os
 import sys
 from pathlib import Path
+
+# Add parent directory to path to import config_loader
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import config_loader
 
 CONST_A = 2570712328
 CONST_B = 4048968661
@@ -38,39 +42,31 @@ STRUCTURE_CONFIGS = {
     "igloo": {"name": "Igloo", "salt": 14357617, "spacing": 32, "separation": 8, "spread_type": "linear"},
     "swamp_hut": {"name": "Swamp Hut", "salt": 14357617, "spacing": 32, "separation": 8, "spread_type": "linear"},
     "jungle_temple": {"name": "Jungle Temple", "salt": 14357617, "spacing": 32, "separation": 8, "spread_type": "linear"},
+    "pillager_outpost": {"name": "Pillager Outpost", "salt": 165745296, "spacing": 80, "separation": 24, "spread_type": "triangular", "rng_type": "bedrock"},
+    "ruined_portal_overworld": {"name": "Ruined Portal (Overworld)", "salt": 40552231, "spacing": 40, "separation": 15, "spread_type": "linear", "rng_type": "bedrock"},
+    "ruined_portal_nether": {"name": "Ruined Portal (Nether)", "salt": 40552231, "spacing": 25, "separation": 10, "spread_type": "linear", "rng_type": "bedrock"},
 }
 
-# ===== Target structures (recommended: 5) =====
-TARGETS = [
+# ===== Target structures (loaded from config.json) =====
+# Load from config file (users can edit config.json)
+_cfg = config_loader.get_low32_config()
+TARGETS = _cfg.get('targets', [
     {"structure": "swamp_hut", "x": 2136, "z": -1176},
     {"structure": "jungle_temple", "x": -360, "z": -248},
     {"structure": "desert_temple", "x": -936, "z": 4744},
     {"structure": "ocean_monument", "x": 792, "z": -792},
     {"structure": "end_city", "x": 1352, "z": -1208},
-]
+])
 
-def load_config():
-    """Load configuration from crack_config.json"""
-    config_path = Path(__file__).parent / 'crack_config.json'
-    default_config = {
-        "use_gpu": True,
-        "auto_fallback": True,
-        "seeds_per_thread": 256,
-        "max_results": 10000
+def load_gpu_config():
+    """Load GPU configuration from main config.json"""
+    cfg = config_loader.get_low32_config()
+    return {
+        'use_gpu': cfg.get('use_gpu', True),
+        'auto_fallback': cfg.get('auto_fallback', True),
+        'seeds_per_thread': cfg.get('seeds_per_thread', 256),
+        'max_results': cfg.get('max_results', 10000)
     }
-
-    if config_path.exists():
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
-        except:
-            pass
-
-    return default_config
 
 def has_opencl_gpu():
     """Check if OpenCL GPU is available"""
@@ -306,12 +302,25 @@ def run_crack_gpu(search_start, search_end, all_results, config):
 
 def main():
     parser = argparse.ArgumentParser(description="Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
-    parser.add_argument("--start", type=int, default=0, help="Start low32 value (inclusive)")
-    parser.add_argument("--end", type=int, default=0xFFFFFFFF, help="End low32 value (inclusive)")
-    parser.add_argument("--test", action="store_true", help="Test mode (100M seeds)")
+    parser.add_argument("--start", type=int, default=None, help="Start low32 value (inclusive), overrides config")
+    parser.add_argument("--end", type=int, default=None, help="End low32 value (inclusive), overrides config")
+    parser.add_argument("--test", action="store_true", help="Test mode (100M seeds), overrides config")
     parser.add_argument("--cpu", action="store_true", help="Force CPU mode")
     parser.add_argument("--gpu", action="store_true", help="Force GPU mode")
     args = parser.parse_args()
+    
+    # Load configuration
+    cfg = config_loader.get_low32_config()
+    
+    # Override config with command-line arguments
+    if args.test:
+        test_mode = True
+        search_start = 0
+        search_end = 100000000
+    else:
+        test_mode = args.test if args.test is not None else cfg.get('test_mode', False)
+        search_start = args.start if args.start is not None else cfg.get('start', 0)
+        search_end = args.end if args.end is not None else cfg.get('end', 0xFFFFFFFF)
     
     print("=" * 60)
     print("Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
@@ -323,7 +332,6 @@ def main():
         print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']}){spread_type_str}")
     
     # Determine compute mode
-    config = load_config()
     use_gpu = False
     gpu_device = "N/A"
     
@@ -333,7 +341,7 @@ def main():
     elif args.gpu:
         print("\n[*] GPU mode forced")
         use_gpu = True
-    elif config.get('use_gpu', True):
+    elif cfg.get('use_gpu', True):
         has_gpu, gpu_info = has_opencl_gpu()
         if has_gpu:
             print(f"\n[*] GPU detected: {gpu_info}")
@@ -341,7 +349,7 @@ def main():
             gpu_device = gpu_info
         else:
             print(f"\n[*] GPU not available: {gpu_info}")
-            if config.get('auto_fallback', True):
+            if cfg.get('auto_fallback', True):
                 print("[*] Auto-fallback to CPU mode")
                 use_gpu = False
             else:
@@ -369,19 +377,20 @@ def main():
             print("[!] Please run 'bash build.sh' first to compile the library.")
             return
     
-    search_start = args.start
-    search_end = 100000000 if args.test and args.end == 0xFFFFFFFF else args.end
     total_seeds = search_end - search_start + 1
     
-    print(f"\n[*] Mode: {'Test' if args.test else 'Full'}")
+    print(f"\n[*] Mode: {'Test' if test_mode else 'Full'}")
     print(f"[*] Search range: {search_start:,} ~ {search_end:,} ({total_seeds:,} seeds)")
     
     print("\n" + "-" * 60)
     print("Starting crack...")
     print("-" * 60)
-    
+
     all_results = []
-    
+
+    # Load GPU config from main config.json
+    config = load_gpu_config()
+
     if use_gpu:
         elapsed = run_crack_gpu(search_start, search_end, all_results, config)
         if elapsed < 0 and config.get('auto_fallback', True):

@@ -1,4 +1,4 @@
-# MCBE Seed Cracker UI
+# MCBEseedcracker (Windows)
 
 English | [简体中文](README_CN.md)
 
@@ -46,7 +46,9 @@ MCBEseedcracker_win_ui/
 ### Prerequisites
 
 1. **GCC Compiler**: [MinGW-w64](https://github.com/niXman/mingw-builds-binaries/releases) or TDM-GCC
-2. **OpenCL Support** (optional for GPU): [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
+2. **OpenCL Support** (optional for GPU):
+   - NVIDIA GPU: Install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads) or display driver
+   - AMD/Intel GPU: Install display driver (already includes OpenCL support)
 
 ### Compile DLLs
 
@@ -146,20 +148,23 @@ Edit `crack_config.json` in the application directory:
 
 **Supported Structures:**
 
-| Structure Type   | Chinese Name            | Distribution |
-| ---------------- | ----------------------- | ------------ |
-| village          | Village/Zombie Village  | triangular   |
-| mansion          | Woodland Mansion        | triangular   |
-| end_city         | End City                | triangular   |
-| ocean_monument   | Ocean Monument          | triangular   |
-| ancient_city     | Ancient City            | triangular   |
-| ocean_ruins      | Ocean Ruins             | **linear**   |
-| shipwreck        | Shipwreck               | **linear**   |
-| nether_complexes | Nether Fortress/Bastion | **linear**   |
-| desert_temple    | Desert Temple           | **linear**   |
-| igloo            | Igloo                   | **linear**   |
-| swamp_hut        | Swamp Hut               | **linear**   |
-| jungle_temple    | Jungle Temple           | **linear**   |
+| Structure Type          | Chinese Name              | Distribution |
+| ----------------------- | ------------------------- | ------------ |
+| village                 | Village/Zombie Village    | triangular   |
+| mansion                 | Woodland Mansion          | triangular   |
+| end_city                | End City                  | triangular   |
+| ocean_monument          | Ocean Monument            | triangular   |
+| ancient_city            | Ancient City              | triangular   |
+| ocean_ruins             | Ocean Ruins               | **linear**   |
+| shipwreck               | Shipwreck                 | **linear**   |
+| nether_complexes        | Nether Fortress/Bastion   | **linear**   |
+| desert_temple           | Desert Temple             | **linear**   |
+| igloo                   | Igloo                     | **linear**   |
+| swamp_hut               | Swamp Hut                 | **linear**   |
+| jungle_temple           | Jungle Temple             | **linear**   |
+| pillager_outpost        | Pillager Outpost          | triangular   |
+| ruined_portal_overworld | Ruined Portal (Overworld) | **linear**   |
+| ruined_portal_nether    | Ruined Portal (Nether)    | **linear**   |
 
 > **Tip**: Prioritize linear type structures (Desert Temple, Swamp Hut), less computation and faster cracking.
 

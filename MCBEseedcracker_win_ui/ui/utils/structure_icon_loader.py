@@ -20,6 +20,9 @@ STRUCTURE_COLORS = {
     "igloo": (200, 220, 240),
     "swamp_hut": (128, 112, 80),
     "jungle_temple": (83, 148, 48),
+    "pillager_outpost": (120, 80, 80),
+    "ruined_portal_overworld": (80, 40, 40),
+    "ruined_portal_nether": (64, 32, 32),
 }
 
 STRUCTURE_ICON_FILES = {
@@ -35,6 +38,9 @@ STRUCTURE_ICON_FILES = {
     "igloo": "igloo.png",
     "swamp_hut": "swamp-hut.png",
     "jungle_temple": "jungle-temple.png",
+    "pillager_outpost": "pillager-outpost.png",
+    "ruined_portal_overworld": "ruined-portal.png",
+    "ruined_portal_nether": "ruined-portal.png",
 }
 
 

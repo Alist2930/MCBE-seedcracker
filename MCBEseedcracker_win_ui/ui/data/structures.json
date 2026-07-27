@@ -106,5 +106,32 @@
     "spacing": 32,
     "separation": 8,
     "spread_type": "linear"
+  },
+  "pillager_outpost": {
+    "name_zh": "掠夺者哨塔",
+    "name_en": "Pillager Outpost",
+    "id": 13,
+    "salt": 165745296,
+    "spacing": 80,
+    "separation": 24,
+    "spread_type": "triangular"
+  },
+  "ruined_portal_overworld": {
+    "name_zh": "废弃传送门（主世界）",
+    "name_en": "Ruined Portal (Overworld)",
+    "id": 14,
+    "salt": 40552231,
+    "spacing": 40,
+    "separation": 15,
+    "spread_type": "linear"
+  },
+  "ruined_portal_nether": {
+    "name_zh": "废弃传送门（下界）",
+    "name_en": "Ruined Portal (Nether)",
+    "id": 15,
+    "salt": 40552231,
+    "spacing": 25,
+    "separation": 10,
+    "spread_type": "linear"
   }
 }

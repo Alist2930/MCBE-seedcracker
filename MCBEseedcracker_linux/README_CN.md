@@ -74,60 +74,73 @@ python3 crack_high32.py --start 0 --end 1000000000  # 自定义范围
 | `--cpu`   | 强制使用CPU模式                        |
 | `--gpu`   | 强制使用GPU模式（不可用时自动回退CPU） |
 
-### GPU配置
+### 配置文件说明
 
-编辑 `crack_config.json` 自定义GPU行为：
+Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和高32位破解）。
+
+**首次运行时会自动创建 `config.json` 文件，请根据需求编辑该文件。**
+
+#### 低32位破解配置
+
+编辑 `config.json` 的 `low32` 部分：
 
 ```json
 {
-  "use_gpu": true,
-  "auto_fallback": true,
-  "seeds_per_thread": 256,
-  "max_results": 10000
+  "low32": {
+    "test_mode": false,
+    "start": 0,
+    "end": 4294967296,
+    "use_gpu": true,
+    "auto_fallback": true,
+    "seeds_per_thread": 256,
+    "max_results": 10000,
+    "targets": [
+      { "structure": "swamp_hut", "x": 2136, "z": -1176 },
+      { "structure": "jungle_temple", "x": -360, "z": -248 },
+      { "structure": "desert_temple", "x": -936, "z": 4744 },
+      { "structure": "ocean_monument", "x": 792, "z": -792 },
+      { "structure": "end_city", "x": 1352, "z": -1208 }
+    ]
+  }
 }
 ```
 
+**配置项说明：**
+
 | 配置项             | 说明                                           |
 | ------------------ | ---------------------------------------------- |
+| `test_mode`        | 测试模式（false: 正常模式，true: 测试模式）    |
+| `start`            | 起始低32位值（默认: 0）                        |
+| `end`              | 结束低32位值（默认: 2^32-1）                   |
 | `use_gpu`          | 启用/禁用GPU加速（默认: true）                 |
 | `auto_fallback`    | GPU失败时自动回退CPU（默认: true）             |
 | `seeds_per_thread` | 每个GPU线程处理的种子数（根据GPU能力自动调整） |
 | `max_results`      | 最大结果存储数量（默认: 10000）                |
-
-### 配置目标结构
-
-编辑 `crack_low32.py` 开头的 `TARGETS`（建议5个结构）：
-
-```python
-TARGETS = [
-    {"structure": "swamp_hut", "x": 2136, "z": -1176},
-    {"structure": "jungle_temple", "x": -360, "z": -248},
-    {"structure": "desert_temple", "x": -936, "z": 4744},
-    {"structure": "ocean_monument", "x": 792, "z": -792},
-    {"structure": "end_city", "x": 1352, "z": -1208},
-]
-```
+| `targets`          | 目标结构列表（建议5个结构）                    |
 
 ### 支持的结构
 
-| 英文名           | 中文名            | 分布类型   |
-| ---------------- | ----------------- | ---------- |
-| village          | 村庄/僵尸村庄     | triangular |
-| mansion          | 林地府邸          | triangular |
-| end_city         | 末地城            | triangular |
-| ocean_monument   | 海底神殿          | triangular |
-| ancient_city     | 远古城市          | triangular |
-| ocean_ruins      | 海底废墟          | **linear** |
-| shipwreck        | 沉船              | **linear** |
-| nether_complexes | 下界要塞/堡垒遗迹 | **linear** |
-| desert_temple    | 沙漠神殿          | **linear** |
-| igloo            | 雪屋              | **linear** |
-| swamp_hut        | 女巫屋            | **linear** |
-| jungle_temple    | 丛林神庙          | **linear** |
+| 英文名                  | 中文名               | 分布类型   |
+| ----------------------- | -------------------- | ---------- |
+| village                 | 村庄/僵尸村庄        | triangular |
+| mansion                 | 林地府邸             | triangular |
+| end_city                | 末地城               | triangular |
+| ocean_monument          | 海底神殿             | triangular |
+| ancient_city            | 远古城市             | triangular |
+| pillager_outpost        | 掠夺者哨塔           | triangular |
+| ocean_ruins             | 海底废墟             | **linear** |
+| shipwreck               | 沉船                 | **linear** |
+| nether_complexes        | 下界要塞/堡垒遗迹    | **linear** |
+| desert_temple           | 沙漠神殿             | **linear** |
+| igloo                   | 雪屋                 | **linear** |
+| swamp_hut               | 女巫屋               | **linear** |
+| jungle_temple           | 丛林神庙             | **linear** |
+| ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
+| ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
 
-坐标只要是在一个区块内都行。
+> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。避免使用村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑，因为生成规则复杂，在游戏中可能有一个区块的偏移。
 
-> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船等）。程序会自动将 linear 类型排序优先处理，计算量更少，破解速度更快。
+**填入的建筑坐标只需在结构定位的区块内的任意坐标即可。**
 
 ### 结构定位区块确定方法
 
@@ -168,24 +181,60 @@ TARGETS = [
 
 ### 配置参数
 
-编辑 `crack_high32.py` 开头配置低32位值、MC版本和群系样本：
+#### 高32位破解配置
 
-```python
-# 群系样本（建议5个，每个样本包含X、Z、Y坐标和群系ID）
-SAMPLES = [
-    (-1922, 1231, 200, 185),   # cherry_grove
-    (-4706, 3302, 200, 132),   # flower_forest
-    (-935, 2592, 200, 5),      # taiga
-    (-2697, 1363, 200, 4),     # forest
-    (-270, 470, 200, 186),     # pale_garden
-]
+编辑 `config.json` 的 `high32` 部分：
 
-# 低32位值（来自 crack_low32 结果）
-LOW32 = 1818588773
-
-# MC版本（支持小版本）
-MC_VERSION_STR = "26.30+"  # 可选版本见下方版本对应表
+```json
+{
+  "high32": {
+    "test_mode": false,
+    "start": 0,
+    "end": 100000000,
+    "low32": 1818588773,
+    "mc_version": "26.30+",
+    "samples": [
+      { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
+      {
+        "x": -1922,
+        "z": 1231,
+        "y": 200,
+        "biome_id": 185,
+        "name": "cherry_grove"
+      },
+      {
+        "x": -4706,
+        "z": 3302,
+        "y": 200,
+        "biome_id": 132,
+        "name": "flower_forest"
+      },
+      { "x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga" },
+      { "x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest" }
+    ]
+  }
+}
 ```
+
+**配置项说明：**
+
+| 配置项       | 说明                                        |
+| ------------ | ------------------------------------------- |
+| `test_mode`  | 测试模式（false: 正常模式，true: 测试模式） |
+| `start`      | 起始高32位值（默认: 0）                     |
+| `end`        | 结束高32位值（默认: 2^32-1）                |
+| `low32`      | 低32位值（已破解得到）                      |
+| `mc_version` | MC版本字符串（见下方版本对应表）            |
+| `samples`    | 群系样本列表（建议5个样本）                 |
+
+**群系样本格式：**
+
+每个样本包含以下字段：
+
+- `x`、`z`、`y`：坐标（Y建议200+，避免地下群系干扰）
+- `biome_id`：群系ID（见下方群系ID参考表）
+
+> **注意**：`name`字段已移除，程序会自动根据`biome_id`识别群系名称。
 
 > **注意**：
 >

@@ -74,56 +74,69 @@ Crack the low 32 bits of the seed using structure locations.
 | `--cpu`   | Force CPU mode                                       |
 | `--gpu`   | Force GPU mode (auto-fallback to CPU if unavailable) |
 
-### GPU Configuration
+### Configuration File
 
-Edit `crack_config.json` to customize GPU behavior:
+Linux version uses **`config.json`** to manage all configuration parameters (both low32 and high32 cracking).
+
+**The `config.json` file will be automatically created on first run. Please edit it as needed.**
+
+#### Low 32-bit Cracking Configuration
+
+Edit the `low32` section in `config.json`:
 
 ```json
 {
-  "use_gpu": true,
-  "auto_fallback": true,
-  "seeds_per_thread": 256,
-  "max_results": 10000
+  "low32": {
+    "test_mode": false,
+    "start": 0,
+    "end": 4294967296,
+    "use_gpu": true,
+    "auto_fallback": true,
+    "seeds_per_thread": 256,
+    "max_results": 10000,
+    "targets": [
+      { "structure": "swamp_hut", "x": 2136, "z": -1176 },
+      { "structure": "jungle_temple", "x": -360, "z": -248 },
+      { "structure": "desert_temple", "x": -936, "z": 4744 },
+      { "structure": "ocean_monument", "x": 792, "z": -792 },
+      { "structure": "end_city", "x": 1352, "z": -1208 }
+    ]
+  }
 }
 ```
 
-| Setting            | Description                                            |
-| ------------------ | ------------------------------------------------------ |
-| `use_gpu`          | Enable/disable GPU acceleration (default: true)        |
-| `auto_fallback`    | Auto-fallback to CPU if GPU fails (default: true)      |
-| `seeds_per_thread` | Seeds per GPU thread (auto-adjusted by GPU capability) |
-| `max_results`      | Maximum results to store (default: 10000)              |
+**Configuration Parameters:**
 
-### Configure Target Structures
-
-Edit `TARGETS` at the beginning of `crack_low32.py` (recommended: 5 structures):
-
-```python
-TARGETS = [
-    {"structure": "swamp_hut", "x": 2136, "z": -1176},
-    {"structure": "jungle_temple", "x": -360, "z": -248},
-    {"structure": "desert_temple", "x": -936, "z": 4744},
-    {"structure": "ocean_monument", "x": 792, "z": -792},
-    {"structure": "end_city", "x": 1352, "z": -1208},
-]
-```
+| Parameter          | Description                                       |
+| ------------------ | ------------------------------------------------- |
+| `test_mode`        | Test mode (false: normal, true: test mode)        |
+| `start`            | Start low32 value (default: 0)                    |
+| `end`              | End low32 value (default: 2^32-1)                 |
+| `use_gpu`          | Enable/disable GPU acceleration (default: true)   |
+| `auto_fallback`    | Auto-fallback to CPU if GPU fails (default: true) |
+| `seeds_per_thread` | Seeds per GPU thread (auto-adjusted based on GPU) |
+| `max_results`      | Maximum results to store (default: 10000)         |
+| `targets`          | Target structure list (recommended: 5 structures) |
 
 ### Supported Structures
 
-| Name             | Description             | Spread Type |
-| ---------------- | ----------------------- | ----------- |
-| village          | Village/Zombie Village  | triangular  |
-| mansion          | Woodland Mansion        | triangular  |
-| end_city         | End City                | triangular  |
-| ocean_monument   | Ocean Monument          | triangular  |
-| ancient_city     | Ancient City            | triangular  |
-| ocean_ruins      | Ocean Ruins             | **linear**  |
-| shipwreck        | Shipwreck               | **linear**  |
-| nether_complexes | Nether Fortress/Bastion | **linear**  |
-| desert_temple    | Desert Temple           | **linear**  |
-| igloo            | Igloo                   | **linear**  |
-| swamp_hut        | Witch Hut               | **linear**  |
-| jungle_temple    | Jungle Temple           | **linear**  |
+| Name                    | Description               | Spread Type |
+| ----------------------- | ------------------------- | ----------- |
+| village                 | Village/Zombie Village    | triangular  |
+| mansion                 | Woodland Mansion          | triangular  |
+| end_city                | End City                  | triangular  |
+| ocean_monument          | Ocean Monument            | triangular  |
+| ancient_city            | Ancient City              | triangular  |
+| pillager_outpost        | Pillager Outpost          | triangular  |
+| ocean_ruins             | Ocean Ruins               | **linear**  |
+| shipwreck               | Shipwreck                 | **linear**  |
+| nether_complexes        | Nether Fortress/Bastion   | **linear**  |
+| desert_temple           | Desert Temple             | **linear**  |
+| igloo                   | Igloo                     | **linear**  |
+| swamp_hut               | Witch Hut                 | **linear**  |
+| jungle_temple           | Jungle Temple             | **linear**  |
+| ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
+| ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
 
 Coordinates just need to be within the same chunk.
 
@@ -168,24 +181,60 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ### Configuration
 
-Edit the beginning of `crack_high32.py` to configure low32 value, MC version, and biome samples:
+#### High 32-bit Cracking Configuration
 
-```python
-# Biome samples (recommended: 5, each sample includes X, Z, Y coordinates and biome ID)
-SAMPLES = [
-    (-1922, 1231, 200, 185),   # cherry_grove
-    (-4706, 3302, 200, 132),   # flower_forest
-    (-935, 2592, 200, 5),      # taiga
-    (-2697, 1363, 200, 4),     # forest
-    (-270, 470, 200, 186),     # pale_garden
-]
+Edit the `high32` section in `config.json`:
 
-# Low 32-bit value (from crack_low32 result)
-LOW32 = 1818588773
-
-# MC version (sub-version support)
-MC_VERSION_STR = "26.30+"  # See version mapping table below
+```json
+{
+  "high32": {
+    "test_mode": false,
+    "start": 0,
+    "end": 100000000,
+    "low32": 1818588773,
+    "mc_version": "26.30+",
+    "samples": [
+      { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
+      {
+        "x": -1922,
+        "z": 1231,
+        "y": 200,
+        "biome_id": 185,
+        "name": "cherry_grove"
+      },
+      {
+        "x": -4706,
+        "z": 3302,
+        "y": 200,
+        "biome_id": 132,
+        "name": "flower_forest"
+      },
+      { "x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga" },
+      { "x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest" }
+    ]
+  }
+}
 ```
+
+**Configuration Parameters:**
+
+| Parameter    | Description                                         |
+| ------------ | --------------------------------------------------- |
+| `test_mode`  | Test mode (false: normal, true: test mode)          |
+| `start`      | Start high32 value (default: 0)                     |
+| `end`        | End high32 value (default: 2^32-1)                  |
+| `low32`      | Low 32-bit value (cracked from low32)               |
+| `mc_version` | MC version string (see version mapping table below) |
+| `samples`    | Biome sample list (recommended: 5 samples)          |
+
+**Biome Sample Format:**
+
+Each sample contains the following fields:
+
+- `x`, `z`, `y`: Coordinates (Y>=200 recommended to avoid underground biomes)
+- `biome_id`: Biome ID (see biome ID reference table below)
+
+> **Note**: The `name` field has been removed. The program automatically identifies biome names based on `biome_id`.
 
 > **Note**:
 >
