@@ -48,7 +48,7 @@ if not "%CUDA_PATH%"=="" (
 
 echo.
 echo [3/4] Compiling crack_high32.dll...
-gcc -O3 -shared -fPIC -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\finders.c crack_high32\cubiomes\generator.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c crack_high32\cubiomes\quadbase.c crack_high32\cubiomes\util.c -Icrack_high32\cubiomes -lgomp
+gcc -O3 -shared -fPIC -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes -lgomp
 if errorlevel 1 (
     echo [ERROR] Failed
     pause
