@@ -9,15 +9,13 @@ Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java Edition seed finder
 >
-> I'm a Minecraft newbie. Most of this code was written by AI, and I'm mainly responsible for testing and feature requests. Feedback and corrections are welcome.
->
 > **Project Status**: Work in progress, currently for personal use. Feedback and suggestions are welcome.
 
 ---
 
 ## Features
 
-Research tool for understanding Minecraft's world generation algorithms through seed verification and biome analysis.
+Crack Minecraft Bedrock Edition world seeds through structure coordinates and biome samples.
 
 ---
 
@@ -358,15 +356,15 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 ### Linux (Command Line)
 
-1. Edit `crack_low32.py` → Add structures → Run
-2. Edit `crack_high32.py` → Add biomes → Run
+1. Edit `config.json` configuration file (see [MCBEseedcracker_linux/README.md](MCBEseedcracker_linux/README.md))
+2. Run cracking programs
 3. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
 
 ---
 
 ## FAQ
 
-### Low 32-bit cracking failed (no matching seeds found)
+### Low 32-bit cracking failed
 
 **Possible causes:**
 
@@ -384,15 +382,16 @@ Even with same version number, Java and Bedrock have biome generation difference
 - Change structure types
 - Confirm the target world's generation version
 
-### High 32-bit cracking failed (no matching seeds found)
+### High 32-bit cracking failed
 
 **Possible causes:**
 
-1. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
-2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-3. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
-4. **Insufficient biome samples** - Recommend at least 5 samples
-5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
+1. **Version mismatch** - Biome samples' game version doesn't match the actual generation version
+2. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
+3. **Incorrect biome samples** - Coordinates or biome IDs are wrong
+4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
+5. **Insufficient biome samples** - Recommend at least 5 samples
+6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
 **Solutions:**
 
@@ -445,7 +444,3 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 ## License
 
 This project is for learning and research purposes only.
-
----
-
-Most of the code in this project was completed with AI assistance. I am mainly responsible for design concepts and testing verification.

@@ -173,9 +173,9 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ```
 [*] Biome samples (sorted by rarity, rarest first):
-    1. (-270, 470) -> pale_garden (ID: 186, 0.0786%)
-    2. (-1922, 1231) -> cherry_grove (ID: 185, 0.2805%)
-    3. (-4706, 3302) -> flower_forest (ID: 132, 0.6529%)
+    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
+    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
+    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
     ...
 ```
 
@@ -426,7 +426,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 ## FAQ
 
-### Low 32-bit cracking failed (no matching seeds found)
+### Low 32-bit cracking failed
 
 **Possible causes:**
 
@@ -444,15 +444,16 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 - Change structure types
 - Confirm the target world's generation version
 
-### High 32-bit cracking failed (no matching seeds found)
+### High 32-bit cracking failed
 
 **Possible causes:**
 
-1. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
-2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-3. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
-4. **Insufficient biome samples** - Recommend at least 5 samples
-5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
+1. **Version mismatch** - Biome samples' game version doesn't match the actual generation version
+2. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
+3. **Incorrect biome samples** - Coordinates or biome IDs are wrong
+4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
+5. **Insufficient biome samples** - Recommend at least 5 samples
+6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
 **Solutions:**
 

@@ -409,15 +409,16 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 - Change structure types
 - Confirm the target world's generation version
 
-### High 32-bit Cracking Failed
+### High 32-bit cracking failed
 
 **Possible causes:**
 
-1. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
-2. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-3. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
-4. **Insufficient biome samples** - Recommend at least 5 samples
-5. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
+1. **Version mismatch** - Biome samples' game version doesn't match the actual generation version
+2. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
+3. **Incorrect biome samples** - Coordinates or biome IDs are wrong
+4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
+5. **Insufficient biome samples** - Recommend at least 5 samples
+6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
 **Solutions:**
 
