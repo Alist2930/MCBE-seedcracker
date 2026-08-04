@@ -184,7 +184,7 @@ Multiple structures matching simultaneously can significantly narrow down candid
 
 - **Ocean Monument**: Chunk containing the center position
 
-  ![Ocean Monument Chunk Location](assets/imgs/ocean_monument.png)
+  ![Ocean Monument Chunk Location](assets/imgs/ocean_monument.jpg)
 
 - **Witch Hut**: Chunk with the largest building area
 

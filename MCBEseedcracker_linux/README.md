@@ -161,7 +161,7 @@ Coordinates just need to be within the same chunk.
 
 - **Ocean Monument**: Chunk containing the center position
 
-  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.png)
+  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.jpg)
 
 - **Witch Hut**: Chunk with the largest building area
 

@@ -185,7 +185,7 @@ Minecraft基岩版使用64位整数作为世界种子。结构生成时，系统
 
 - **海底神殿**：中心位置所在的区块
 
-  ![海底神殿区块确定](assets/imgs/ocean_monument.png)
+  ![海底神殿区块确定](assets/imgs/ocean_monument.jpg)
 
 - **女巫屋**：建筑占区块面积最大的区块
 
