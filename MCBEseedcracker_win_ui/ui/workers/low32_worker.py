@@ -5,6 +5,7 @@ import os
 import sys
 import multiprocessing as mp
 import ctypes
+from ui.utils.language_manager import lang_manager
 
 
 def get_dll_path(opencl=False):
@@ -144,6 +145,7 @@ class Low32Worker(QThread):
     finished = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
     compute_device_info = pyqtSignal(str)  # Signal for GPU/CPU device info
+    structure_info_updated = pyqtSignal(str)  # Signal for structure sorting info
 
     def __init__(self, structures, start=0, end=4294967295, test_mode=False, force_gpu=None, process_count=None):
         super().__init__()
@@ -487,8 +489,10 @@ class Low32Worker(QThread):
         CONST_A = 2570712328
         CONST_B = 4048968661
 
+        # First sort by spread_type (linear first)
         sorted_structures = sorted(self.structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)
 
+        # Calculate parameters for all structures
         r_base_list, ox_list, oz_list, offset_range_list, spread_type_list = [], [], [], [], []
 
         for structure in sorted_structures:
@@ -513,6 +517,140 @@ class Low32Worker(QThread):
             oz_list.append(oz)
             offset_range_list.append(spacing - separation)
             spread_type_list.append(spread_type_int)
+
+        # Test strictness and sort (strictest first)
+        print("\n[INFO] Testing sample strictness (0-100000 seeds)...")
+
+        strictness_scores = []
+        structure_info_lines = []
+        structure_info_lines.append("=" * 80)
+        structure_info_lines.append("Structure samples (testing strictness, strictest first):")
+        structure_info_lines.append("=" * 80)
+
+        for i, structure in enumerate(sorted_structures):
+            structure_type = structure["type"]
+            x, z = structure["x"], structure["z"]
+
+            config = self.structure_data.get(structure_type, {})
+            spacing = config.get("spacing", 32)
+            separation = config.get("separation", 8)
+
+            # Calculate target parameters
+            cx, cz = x >> 4, z >> 4
+            rx, rz = cx // spacing, cz // spacing
+            target_ox, target_oz = cx % spacing, cz % spacing
+            r_base = r_base_list[i]
+            spread_type_int = spread_type_list[i]
+            offset_range = offset_range_list[i]
+
+            # Test using C library
+            try:
+                dll_path = get_dll_path(opencl=False)
+                if os.path.exists(dll_path):
+                    lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+                    lib.crack_low32.argtypes = [
+                        ctypes.c_uint32, ctypes.c_uint32,
+                        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+                        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+                        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+                        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+                    ]
+                    lib.crack_low32.restype = ctypes.c_int
+
+                    r_base_arr = (ctypes.c_uint32 * 1)(r_base)
+                    ox_arr = (ctypes.c_uint32 * 1)(target_ox)
+                    oz_arr = (ctypes.c_uint32 * 1)(target_oz)
+                    offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
+                    spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
+                    results_arr = (ctypes.c_uint32 * 100000)()
+
+                    found = lib.crack_low32(
+                        0, 100000,
+                        r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
+                        1, results_arr, 100000
+                    )
+
+                    strictness_scores.append(found)
+                    name = config.get("name_zh", structure_type)
+                    spread_type_str = "linear" if spread_type_int == 0 else "triangular"
+                    match_rate = found / 100000 * 100
+
+                    info_line = f"    {i+1}. {name} at ({x}, {z}): {found}/100000 matches ({match_rate:.4f}%) [{spread_type_str}]"
+                    print(info_line)
+                    structure_info_lines.append(info_line)
+                else:
+                    strictness_scores.append(0)
+                    warning_line = f"    {i+1}. [WARNING] DLL not found for strictness test"
+                    print(warning_line)
+                    structure_info_lines.append(warning_line)
+            except Exception as e:
+                strictness_scores.append(0)
+                error_line = f"    {i+1}. [WARNING] Failed to test strictness: {e}"
+                print(error_line)
+                structure_info_lines.append(error_line)
+
+        structure_info_lines.append("=" * 80)
+
+        # Sort by strictness (fewer matches = stricter = higher priority)
+        # But maintain linear-first ordering
+        indices = list(range(len(sorted_structures)))
+
+        # Separate linear and triangular
+        linear_indices = [i for i in indices if spread_type_list[i] == 0]
+        triangular_indices = [i for i in indices if spread_type_list[i] == 1]
+
+        # Sort each group by strictness (ascending = stricter first)
+        linear_indices.sort(key=lambda i: strictness_scores[i])
+        triangular_indices.sort(key=lambda i: strictness_scores[i])
+
+        # Combine: linear first, then triangular
+        sorted_indices = linear_indices + triangular_indices
+
+        # Reorder all lists
+        r_base_list = [r_base_list[i] for i in sorted_indices]
+        ox_list = [ox_list[i] for i in sorted_indices]
+        oz_list = [oz_list[i] for i in sorted_indices]
+        offset_range_list = [offset_range_list[i] for i in sorted_indices]
+        spread_type_list = [spread_type_list[i] for i in sorted_indices]
+
+        # Print optimized order
+        structure_info_lines.append("\nOptimized sample order (strictest first, linear优先):")
+        structure_info_lines.append("=" * 80)
+        order_info = []
+        for i, idx in enumerate(sorted_indices):
+            structure = sorted_structures[idx]
+            config = self.structure_data.get(structure["type"], {})
+            name = config.get("name_zh", structure["type"])
+            spread_type = "linear" if spread_type_list[i] == 0 else "triangular"
+            strictness = strictness_scores[idx]
+            match_rate = strictness / 100000 * 100
+
+            order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}] - {strictness}/100000 ({match_rate:.4f}%)"
+            print(order_line)
+            structure_info_lines.append(order_line)
+
+            # Simplified format for UI: "(x, z) -> 结构名 (spread_type)"
+            # Use appropriate language for structure name
+            if lang_manager.language == "zh_CN":
+                display_name = config.get("name_zh", structure["type"])
+            else:
+                display_name = config.get("name_en", structure["type"])
+
+            order_info.append({
+                "x": structure['x'],
+                "z": structure['z'],
+                "name": display_name,
+                "spread_type": spread_type
+            })
+        structure_info_lines.append("=" * 80)
+
+        # Send structure info to UI
+        structure_info_text = "\n" + "\n".join(structure_info_lines) + "\n"
+        print(structure_info_text)  # Keep console output for debugging
+
+        # Send simplified order info as JSON string
+        import json
+        self.structure_info_updated.emit(json.dumps(order_info))
 
         return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list
 

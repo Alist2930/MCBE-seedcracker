@@ -14,6 +14,7 @@ import os
 import argparse
 import multiprocessing as mp
 from pathlib import Path
+from datetime import datetime
 
 # Disable output buffering for real-time progress updates
 # This is critical for multiprocessing to show progress immediately
@@ -278,6 +279,16 @@ def crack_batch_soa(args):
     return [results[i] for i in range(found)]
 
 def main():
+    # Create/Clear found seeds file
+    found_seeds_file = Path(__file__).parent / "found_seeds.txt"
+    start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(found_seeds_file, 'w', encoding='utf-8') as f:
+        f.write("=" * 60 + "\n")
+        f.write("Minecraft Bedrock High 32-bit Seed Cracker - Found Seeds\n")
+        f.write("=" * 60 + "\n")
+        f.write(f"Start Time: {start_time_str}\n")
+        f.write("=" * 60 + "\n\n")
+
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
     parser.add_argument('--start', type=int, default=None, help='Start high value (inclusive), overrides config')
     parser.add_argument('--end', type=int, default=None, help='End high value (inclusive), overrides config')
@@ -304,30 +315,36 @@ def main():
     print("=" * 60)
     print("Minecraft Bedrock High 32-bit Seed Cracker")
     print("=" * 60)
-    
+
     search_end_exclusive = search_end + 1
-    
+
     # CRITICAL: Limit processes to prevent resource exhaustion
     # On high-core systems (>32 cores), using all cores causes:
     # - DLL loading conflicts (multiple processes loading same .so)
     # - Memory exhaustion
     # - Lock contention
     # Solution: Use max 8-16 processes regardless of core count
+
+    # Priority: command-line args > config file > auto-detect
     if args.processes:
         max_processes = min(args.processes, 16)  # Never exceed 16
         if args.processes > 16:
             print(f"[WARNING] Limiting processes from {args.processes} to 16 (to prevent resource exhaustion)")
+        source = "command-line"
+    elif cfg.get('processes', None) is not None:
+        max_processes = min(cfg.get('processes'), 16)  # Never exceed 16
+        if cfg.get('processes') > 16:
+            print(f"[WARNING] Limiting processes from {cfg.get('processes')} to 16 (to prevent resource exhaustion)")
+        source = "config file"
     else:
         # Auto-limit: use min(cpu_count, 16), but never more than 1/4 of cores
         cpu_count = mp.cpu_count()
         max_processes = min(cpu_count, 16, max(1, cpu_count // 4))
-    
+        source = "auto-detect"
+
     print(f"\n[*] Low 32-bit: {low32}")
     print(f"[*] MC Version: {MC_VERSION_STR}")
-    if args.processes:
-        print(f"[*] Processes: {max_processes} (user specified, limited to 16)")
-    else:
-        print(f"[*] Processes: {max_processes} (auto-limited to prevent resource exhaustion)")
+    print(f"[*] Processes: {max_processes} ({source}, limited to 16)")
     
     sorted_samples = sort_samples_by_rarity(SAMPLES, MC_VERSION_STR)
     
@@ -371,7 +388,8 @@ def main():
     print(f"\n[*] Initializing {max_processes} worker processes (using spawn)...")
     pool = ctx.Pool(max_processes)
     print("[*] Workers initialized! Starting crack...")
-    print("[*] Progress will be updated in real-time...\n")
+    print("[*] Progress will be updated in real-time...")
+    print(f"[*] Found seeds will be saved to: {found_seeds_file}\n")
 
     # Progress heartbeat: output progress even if no seeds found
     last_output_time = time.time()
@@ -395,8 +413,24 @@ def main():
                     for seed in r:
                         all_results.append(seed)
                         found_count += 1
-                        print(format_seed_output(seed, low32))
-                
+
+                        # Format seed info
+                        seed_info = format_seed_output(seed, low32)
+
+                        # Clear current line before outputting seed info
+                        sys.stdout.write('\r\033[K')  # Clear entire line
+                        sys.stdout.flush()
+
+                        # Print seed info to console
+                        sys.stdout.write(seed_info + '\n')
+                        sys.stdout.flush()
+
+                        # Write to found seeds file
+                        with open(found_seeds_file, 'a', encoding='utf-8') as f:
+                            f.write(seed_info + '\n')
+                            f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                            f.write("-" * 60 + '\n')
+
                 # Progress heartbeat: output every 2 seconds even if batch is not complete
                 current_time = time.time()
                 if current_time - last_output_time >= output_interval:
@@ -419,7 +453,9 @@ def main():
         bar_len = 30
         filled = int(bar_len * percent / 100)
         bar = '#' * filled + '-' * (bar_len - filled)
-        
+
+        # Clear line before progress update to avoid artifacts
+        sys.stdout.write('\r\033[K')  # Clear entire line
         sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {total_done:,}/{total_search:,} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}')
         sys.stdout.flush()
         last_output_time = time.time()  # Reset heartbeat timer

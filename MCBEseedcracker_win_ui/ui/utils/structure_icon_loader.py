@@ -23,6 +23,7 @@ STRUCTURE_COLORS = {
     "pillager_outpost": (120, 80, 80),
     "ruined_portal_overworld": (80, 40, 40),
     "ruined_portal_nether": (64, 32, 32),
+    "buried_treasure": (255, 215, 0),
 }
 
 STRUCTURE_ICON_FILES = {
@@ -41,6 +42,7 @@ STRUCTURE_ICON_FILES = {
     "pillager_outpost": "pillager-outpost.png",
     "ruined_portal_overworld": "ruined-portal.png",
     "ruined_portal_nether": "ruined-portal.png",
+    "buried_treasure": "buried-treasure.png",
 }
 
 

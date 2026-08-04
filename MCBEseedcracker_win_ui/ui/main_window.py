@@ -425,6 +425,7 @@ class MainWindow(QMainWindow):
         self.low32_worker.finished.connect(self.low32_finished)
         self.low32_worker.error_occurred.connect(self.show_error)
         self.low32_worker.compute_device_info.connect(self.update_low32_compute_device)
+        self.low32_worker.structure_info_updated.connect(self.update_low32_structure_info)
 
         self.low32_worker.start()
         self.low32_status_label.setText(lang_manager.get("start_low32_cracking"))
@@ -678,6 +679,40 @@ class MainWindow(QMainWindow):
         current_text = self.low32_status_label.text()
         self.low32_status_label.setText(f"{current_text} | {device_info}")
 
+    def update_low32_structure_info(self, structure_info):
+        """Update status label with structure sorting info (simplified)"""
+        import json
+        try:
+            order_info = json.loads(structure_info)
+
+            # Build display text with proper format
+            order_lines = []
+            for i, item in enumerate(order_info, 1):
+                # Format: "(x, z) -> 结构名 (spread_type)"
+                line = f"({item['x']}, {item['z']}) -> {item['name']} ({item['spread_type']})"
+                order_lines.append(line)
+
+            # Join with newlines
+            order_text = "\n" + lang_manager.get("sample_order") + ":\n" + "\n".join(order_lines)
+
+            # Update status label
+            # Current text is like "开始低32位破解."
+            # We need to insert the order info before the CPU info
+            current_text = self.low32_status_label.text()
+
+            # Check if CPU info is already appended
+            if " | " in current_text:
+                # Split and recombine: "开始低32位破解. | CPU (4 cores)"
+                base_text, cpu_info = current_text.split(" | ", 1)
+                new_text = base_text + order_text + " | " + cpu_info
+            else:
+                # No CPU info yet, just append order info
+                new_text = current_text + order_text
+
+            self.low32_status_label.setText(new_text)
+        except Exception as e:
+            print(f"[ERROR] Failed to parse structure info: {e}")
+
     def low32_finished(self, results):
         self.start_low32_btn.setEnabled(True)
         self.pause_low32_btn.setEnabled(False)
@@ -864,7 +899,7 @@ class MainWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(
             self, lang_manager.get("about_title"),
-            f"MCBE Seed Cracker v1.3.2\n\n{lang_manager.get('about_text')}"
+            f"MCBE Seed Cracker v1.3.3\n\n{lang_manager.get('about_text')}"
         )
     
     def copy_low32_seed(self, item):
@@ -1016,7 +1051,7 @@ class MainWindow(QMainWindow):
                     self.low32_results = data["low32_results"]
                     self.low32_results_list.clear()
                     for seed in self.low32_results:
-                        self.low32_results_list.addItem(f"{lang_manager.get('candidate_seed')}: {seed}")
+                        self.low32_results_list.addItem(f"{lang_manager.get('seed')}: {seed}")
                 
                 if "high32_results" in data:
                     self.high32_results = data["high32_results"]

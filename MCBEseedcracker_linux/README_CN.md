@@ -25,6 +25,7 @@ cd crack_low32
 python3 crack_low32.py                    # 完整破解 (0 - 2^32-1)
 python3 crack_low32.py --test             # 测试模式 (0 - 100M)
 python3 crack_low32.py --start 1000 --end 2000  # 指定范围
+python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 ```
 
 ### 高32位破解
@@ -35,7 +36,11 @@ python3 crack_high32.py                         # 完整破解 (0 ~ 2^32-1)
 python3 crack_high32.py --test                  # 测试模式 (0 ~ 100M)
 python3 crack_high32.py --low32 1818588773      # 指定低32位值
 python3 crack_high32.py --start 0 --end 1000000000  # 自定义范围
+python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 ```
+
+**找到的种子输出：**
+所有找到的种子会自动保存到 `crack_high32/found_seeds.txt`，包含时间戳和详细信息。程序启动时会创建/清空此文件，确保即使进度输出过多也不会遗漏找到的种子。
 
 ---
 
@@ -66,13 +71,14 @@ python3 crack_high32.py --start 0 --end 1000000000  # 自定义范围
 
 ### 命令行参数
 
-| 参数      | 说明                                   |
-| --------- | -------------------------------------- |
-| `--start` | 起始低32位值（默认: 0）                |
-| `--end`   | 结束低32位值（默认: 2^32-1）           |
-| `--test`  | 测试模式（0 - 100M）                   |
-| `--cpu`   | 强制使用CPU模式                        |
-| `--gpu`   | 强制使用GPU模式（不可用时自动回退CPU） |
+| 参数          | 说明                                         |
+| ------------- | -------------------------------------------- |
+| `--start`     | 起始低32位值（默认: 0）                      |
+| `--end`       | 结束低32位值（默认: 2^32-1）                 |
+| `--test`      | 测试模式（0 - 100M）                         |
+| `--cpu`       | 强制使用CPU模式                              |
+| `--gpu`       | 强制使用GPU模式（不可用时自动回退CPU）       |
+| `--processes` | 进程数（仅CPU模式有效，建议不超过CPU核心数） |
 
 ### 配置文件说明
 
@@ -94,6 +100,7 @@ Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和
     "auto_fallback": true,
     "seeds_per_thread": 256,
     "max_results": 10000,
+    "processes": null,
     "targets": [
       { "structure": "swamp_hut", "x": 2136, "z": -1176 },
       { "structure": "jungle_temple", "x": -360, "z": -248 },
@@ -116,6 +123,7 @@ Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和
 | `auto_fallback`    | GPU失败时自动回退CPU（默认: true）             |
 | `seeds_per_thread` | 每个GPU线程处理的种子数（根据GPU能力自动调整） |
 | `max_results`      | 最大结果存储数量（默认: 10000）                |
+| `processes`        | CPU进程数（null: 自动检测所有CPU核心）         |
 | `targets`          | 目标结构列表（建议5个结构）                    |
 
 ### 支持的结构
@@ -128,6 +136,7 @@ Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和
 | ocean_monument          | 海底神殿             | triangular |
 | ancient_city            | 远古城市             | triangular |
 | pillager_outpost        | 掠夺者哨塔           | triangular |
+| buried_treasure         | 埋藏的宝藏           | triangular |
 | ocean_ruins             | 海底废墟             | **linear** |
 | shipwreck               | 沉船                 | **linear** |
 | nether_complexes        | 下界要塞/堡垒遗迹    | **linear** |
@@ -139,17 +148,52 @@ Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和
 | ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
 
 > **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。避免使用村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑，因为生成规则复杂，在游戏中可能有一个区块的偏移。
+>
+> ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
 **填入的建筑坐标只需在结构定位的区块内的任意坐标即可。**
 
 ### 结构定位区块确定方法
 
 - **沙漠神殿**：中心位置所在的区块
+
+  ![沙漠神殿区块确定](../assets/imgs/desert_temple.png)
+
 - **海底神殿**：中心位置所在的区块
+
+  ![海底神殿区块确定](../assets/imgs/ocean_monument.png)
+
 - **女巫屋**：建筑占区块面积最大的区块
+
+  ![女巫屋区块确定](../assets/imgs/swamp_hut.png)
+
 - **丛林神庙**：建筑占区块面积最大的区块
+
+  ![丛林神庙区块确定](../assets/imgs/jungle_temple.png)
+
 - **末地城**：入口潜影贝方形结构占区块面积最大的区块
+
+  ![末地城区块确定](../assets/imgs/end_city.png)
+
 - **沉船**：完整沉船取船头所在区块（船头大概是刚好顶到区块边界的那端），残缺沉船取船占区块面积最大的区块
+
+  完整沉船：
+
+  ![完整沉船区块确定](../assets/imgs/shipwreck_complete.png)
+
+  残缺沉船：
+
+  ![残缺沉船区块确定](../assets/imgs/shipwreck_incomplete.png)
+
+- **海底废墟**：单个的海底废墟为其占区块面积最大的区块，若为海底废墟群则为中间的海底废墟占区块面积最大的区块
+
+  单个海底废墟：
+
+  ![单个海底废墟区块确定](../assets/imgs/ocean_ruins.png)
+
+  海底废墟群：
+
+  ![海底废墟群区块确定](../assets/imgs/ocean_ruins_group.png)
 
 ---
 
@@ -193,6 +237,7 @@ Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和
     "end": 100000000,
     "low32": 1818588773,
     "mc_version": "26.30+",
+    "processes": 16,
     "samples": [
       { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
       {
@@ -225,6 +270,7 @@ Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和
 | `end`        | 结束高32位值（默认: 2^32-1）                |
 | `low32`      | 低32位值（已破解得到）                      |
 | `mc_version` | MC版本字符串（见下方版本对应表）            |
+| `processes`  | 进程数（最大16，推荐16）                    |
 | `samples`    | 群系样本列表（建议5个样本）                 |
 
 **群系样本格式：**

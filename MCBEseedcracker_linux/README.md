@@ -25,6 +25,7 @@ cd crack_low32
 python3 crack_low32.py                    # Full crack (0 - 2^32-1)
 python3 crack_low32.py --test             # Test mode (0 - 100M)
 python3 crack_low32.py --start 1000 --end 2000  # Custom range
+python3 crack_low32.py --processes 8      # Specify process count (CPU mode)
 ```
 
 ### High 32-bit Cracking
@@ -35,7 +36,11 @@ python3 crack_high32.py                         # Full crack (0 ~ 2^32-1)
 python3 crack_high32.py --test                  # Test mode (0 ~ 100M)
 python3 crack_high32.py --low32 1818588773      # Specify low32 value
 python3 crack_high32.py --start 0 --end 1000000000  # Custom range
+python3 crack_high32.py --processes 16          # Specify process count (max 16)
 ```
+
+**Found Seeds Output:**
+All found seeds are automatically saved to `crack_high32/found_seeds.txt` with timestamps and detailed information. This file is created/cleared at program start, ensuring you never miss any found seeds even with verbose progress output.
 
 ---
 
@@ -66,13 +71,14 @@ Crack the low 32 bits of the seed using structure locations.
 
 ### Command Line Arguments
 
-| Argument  | Description                                          |
-| --------- | ---------------------------------------------------- |
-| `--start` | Start low32 value (default: 0)                       |
-| `--end`   | End low32 value (default: 2^32-1)                    |
-| `--test`  | Test mode (0 - 100M)                                 |
-| `--cpu`   | Force CPU mode                                       |
-| `--gpu`   | Force GPU mode (auto-fallback to CPU if unavailable) |
+| Argument      | Description                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `--start`     | Start low32 value (default: 0)                                   |
+| `--end`       | End low32 value (default: 2^32-1)                                |
+| `--test`      | Test mode (0 - 100M)                                             |
+| `--cpu`       | Force CPU mode                                                   |
+| `--gpu`       | Force GPU mode (auto-fallback to CPU if unavailable)             |
+| `--processes` | Process count (CPU mode only, recommend not exceeding CPU cores) |
 
 ### Configuration File
 
@@ -94,6 +100,7 @@ Edit the `low32` section in `config.json`:
     "auto_fallback": true,
     "seeds_per_thread": 256,
     "max_results": 10000,
+    "processes": null,
     "targets": [
       { "structure": "swamp_hut", "x": 2136, "z": -1176 },
       { "structure": "jungle_temple", "x": -360, "z": -248 },
@@ -116,6 +123,7 @@ Edit the `low32` section in `config.json`:
 | `auto_fallback`    | Auto-fallback to CPU if GPU fails (default: true) |
 | `seeds_per_thread` | Seeds per GPU thread (auto-adjusted based on GPU) |
 | `max_results`      | Maximum results to store (default: 10000)         |
+| `processes`        | CPU process count (null: auto-detect all cores)   |
 | `targets`          | Target structure list (recommended: 5 structures) |
 
 ### Supported Structures
@@ -127,6 +135,7 @@ Edit the `low32` section in `config.json`:
 | end_city                | End City                  | triangular  |
 | ocean_monument          | Ocean Monument            | triangular  |
 | ancient_city            | Ancient City              | triangular  |
+| buried_treasure         | Buried Treasure           | triangular  |
 | pillager_outpost        | Pillager Outpost          | triangular  |
 | ocean_ruins             | Ocean Ruins               | **linear**  |
 | shipwreck               | Shipwreck                 | **linear**  |
@@ -142,14 +151,49 @@ Coordinates just need to be within the same chunk.
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). The program automatically sorts linear types first for processing, requiring less computation and faster cracking.
 
+> ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
+
 ### Structure Chunk Location Method
 
 - **Desert Temple**: Chunk containing the center position
+
+  ![Desert Temple Chunk Location](../assets/imgs/desert_temple.png)
+
 - **Ocean Monument**: Chunk containing the center position
+
+  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.png)
+
 - **Witch Hut**: Chunk with the largest building area
+
+  ![Witch Hut Chunk Location](../assets/imgs/swamp_hut.png)
+
 - **Jungle Temple**: Chunk with the largest building area
+
+  ![Jungle Temple Chunk Location](../assets/imgs/jungle_temple.png)
+
 - **End City**: Chunk with the largest shulker box structure area at entrance
+
+  ![End City Chunk Location](../assets/imgs/end_city.png)
+
 - **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
+
+  Complete shipwreck:
+
+  ![Complete Shipwreck Chunk Location](../assets/imgs/shipwreck_complete.png)
+
+  Incomplete shipwreck:
+
+  ![Incomplete Shipwreck Chunk Location](../assets/imgs/shipwreck_incomplete.png)
+
+- **Ocean Ruins**: For single ruins, use the chunk with the largest ruins area; for ruins groups, use the chunk with the largest area of the middle ruins
+
+  Single ocean ruins:
+
+  ![Single Ocean Ruins Chunk Location](../assets/imgs/ocean_ruins.png)
+
+  Ocean ruins group:
+
+  ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
 
 ---
 
@@ -193,6 +237,7 @@ Edit the `high32` section in `config.json`:
     "end": 100000000,
     "low32": 1818588773,
     "mc_version": "26.30+",
+    "processes": 16,
     "samples": [
       { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
       {
@@ -225,6 +270,7 @@ Edit the `high32` section in `config.json`:
 | `end`        | End high32 value (default: 2^32-1)                  |
 | `low32`      | Low 32-bit value (cracked from low32)               |
 | `mc_version` | MC version string (see version mapping table below) |
+| `processes`  | Process count (max 16, recommended: 16)             |
 | `samples`    | Biome sample list (recommended: 5 samples)          |
 
 **Biome Sample Format:**

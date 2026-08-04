@@ -133,5 +133,14 @@
     "spacing": 25,
     "separation": 10,
     "spread_type": "linear"
+  },
+  "buried_treasure": {
+    "name_zh": "埋藏的宝藏",
+    "name_en": "Buried Treasure",
+    "id": 16,
+    "salt": 16842397,
+    "spacing": 4,
+    "separation": 2,
+    "spread_type": "triangular"
   }
 }

@@ -160,6 +160,7 @@ Minecraft基岩版使用64位整数作为世界种子。结构生成时，系统
 | ocean_monument          | 海底神殿             | triangular |
 | ancient_city            | 远古城市             | triangular |
 | pillager_outpost        | 掠夺者哨塔           | triangular |
+| buried_treasure         | 埋藏的宝藏           | triangular |
 | ocean_ruins             | 海底废墟             | **linear** |
 | shipwreck               | 沉船                 | **linear** |
 | nether_complexes        | 下界要塞/堡垒遗迹    | **linear** |
@@ -171,17 +172,52 @@ Minecraft基岩版使用64位整数作为世界种子。结构生成时，系统
 | ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
 
 > **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。避免使用村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑，因为生成规则复杂，在游戏中可能有一个区块的偏移。
+>
+> ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
 **填入的建筑坐标只需在结构定位的区块内的任意坐标即可。**
 
 #### 结构定位区块确定方法
 
 - **沙漠神殿**：中心位置所在的区块
+
+  ![沙漠神殿区块确定](assets/imgs/desert_temple.png)
+
 - **海底神殿**：中心位置所在的区块
+
+  ![海底神殿区块确定](assets/imgs/ocean_monument.png)
+
 - **女巫屋**：建筑占区块面积最大的区块
+
+  ![女巫屋区块确定](assets/imgs/swamp_hut.png)
+
 - **丛林神庙**：建筑占区块面积最大的区块
+
+  ![丛林神庙区块确定](assets/imgs/jungle_temple.png)
+
 - **末地城**：入口潜影贝方形结构占区块面积最大的区块
+
+  ![末地城区块确定](assets/imgs/end_city.png)
+
 - **沉船**：完整沉船取船头所在区块（船头大概是刚好顶到区块边界的那端），残缺沉船取船占区块面积最大的区块
+
+  完整沉船：
+
+  ![完整沉船区块确定](assets/imgs/shipwreck_complete.png)
+
+  残缺沉船：
+
+  ![残缺沉船区块确定](assets/imgs/shipwreck_incomplete.png)
+
+- **海底废墟**：单个的海底废墟为其占区块面积最大的区块，若为海底废墟群则为中间的海底废墟占区块面积最大的区块
+
+  单个海底废墟：
+
+  ![单个海底废墟区块确定](assets/imgs/ocean_ruins.png)
+
+  海底废墟群：
+
+  ![海底废墟群区块确定](assets/imgs/ocean_ruins_group.png)
 
 ---
 

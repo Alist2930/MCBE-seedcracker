@@ -143,8 +143,15 @@ Edit `crack_config.json` in the application directory:
 1. Collect structure coordinates in-game (recommend 5 different structure types)
 2. Click "Add Structure" button, enter structure type and coordinates
 3. Select cracking range (test mode 0-100M or full mode 0-4.3B)
-4. Click "Start Cracking"
-5. Wait for completion, view candidate low 32-bit values
+4. (Optional) Manually set process count in Settings (default: auto-use all CPU cores, max 16 processes)
+5. Click "Start Cracking"
+6. Wait for completion, view candidate low 32-bit values
+
+**Process Count Settings:**
+
+- **GPU Mode**: Process count setting has no effect (GPU single-process, multi-thread parallel)
+- **CPU Mode**: Process count can be manually set (default: use all cores, max 16 processes)
+- **Recommendation**: Use default auto-setting, 16 processes is already optimal
 
 **Supported Structures:**
 
@@ -155,6 +162,7 @@ Edit `crack_config.json` in the application directory:
 | end_city                | End City                  | triangular   |
 | ocean_monument          | Ocean Monument            | triangular   |
 | ancient_city            | Ancient City              | triangular   |
+| buried_treasure         | Buried Treasure           | triangular   |
 | ocean_ruins             | Ocean Ruins               | **linear**   |
 | shipwreck               | Shipwreck                 | **linear**   |
 | nether_complexes        | Nether Fortress/Bastion   | **linear**   |
@@ -168,16 +176,51 @@ Edit `crack_config.json` in the application directory:
 
 > **Tip**: Prioritize linear type structures (Desert Temple, Swamp Hut), less computation and faster cracking.
 
+> ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
+
 **Coordinates just need to be within the same chunk.**
 
 **Structure Chunk Location Method:**
 
 - **Desert Temple**: Chunk containing the center position
+
+  ![Desert Temple Chunk Location](../assets/imgs/desert_temple.png)
+
 - **Ocean Monument**: Chunk containing the center position
+
+  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.png)
+
 - **Witch Hut**: Chunk with the largest building area
+
+  ![Witch Hut Chunk Location](../assets/imgs/swamp_hut.png)
+
 - **Jungle Temple**: Chunk with the largest building area
+
+  ![Jungle Temple Chunk Location](../assets/imgs/jungle_temple.png)
+
 - **End City**: Chunk with the largest shulker box structure area at entrance
+
+  ![End City Chunk Location](../assets/imgs/end_city.png)
+
 - **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
+
+  Complete shipwreck:
+
+  ![Complete Shipwreck Chunk Location](../assets/imgs/shipwreck_complete.png)
+
+  Incomplete shipwreck:
+
+  ![Incomplete Shipwreck Chunk Location](../assets/imgs/shipwreck_incomplete.png)
+
+- **Ocean Ruins**: For single ruins, use the chunk with the largest ruins area; for ruins groups, use the chunk with the largest area of the middle ruins
+
+  Single ocean ruins:
+
+  ![Single Ocean Ruins Chunk Location](../assets/imgs/ocean_ruins.png)
+
+  Ocean ruins group:
+
+  ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
 
 ### 2. High 32-bit Cracking (Biomes)
 
@@ -186,9 +229,16 @@ Edit `crack_config.json` in the application directory:
 1. Collect biome sample coordinates in-game (recommend 5 different biomes)
 2. **Select Bedrock version** (see version mapping table below)
 3. Click "Add Biome" button, enter coordinates and biome type
-4. Enter low 32-bit value (from low 32-bit cracking result)
-5. Click "Start Cracking"
-6. Wait for completion, view complete seed
+4. Enter low 32-bit value (from low 32-bit cracking results)
+5. (Optional) Manually set process count in Settings (default: 16 processes, already optimal)
+6. Click "Start Cracking"
+7. Wait for completion, view full seed
+
+**Process Count Settings:**
+
+- **High 32-bit cracking only supports CPU mode**: Process count setting is effective
+- **Default 16 processes**: This is the tested optimal value (avoids memory bandwidth saturation)
+- **Recommendation**: Keep default 16 processes, more processes won't improve performance
 
 #### Version Mapping
 

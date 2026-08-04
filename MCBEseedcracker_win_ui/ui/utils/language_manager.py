@@ -153,6 +153,7 @@ class LanguageManager:
                 "cracking_error": "破解出错",
                 "start_low32_cracking": "开始低32位破解...",
                 "start_high32_cracking": "开始高32位破解...",
+                "sample_order": "样本排序",
                 "resume_from_progress_percent": "从进度 {:.2f}% 继续...",
                 "continue": "继续",
                 
@@ -347,6 +348,7 @@ class LanguageManager:
                 "cracking_error": "Cracking error",
                 "start_low32_cracking": "Starting low 32-bit cracking...",
                 "start_high32_cracking": "Starting high 32-bit cracking...",
+                "sample_order": "Sample Order",
                 "resume_from_progress_percent": "Resuming from progress {:.2f}%...",
                 "continue": "Continue",
                 

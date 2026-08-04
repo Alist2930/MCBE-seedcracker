@@ -45,6 +45,7 @@ STRUCTURE_CONFIGS = {
     "pillager_outpost": {"name": "Pillager Outpost", "salt": 165745296, "spacing": 80, "separation": 24, "spread_type": "triangular", "rng_type": "bedrock"},
     "ruined_portal_overworld": {"name": "Ruined Portal (Overworld)", "salt": 40552231, "spacing": 40, "separation": 15, "spread_type": "linear", "rng_type": "bedrock"},
     "ruined_portal_nether": {"name": "Ruined Portal (Nether)", "salt": 40552231, "spacing": 25, "separation": 10, "spread_type": "linear", "rng_type": "bedrock"},
+    "buried_treasure": {"name": "Buried Treasure", "salt": 16842397, "spacing": 4, "separation": 2, "spread_type": "triangular"},
 }
 
 # ===== Target structures (loaded from config.json) =====
@@ -110,31 +111,127 @@ def has_opencl_gpu():
     except Exception as e:
         return False, str(e)
 
+def test_sample_strictness(config, x, z, num_test_seeds=100000):
+    """
+    Test the strictness (matching probability) of a structure sample.
+    Returns the number of matches in num_test_seeds attempts.
+
+    Args:
+        config: Structure configuration dict
+        x: Block X coordinate
+        z: Block Z coordinate
+        num_test_seeds: Number of seeds to test (default 100000)
+
+    Returns:
+        Number of matches (lower = stricter)
+    """
+    spacing = config["spacing"]
+    separation = config["separation"]
+
+    # Calculate target parameters
+    cx, cz = x >> 4, z >> 4
+    rx, rz = cx // spacing, cz // spacing
+    target_ox, target_oz = cx % spacing, cz % spacing
+
+    # Calculate r_base
+    r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
+
+    # Load C library for fast testing
+    lib_path = Path(__file__).parent / 'crack_low32.so'
+    try:
+        lib = ctypes.CDLL(str(lib_path))
+        lib.crack_low32.argtypes = [
+            ctypes.c_uint32, ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+        ]
+        lib.crack_low32.restype = ctypes.c_int
+
+        # Test using C library
+        offset_range = spacing - separation
+        spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
+
+        r_base_arr = (ctypes.c_uint32 * 1)(r_base)
+        ox_arr = (ctypes.c_uint32 * 1)(target_ox)
+        oz_arr = (ctypes.c_uint32 * 1)(target_oz)
+        offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
+        spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
+        results_arr = (ctypes.c_uint32 * num_test_seeds)()
+
+        found = lib.crack_low32(
+            0, num_test_seeds,
+            r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
+            1, results_arr, num_test_seeds
+        )
+
+        return found
+    except Exception as e:
+        print(f"[WARNING] Failed to test strictness with C library: {e}")
+        return 0
+
+
 def prepare_targets(targets):
+    # First sort by spread_type (linear first)
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
-    
+
+    # Calculate parameters for all targets
     r_base_list, ox_list, oz_list = [], [], []
     offset_range_list, spread_type_list, structure_info = [], [], []
-    
+
     for t in sorted_targets:
         config = STRUCTURE_CONFIGS[t["structure"]]
         x, z = t["x"], t["z"]
         spacing, separation = config["spacing"], config["separation"]
-        
+
         cx, cz = x >> 4, z >> 4
         rx, rz = cx // spacing, cz // spacing
         ox, oz = cx % spacing, cz % spacing
-        
+
         r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
         spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
-        
+
         r_base_list.append(r_base)
         ox_list.append(ox)
         oz_list.append(oz)
         offset_range_list.append(spacing - separation)
         spread_type_list.append(spread_type_int)
         structure_info.append({"name": config["name"], "x": x, "z": z, "rx": rx, "rz": rz, "spread_type": config.get("spread_type", "linear")})
-    
+
+    # Test strictness and sort (strictest first)
+    strictness_scores = []
+
+    for i, t in enumerate(sorted_targets):
+        config = STRUCTURE_CONFIGS[t["structure"]]
+        x, z = t["x"], t["z"]
+
+        matches = test_sample_strictness(config, x, z, num_test_seeds=100000)
+        strictness_scores.append(matches)
+
+    # Sort by strictness (fewer matches = stricter = higher priority)
+    # But maintain linear-first ordering
+    indices = list(range(len(sorted_targets)))
+
+    # Separate linear and triangular
+    linear_indices = [i for i in indices if spread_type_list[i] == 0]
+    triangular_indices = [i for i in indices if spread_type_list[i] == 1]
+
+    # Sort each group by strictness (ascending = stricter first)
+    linear_indices.sort(key=lambda i: strictness_scores[i])
+    triangular_indices.sort(key=lambda i: strictness_scores[i])
+
+    # Combine: linear first, then triangular
+    sorted_indices = linear_indices + triangular_indices
+
+    # Reorder all lists
+    r_base_list = [r_base_list[i] for i in sorted_indices]
+    ox_list = [ox_list[i] for i in sorted_indices]
+    oz_list = [oz_list[i] for i in sorted_indices]
+    offset_range_list = [offset_range_list[i] for i in sorted_indices]
+    spread_type_list = [spread_type_list[i] for i in sorted_indices]
+    structure_info = [structure_info[i] for i in sorted_indices]
+
     return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info
 
 R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = prepare_targets(TARGETS)
@@ -307,6 +404,7 @@ def main():
     parser.add_argument("--test", action="store_true", help="Test mode (100M seeds), overrides config")
     parser.add_argument("--cpu", action="store_true", help="Force CPU mode")
     parser.add_argument("--gpu", action="store_true", help="Force GPU mode")
+    parser.add_argument("--processes", type=int, default=None, help="Number of CPU processes (only for CPU mode)")
     args = parser.parse_args()
     
     # Load configuration
@@ -358,8 +456,20 @@ def main():
     else:
         print("\n[*] CPU mode (from config)")
         use_gpu = False
-    
-    num_processes = mp.cpu_count()
+
+    # Get process count: command-line > config > auto-detect
+    if args.processes is not None:
+        num_processes = args.processes
+        source = "command-line"
+    elif cfg.get('processes', None) is not None:
+        num_processes = cfg.get('processes')
+        source = "config file"
+    else:
+        num_processes = mp.cpu_count()
+        source = "auto-detect"
+
+    print(f"[*] Processes: {num_processes} ({source})")
+
     compute_device = f"GPU ({gpu_device})" if use_gpu else f"CPU ({num_processes} cores)"
     print(f"[*] Compute device: {compute_device}")
     
