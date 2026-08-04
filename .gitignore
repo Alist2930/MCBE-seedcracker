@@ -39,11 +39,6 @@ UI_DEVELOPMENT_PLAN.md
 # Ignore Windows non-UI version (MCBEseedcracker/)
 MCBEseedcracker/
 
-# Keep only DLLs in UI version (ignore C source files in UI)
-MCBEseedcracker_win_ui/**/*.c
-MCBEseedcracker_win_ui/**/*.h
-MCBEseedcracker_win_ui/**/cubiomes/
-
 # Session and config files
 session_data.json
 config.json
