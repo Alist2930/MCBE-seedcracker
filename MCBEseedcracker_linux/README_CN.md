@@ -116,43 +116,43 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 
 - **沙漠神殿**：中心位置所在的区块
 
-  ![沙漠神殿区块确定](assets/imgs/desert_temple.png)
+  ![沙漠神殿区块确定](../assets/imgs/desert_temple.png)
 
 - **海底神殿**：中心位置所在的区块
 
-  ![海底神殿区块确定](assets/imgs/ocean_monument.jpg)
+  ![海底神殿区块确定](../assets/imgs/ocean_monument.jpg)
 
 - **女巫屋**：建筑占区块面积最大的区块
 
-  ![女巫屋区块确定](assets/imgs/swamp_hut.png)
+  ![女巫屋区块确定](../assets/imgs/swamp_hut.png)
 
 - **丛林神庙**：建筑占区块面积最大的区块
 
-  ![丛林神庙区块确定](assets/imgs/jungle_temple.png)
+  ![丛林神庙区块确定](../assets/imgs/jungle_temple.png)
 
 - **末地城**：入口潜影贝方形结构占区块面积最大的区块
 
-  ![末地城区块确定](assets/imgs/end_city.png)
+  ![末地城区块确定](../assets/imgs/end_city.png)
 
 - **沉船**：完整沉船取船头所在区块（船头大概是刚好顶到区块边界的那端），残缺沉船取船占区块面积最大的区块
 
   完整沉船：
 
-  ![完整沉船区块确定](assets/imgs/shipwreck_complete.png)
+  ![完整沉船区块确定](../assets/imgs/shipwreck_complete.png)
 
   残缺沉船：
 
-  ![残缺沉船区块确定](assets/imgs/shipwreck_incomplete.png)
+  ![残缺沉船区块确定](../assets/imgs/shipwreck_incomplete.png)
 
 - **海底废墟**：单个的海底废墟为其占区块面积最大的区块，若为海底废墟群则为中间的海底废墟占区块面积最大的区块
 
   单个海底废墟：
 
-  ![单个海底废墟区块确定](assets/imgs/ocean_ruins.png)
+  ![单个海底废墟区块确定](../assets/imgs/ocean_ruins.png)
 
   海底废墟群：
 
-  ![海底废墟群区块确定](assets/imgs/ocean_ruins_group.png)
+  ![海底废墟群区块确定](../assets/imgs/ocean_ruins_group.png)
 
 ---
 

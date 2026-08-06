@@ -116,43 +116,43 @@ Edit the `low32` section in `config.json`:
 
 - **Desert Temple**: Chunk containing the center position
 
-  ![Desert Temple Chunk Location](assets/imgs/desert_temple.png)
+  ![Desert Temple Chunk Location](../assets/imgs/desert_temple.png)
 
 - **Ocean Monument**: Chunk containing the center position
 
-  ![Ocean Monument Chunk Location](assets/imgs/ocean_monument.jpg)
+  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.jpg)
 
 - **Witch Hut**: Chunk with the largest building area
 
-  ![Witch Hut Chunk Location](assets/imgs/swamp_hut.png)
+  ![Witch Hut Chunk Location](../assets/imgs/swamp_hut.png)
 
 - **Jungle Temple**: Chunk with the largest building area
 
-  ![Jungle Temple Chunk Location](assets/imgs/jungle_temple.png)
+  ![Jungle Temple Chunk Location](../assets/imgs/jungle_temple.png)
 
 - **End City**: Chunk with the largest shulker box structure area at entrance
 
-  ![End City Chunk Location](assets/imgs/end_city.png)
+  ![End City Chunk Location](../assets/imgs/end_city.png)
 
 - **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
 
   Complete shipwreck:
 
-  ![Complete Shipwreck Chunk Location](assets/imgs/shipwreck_complete.png)
+  ![Complete Shipwreck Chunk Location](../assets/imgs/shipwreck_complete.png)
 
   Incomplete shipwreck:
 
-  ![Incomplete Shipwreck Chunk Location](assets/imgs/shipwreck_incomplete.png)
+  ![Incomplete Shipwreck Chunk Location](../assets/imgs/shipwreck_incomplete.png)
 
 - **Ocean Ruins**: For single ruins, use the chunk with the largest ruins area; for ruins groups, use the chunk with the largest area of the middle ruins
 
   Single ocean ruins:
 
-  ![Single Ocean Ruins Chunk Location](assets/imgs/ocean_ruins.png)
+  ![Single Ocean Ruins Chunk Location](../assets/imgs/ocean_ruins.png)
 
   Ocean ruins group:
 
-  ![Ocean Ruins Group Chunk Location](assets/imgs/ocean_ruins_group.png)
+  ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
 
 ---
 
