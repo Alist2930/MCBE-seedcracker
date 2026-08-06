@@ -41,15 +41,38 @@ MCBEseedcracker_win_ui/
 
 ---
 
-## 功能特性
+### Windows 用户（推荐）
 
-- ✅ **图形化界面** - 直观的 Windows 桌面应用
-- ✅ **GPU加速** - 低32位破解支持OpenCL GPU加速（15倍速度提升）
-- ✅ **低32位破解** - 使用建筑坐标破解种子低32位
-- ✅ **高32位破解** - 使用群系样本破解种子高32位
-- ✅ **进度保存/恢复** - 支持中断后继续破解
-- ✅ **中英文切换** - 支持中文和英文界面
-- ✅ **小版本支持** - 支持基岩版小版本选择（如 1.21.50, 1.21-1.21.40）
+**Windows 图形界面版**，无需命令行操作，无需编辑配置文件！
+
+详见 [MCBEseedcracker_win_ui/README_CN.md](MCBEseedcracker_win_ui/README_CN.md)。
+
+**功能特性：**
+
+- ✅ 图形化界面 - 无需编程
+- ✅ 低32位和高32位破解
+- ✅ 进度保存/恢复
+- ✅ 中英文切换
+- ✅ 支持 MC 1.18/1.19/1.20/1.21/26.XX
+
+## 使用说明
+
+### 1. 低32位破解（建筑坐标）
+
+1. 在游戏中收集建筑坐标（推荐 5 个不同类型的建筑）
+2. 点击「添加建筑」按钮，输入建筑类型和坐标
+3. 选择破解范围（测试模式 0-100M 或全量模式 0-4.3B）
+4. （可选）在「设置」中手动设置进程数（默认自动使用所有CPU核心，最大16进程）
+5. 点击「开始破解」
+6. 等待破解完成，查看候选低32位值
+
+**进程数设置说明：**
+
+- **GPU模式**：进程数设置无效（GPU单进程多线程并行）
+- **CPU模式**：可手动设置进程数（默认使用所有核心，最大16进程）
+- **推荐**：默认自动设置即可，16进程已是最优值
+
+---
 
 ### GPU加速（低32位破解）
 
@@ -88,26 +111,9 @@ MCBEseedcracker_win_ui/
 
 ---
 
-## 使用说明
+#### 支持的结构
 
-### 1. 低32位破解（建筑坐标）
-
-1. 在游戏中收集建筑坐标（推荐 5 个不同类型的建筑）
-2. 点击「添加建筑」按钮，输入建筑类型和坐标
-3. 选择破解范围（测试模式 0-100M 或全量模式 0-4.3B）
-4. （可选）在「设置」中手动设置进程数（默认自动使用所有CPU核心，最大16进程）
-5. 点击「开始破解」
-6. 等待破解完成，查看候选低32位值
-
-**进程数设置说明：**
-
-- **GPU模式**：进程数设置无效（GPU单进程多线程并行）
-- **CPU模式**：可手动设置进程数（默认使用所有核心，最大16进程）
-- **推荐**：默认自动设置即可，16进程已是最优值
-
-**支持的建筑类型：**
-
-| 建筑类型                | 中文名               | 分布类型   |
+| 英文名                  | 中文名               | 分布类型   |
 | ----------------------- | -------------------- | ---------- |
 | village                 | 村庄/僵尸村庄        | triangular |
 | mansion                 | 林地府邸             | triangular |
@@ -132,47 +138,49 @@ MCBEseedcracker_win_ui/
 
 **填入的建筑坐标只需在结构定位的区块内的任意坐标即可。**
 
-**建筑定位区块确定方法：**
+#### 结构定位区块确定方法
 
 - **沙漠神殿**：中心位置所在的区块
 
-  ![沙漠神殿区块确定](../assets/imgs/desert_temple.png)
+  ![沙漠神殿区块确定](assets/imgs/desert_temple.png)
 
 - **海底神殿**：中心位置所在的区块
 
-  ![海底神殿区块确定](../assets/imgs/ocean_monument.jpg)
+  ![海底神殿区块确定](assets/imgs/ocean_monument.jpg)
 
 - **女巫屋**：建筑占区块面积最大的区块
 
-  ![女巫屋区块确定](../assets/imgs/swamp_hut.png)
+  ![女巫屋区块确定](assets/imgs/swamp_hut.png)
 
 - **丛林神庙**：建筑占区块面积最大的区块
 
-  ![丛林神庙区块确定](../assets/imgs/jungle_temple.png)
+  ![丛林神庙区块确定](assets/imgs/jungle_temple.png)
 
 - **末地城**：入口潜影贝方形结构占区块面积最大的区块
 
-  ![末地城区块确定](../assets/imgs/end_city.png)
+  ![末地城区块确定](assets/imgs/end_city.png)
 
 - **沉船**：完整沉船取船头所在区块（船头大概是刚好顶到区块边界的那端），残缺沉船取船占区块面积最大的区块
 
   完整沉船：
 
-  ![完整沉船区块确定](../assets/imgs/shipwreck_complete.png)
+  ![完整沉船区块确定](assets/imgs/shipwreck_complete.png)
 
   残缺沉船：
 
-  ![残缺沉船区块确定](../assets/imgs/shipwreck_incomplete.png)
+  ![残缺沉船区块确定](assets/imgs/shipwreck_incomplete.png)
 
 - **海底废墟**：单个的海底废墟为其占区块面积最大的区块，若为海底废墟群则为中间的海底废墟占区块面积最大的区块
 
   单个海底废墟：
 
-  ![单个海底废墟区块确定](../assets/imgs/ocean_ruins.png)
+  ![单个海底废墟区块确定](assets/imgs/ocean_ruins.png)
 
   海底废墟群：
 
-  ![海底废墟群区块确定](../assets/imgs/ocean_ruins_group.png)
+  ![海底废墟群区块确定](assets/imgs/ocean_ruins_group.png)
+
+---
 
 ### 2. 高32位破解（群系样本）
 
@@ -242,6 +250,12 @@ MCBEseedcracker_win_ui/
 - **群系边界**：两版本的群系边界位置可能略有差异
 - **新版本差异**：基岩版 1.26.x 与 Java 版 1.21 群系算法有较小差异
 
+#### 群系样本选择建议
+
+- **选择群系中心区域的坐标**，远离群系边界至少3格以上
+- **避免在群系边界附近采集样本**
+- 如果破解失败，尝试更换同一群系内的其他坐标
+
 #### 重要限制
 
 **高32位破解功能基于 cubiomes 库，支持到 Java 版 1.21.11（通过社区 fork 版本）。**
@@ -258,97 +272,56 @@ MCBEseedcracker_win_ui/
 - 集成 SeedMapper 的 cubiomes fork 版本支持 1.21.5+ 和 26.2+
 - 支持苍白之园（1.21.50+）和硫磺洞穴（26.30+）
 
-#### 版本选择建议
+### 稀有度自动排序
 
-- **最新版本优先**：建议选择你游戏实际使用的版本
-- **群系版本匹配**：确保选择的版本支持你采集的群系
-- **默认推荐**：程序默认选择 26.30+（最新版本，支持硫磺洞穴等新群系）
+程序会自动按群系稀有度排序样本，最稀有的群系优先检查，一旦不匹配立即跳过当前种子，大幅提高效率：
 
-**主世界群系ID参考（1.21.60-26.23）**
+```
+[*] Biome samples (sorted by rarity, rarest first):
+    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
+    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
+    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
+    ...
+```
 
-| 群系                     | ID  | 稀有度 | 群系                  | ID  | 稀有度 |
-| ------------------------ | --- | ------ | --------------------- | --- | ------ |
-| extreme_hills_mutated    | 131 | 0.10%  | stony_peaks           | 182 | 0.10%  |
-| pale_garden              | 186 | 0.12%  | mushroom_island       | 14  | 0.14%  |
-| frozen_peaks             | 181 | 0.16%  | jagged_peaks          | 180 | 0.18%  |
-| extreme_hills_plus_trees | 34  | 0.19%  | savanna_mutated       | 163 | 0.21%  |
-| ice_spikes               | 140 | 0.24%  | extreme_hills         | 3   | 0.26%  |
-| cherry_grove             | 185 | 0.29%  | mesa_bryce            | 165 | 0.33%  |
-| cold_beach               | 26  | 0.36%  | snowy_slopes          | 179 | 0.39%  |
-| savanna_plateau          | 36  | 0.40%  | mangrove_swamp        | 184 | 0.51%  |
-| mesa_plateau_stone       | 38  | 0.62%  | bamboo_jungle         | 168 | 0.64%  |
-| sunflower_plains         | 129 | 0.67%  | mega_taiga            | 32  | 0.69%  |
-| flower_forest            | 132 | 0.69%  | redwood_taiga_mutated | 160 | 0.71%  |
-| grove                    | 178 | 0.72%  | frozen_river          | 11  | 0.83%  |
-| mesa                     | 37  | 0.89%  | swamp                 | 6   | 0.98%  |
-| meadow                   | 177 | 1.16%  | stone_beach           | 25  | 1.17%  |
-| deep_frozen_ocean        | 50  | 1.25%  | jungle_edge           | 23  | 1.38%  |
-| roofed_forest            | 29  | 1.84%  | jungle                | 21  | 2.04%  |
-| warm_ocean               | 44  | 2.13%  | birch_forest_mutated  | 155 | 2.15%  |
-| frozen_ocean             | 10  | 2.26%  | birch_forest          | 27  | 2.29%  |
-| desert                   | 2   | 2.33%  | deep_lukewarm_ocean   | 48  | 2.37%  |
-| cold_taiga               | 30  | 2.40%  | deep_cold_ocean       | 49  | 2.42%  |
-| beach                    | 16  | 2.45%  | ice_plains            | 12  | 2.78%  |
-| taiga                    | 5   | 3.40%  | deep_ocean            | 24  | 3.60%  |
-| savanna                  | 35  | 3.91%  | lukewarm_ocean        | 45  | 4.55%  |
-| cold_ocean               | 46  | 4.59%  | river                 | 7   | 6.22%  |
-| ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
-| forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
-| lush_caves               | 175 | -      | deep_dark             | 183 | -      |
-| sulfur_caves             | 187 | -      |                       |     |        |
+#### 主世界群系ID参考（1.21.60-26.23）
 
----
+| 群系                                  | ID  | 稀有度 | 群系                                    | ID  | 稀有度 |
+| ------------------------------------- | --- | ------ | --------------------------------------- | --- | ------ |
+| extreme_hills_mutated（风袭沙砾丘陵） | 131 | 0.10%  | stony_peaks（裸岩山峰）                 | 182 | 0.10%  |
+| pale_garden（苍白之园）               | 186 | 0.12%  | mushroom_island（蘑菇岛）               | 14  | 0.14%  |
+| frozen_peaks（冰封山峰）              | 181 | 0.16%  | jagged_peaks（尖峭山峰）                | 180 | 0.18%  |
+| extreme_hills_plus_trees（风袭森林）  | 34  | 0.19%  | savanna_mutated（风袭热带草原）         | 163 | 0.21%  |
+| ice_spikes（冰刺之地）                | 140 | 0.24%  | extreme_hills（风袭丘陵）               | 3   | 0.26%  |
+| cherry_grove（樱花树林）              | 185 | 0.29%  | mesa_bryce（风蚀恶地）                  | 165 | 0.33%  |
+| cold_beach（积雪沙滩）                | 26  | 0.36%  | snowy_slopes（积雪山坡）                | 179 | 0.39%  |
+| savanna_plateau（热带高原）           | 36  | 0.40%  | mangrove_swamp（红树林沼泽）            | 184 | 0.51%  |
+| mesa_plateau_stone（繁茂的恶地高原）  | 38  | 0.62%  | bamboo_jungle（竹林）                   | 168 | 0.64%  |
+| sunflower_plains（向日葵平原）        | 129 | 0.67%  | mega_taiga（原始松木针叶林）            | 32  | 0.69%  |
+| flower_forest（繁花森林）             | 132 | 0.69%  | redwood_taiga_mutated（原始云杉针叶林） | 160 | 0.71%  |
+| grove（雪林）                         | 178 | 0.72%  | frozen_river（冻河）                    | 11  | 0.83%  |
+| mesa（恶地）                          | 37  | 0.89%  | swamp（沼泽）                           | 6   | 0.98%  |
+| meadow（草甸）                        | 177 | 1.16%  | stone_beach（石岸）                     | 25  | 1.17%  |
+| deep_frozen_ocean（冰冻深海）         | 50  | 1.25%  | jungle_edge（稀疏丛林）                 | 23  | 1.38%  |
+| roofed_forest（黑森林）               | 29  | 1.84%  | jungle（丛林）                          | 21  | 2.04%  |
+| warm_ocean（暖水海洋）                | 44  | 2.13%  | birch_forest_mutated（原始桦木森林）    | 155 | 2.15%  |
+| frozen_ocean（冻洋）                  | 10  | 2.26%  | birch_forest（桦木森林）                | 27  | 2.29%  |
+| desert（沙漠）                        | 2   | 2.33%  | deep_lukewarm_ocean（温水深海）         | 48  | 2.37%  |
+| cold_taiga（积雪针叶林）              | 30  | 2.40%  | deep_cold_ocean（冷水深海）             | 49  | 2.42%  |
+| beach（沙滩）                         | 16  | 2.45%  | ice_plains（雪原）                      | 12  | 2.78%  |
+| taiga（针叶林）                       | 5   | 3.40%  | deep_ocean（深海）                      | 24  | 3.60%  |
+| savanna（热带草原）                   | 35  | 3.91%  | lukewarm_ocean（温水海洋）              | 45  | 4.55%  |
+| cold_ocean（冷水海洋）                | 46  | 4.59%  | river（河流）                           | 7   | 6.22%  |
+| ocean（海洋）                         | 0   | 6.87%  | plains（平原）                          | 1   | 10.69% |
+| forest（森林）                        | 4   | 12.31% | dripstone_caves（溶洞）                 | 174 | -      |
+| lush_caves（繁茂洞穴）                | 175 | -      | deep_dark（深暗之域）                   | 183 | -      |
+| sulfur_caves（硫磺洞穴）              | 187 | -      |                                         |     |        |
 
 > **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
 
 > **注**：硫磺洞穴（ID: 187）现已支持破解。请使用低 Y 坐标（Y≤60）以获得准确检测。由于缺乏稀有度数据，不推荐作为主要破解群系。
 
 > **注意**：ChunkBase 等网站使用 Java 版群系名称，与基岩版不同。例如：Java 的 `stony_shore` 在基岩版是 `stone_beach`，Java 的 `dark_forest` 在基岩版是 `roofed_forest`。验证时请注意区分。
-
-## 性能参考
-
-测试环境：Intel Xeon Gold 6330 (112核) + NVIDIA RTX 3090
-
-| 破解器 | 模式 | 速度    | 预计时间 (2^32) | 备注                |
-| ------ | ---- | ------- | --------------- | ------------------- |
-| 低32位 | GPU  | ~156M/s | **~30秒**       | RTX 3090 OpenCL加速 |
-| 低32位 | CPU  | ~12M/s  | ~6 分钟         | 112核并行           |
-| 高32位 | CPU  | ~432K/s | ~2.5 小时       | 16进程（自动限制）  |
-
-**注**：旧显卡（计算单元 < 10）会自动使用CPU模式以确保稳定性。
-
----
-
-## 项目结构
-
-```
-MCBEseedcracker_win_ui/
-├── main.py                  # 主程序入口
-├── ui/
-│   ├── main_window.py       # 主窗口
-│   ├── widgets/             # 自定义组件
-│   │   ├── biome_list_widget.py
-│   │   ├── structure_list_widget.py
-│   │   └── progress_widget.py
-│   ├── workers/             # 后台任务
-│   │   ├── low32_worker.py
-│   │   └── high32_worker.py
-│   ├── utils/               # 工具函数
-│   │   ├── crack_engine.py
-│   │   ├── crack_high32_engine.py
-│   │   ├── i18n.py
-│   │   └── ...
-│   ├── data/                # 数据文件
-│   │   ├── biomes.json
-│   │   └── structures.json
-│   └── resources/           # 资源文件
-│       └── translations/    # 翻译文件
-├── dll/                     # 预编译 DLL
-│   ├── crack_low32/
-│   └── crack_high32/
-├── build.spec               # PyInstaller 配置
-└── requirements.txt         # Python 依赖
-```
 
 ---
 
@@ -428,24 +401,42 @@ pyinstaller build.spec --noconfirm
 
 ---
 
+## 性能参考
+
+测试环境：Intel Xeon Gold 6330 (112核) + NVIDIA RTX 3090
+
+| 破解器 | 模式 | 速度    | 预计时间 (2^32) | 备注                |
+| ------ | ---- | ------- | --------------- | ------------------- |
+| 低32位 | GPU  | ~156M/s | **~30秒**       | RTX 3090 OpenCL加速 |
+| 低32位 | CPU  | ~12M/s  | ~6 分钟         | 112核并行           |
+| 高32位 | CPU  | ~432K/s | ~2.5 小时       | 16进程（自动限制）  |
+
+**注**：
+
+- 低32位破解支持 OpenCL GPU 加速，兼容 NVIDIA/AMD/Intel 显卡
+- 旧显卡（计算单元 < 10）会自动使用 CPU 模式以确保稳定性
+- 高32位破解因算法复杂度高，暂不支持 GPU 加速
+
+---
+
 ## 常见问题
 
 ### 低32位破解失败
 
 **可能原因：**
 
-1. **建筑坐标错误** - 坐标填写不正确，或区块定位方法有误
-2. **建筑数量不足** - 建筑数量不足会导致找到过多的候选种子，建议至少提供 5 个不同类型的建筑
-3. **建筑类型选择不当** - 某些建筑（如村庄）生成规则复杂，建议优先使用：
+1. **结构坐标错误** - 坐标填写不正确，或区块定位方法有误
+2. **结构数量不足** - 结构数量不足会导致找到过多的候选种子，建议至少提供 5 个不同类型的结构
+3. **结构类型选择不当** - 某些结构（如村庄）生成规则复杂，建议优先使用：
    - 沙漠神殿、女巫屋、丛林神庙（生成规则简单稳定）
    - 海底神殿、末地城
-4. **版本不兼容** - 如果目标世界是旧版本（1.18以下）生成的，建筑位置可能与当前版本不同
+4. **版本不兼容** - 如果目标世界是旧版本（1.18以下）生成的，结构位置可能与当前版本不同
 
 **解决方法：**
 
 - 核对坐标是否正确
-- 增加建筑数量
-- 更换建筑类型
+- 增加结构数量
+- 更换结构类型
 - 确认目标世界的生成版本
 
 ### 高32位破解失败
@@ -455,7 +446,7 @@ pyinstaller build.spec --noconfirm
 1. **版本不匹配** - 群系样本的游戏版本与实际生成版本不一致
 2. **低32位值错误** - 低32位破解结果不正确
 3. **群系样本错误** - 坐标或群系ID填写不正确
-4. **采样高度不当** - 建议 Y >= 200，避免地下群系干扰
+4. **采样高度不当** - 建议 Y >= 200，避免地下群系干扰（某些地下群系可延伸至 Y=150 以上）
 5. **群系样本数量不足** - 建议至少 5 个样本
 6. **样本选择不当** - 应选择稀有群系（如樱花林），避免常见群系（如平原、海洋）
 
@@ -466,10 +457,24 @@ pyinstaller build.spec --noconfirm
 - 提高采样高度
 - 选择稀有群系作为样本
 
+### 破解时间过长
+
+**低32位破解：** GPU约30秒，CPU约6分钟（112核）
+
+**高32位破解：** 约2.5小时（112核，16进程）
+
+如果时间明显超出：
+
+- 检查 CPU 占用率，确认多线程正常工作
+- 减少群系样本数量（但会降低准确性）
+- 使用 `--test` 参数先进行小范围测试
+
 ---
 
-## 相关链接
+## 相关链接与参考资料
 
+- [Windows 图形界面版](MCBEseedcracker_win_ui/README_CN.md)
+- [Linux 命令行版](MCBEseedcracker_linux/README_CN.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算；集成 [SeedMapper 的 fork 版本](https://github.com/xpple/SeedMapper) 支持 1.21.5+ 和 26.2+ 群系生成
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 

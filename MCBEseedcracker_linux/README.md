@@ -16,6 +16,12 @@ Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
 
 ---
 
+### Configuration File
+
+Linux version uses **`config.json`** to manage all configuration parameters (both low32 and high32 cracking).
+
+**The `config.json` file will be automatically created on first run. Please edit it as needed.**
+
 ## Quick Start
 
 ### Low 32-bit Cracking
@@ -28,48 +34,7 @@ python3 crack_low32.py --start 1000 --end 2000  # Custom range
 python3 crack_low32.py --processes 8      # Specify process count (CPU mode)
 ```
 
-### High 32-bit Cracking
-
-```bash
-cd crack_high32
-python3 crack_high32.py                         # Full crack (0 ~ 2^32-1)
-python3 crack_high32.py --test                  # Test mode (0 ~ 100M)
-python3 crack_high32.py --low32 1818588773      # Specify low32 value
-python3 crack_high32.py --start 0 --end 1000000000  # Custom range
-python3 crack_high32.py --processes 16          # Specify process count (max 16)
-```
-
-**Found Seeds Output:**
-All found seeds are automatically saved to `crack_high32/found_seeds.txt` with timestamps and detailed information. This file is created/cleared at program start, ensuring you never miss any found seeds even with verbose progress output.
-
----
-
-## Low 32-bit Cracker
-
-Crack the low 32 bits of the seed using structure locations.
-
-### GPU Acceleration (OpenCL)
-
-**Automatically detects and uses GPU if available, with automatic fallback to CPU.**
-
-| Feature             | GPU Mode       | CPU Mode     |
-| ------------------- | -------------- | ------------ |
-| **Speed**           | ~150M seeds/s  | ~10M seeds/s |
-| **Full Range Time** | ~30 seconds    | ~7 minutes   |
-| **Speedup**         | **15x faster** | Baseline     |
-
-**GPU Requirements:**
-
-- NVIDIA GPU with Compute Capability 2.0+ (Fermi architecture or newer)
-- AMD GPU with OpenCL 1.1+ support
-- **Recommended**: RTX 20/30/40 series for best performance
-
-**Old GPU Behavior:**
-
-- GPUs with <10 compute units (e.g., MX330, GTX 550 Ti) are automatically detected and will use CPU mode
-- This prevents timeout/crash issues on low-end GPUs
-
-### Command Line Arguments
+### Low 32-bit Command Line Arguments
 
 | Argument      | Description                                                      |
 | ------------- | ---------------------------------------------------------------- |
@@ -79,12 +44,6 @@ Crack the low 32 bits of the seed using structure locations.
 | `--cpu`       | Force CPU mode                                                   |
 | `--gpu`       | Force GPU mode (auto-fallback to CPU if unavailable)             |
 | `--processes` | Process count (CPU mode only, recommend not exceeding CPU cores) |
-
-### Configuration File
-
-Linux version uses **`config.json`** to manage all configuration parameters (both low32 and high32 cracking).
-
-**The `config.json` file will be automatically created on first run. Please edit it as needed.**
 
 #### Low 32-bit Cracking Configuration
 
@@ -126,7 +85,7 @@ Edit the `low32` section in `config.json`:
 | `processes`        | CPU process count (null: auto-detect all cores)   |
 | `targets`          | Target structure list (recommended: 5 structures) |
 
-### Supported Structures
+#### Supported Structures
 
 | Name                    | Description               | Spread Type |
 | ----------------------- | ------------------------- | ----------- |
@@ -147,61 +106,73 @@ Edit the `low32` section in `config.json`:
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
 
-Coordinates just need to be within the same chunk.
-
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). The program automatically sorts linear types first for processing, requiring less computation and faster cracking.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Avoid using Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether structures due to complex generation rules that may cause one-chunk offset in-game.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
-### Structure Chunk Location Method
+**The input structure coordinates can be any position within the structure's locating chunk.**
+
+#### Structure Chunk Location Method
 
 - **Desert Temple**: Chunk containing the center position
 
-  ![Desert Temple Chunk Location](../assets/imgs/desert_temple.png)
+  ![Desert Temple Chunk Location](assets/imgs/desert_temple.png)
 
 - **Ocean Monument**: Chunk containing the center position
 
-  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.jpg)
+  ![Ocean Monument Chunk Location](assets/imgs/ocean_monument.jpg)
 
 - **Witch Hut**: Chunk with the largest building area
 
-  ![Witch Hut Chunk Location](../assets/imgs/swamp_hut.png)
+  ![Witch Hut Chunk Location](assets/imgs/swamp_hut.png)
 
 - **Jungle Temple**: Chunk with the largest building area
 
-  ![Jungle Temple Chunk Location](../assets/imgs/jungle_temple.png)
+  ![Jungle Temple Chunk Location](assets/imgs/jungle_temple.png)
 
 - **End City**: Chunk with the largest shulker box structure area at entrance
 
-  ![End City Chunk Location](../assets/imgs/end_city.png)
+  ![End City Chunk Location](assets/imgs/end_city.png)
 
 - **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
 
   Complete shipwreck:
 
-  ![Complete Shipwreck Chunk Location](../assets/imgs/shipwreck_complete.png)
+  ![Complete Shipwreck Chunk Location](assets/imgs/shipwreck_complete.png)
 
   Incomplete shipwreck:
 
-  ![Incomplete Shipwreck Chunk Location](../assets/imgs/shipwreck_incomplete.png)
+  ![Incomplete Shipwreck Chunk Location](assets/imgs/shipwreck_incomplete.png)
 
 - **Ocean Ruins**: For single ruins, use the chunk with the largest ruins area; for ruins groups, use the chunk with the largest area of the middle ruins
 
   Single ocean ruins:
 
-  ![Single Ocean Ruins Chunk Location](../assets/imgs/ocean_ruins.png)
+  ![Single Ocean Ruins Chunk Location](assets/imgs/ocean_ruins.png)
 
   Ocean ruins group:
 
-  ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
+  ![Ocean Ruins Group Chunk Location](assets/imgs/ocean_ruins_group.png)
 
 ---
 
-## High 32-bit Cracker
+### High 32-bit Cracking
 
-Crack the high 32 bits of the seed using biome samples.
+```bash
+cd crack_high32
+python3 crack_high32.py                         # Full crack (0 ~ 2^32-1)
+python3 crack_high32.py --test                  # Test mode (0 ~ 100M)
+python3 crack_high32.py --low32 1818588773      # Specify low32 value
+python3 crack_high32.py --start 0 --end 1000000000  # Custom range
+python3 crack_high32.py --processes 16          # Specify process count (max 16)
+```
 
-### Command Line Arguments
+**Found Seeds Output:**
+All found seeds are automatically saved to `crack_high32/found_seeds.txt` with timestamps and detailed information. This file is created/cleared at program start, ensuring you never miss any found seeds even with verbose progress output.
+
+---
+
+### High 32-bit Command Line Arguments
 
 | Argument      | Description                              |
 | ------------- | ---------------------------------------- |
@@ -210,20 +181,6 @@ Crack the high 32 bits of the seed using biome samples.
 | `--test`      | Test mode (0 - 100M)                     |
 | `--low32`     | Low 32-bit value                         |
 | `--processes` | Number of processes (default: CPU cores) |
-
-### Automatic Rarity Sorting
-
-The program automatically sorts samples by biome rarity, checking the rarest biomes first. If the first sample doesn't match, it immediately skips the current seed, greatly improving efficiency:
-
-```
-[*] Biome samples (sorted by rarity, rarest first):
-    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
-    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
-    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
-    ...
-```
-
-### Configuration
 
 #### High 32-bit Cracking Configuration
 
@@ -240,20 +197,8 @@ Edit the `high32` section in `config.json`:
     "processes": 16,
     "samples": [
       { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
-      {
-        "x": -1922,
-        "z": 1231,
-        "y": 200,
-        "biome_id": 185,
-        "name": "cherry_grove"
-      },
-      {
-        "x": -4706,
-        "z": 3302,
-        "y": 200,
-        "biome_id": 132,
-        "name": "flower_forest"
-      },
+      { "x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove" },
+      { "x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest" },
       { "x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga" },
       { "x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest" }
     ]
@@ -291,16 +236,16 @@ Each sample contains the following fields:
 
 #### Version Mapping
 
-| Bedrock Version   | MC_VERSION_STR Value | Supported Biomes                                |
-| ----------------- | -------------------- | ----------------------------------------------- |
-| **26.30+**        | `"26.30+"`           | ✅ Sulfur Caves (new cave biome)                |
-| **1.21.60-26.23** | `"1.21.60-26.23"`    | ✅ Pale Garden (expanded range)                 |
-| **1.21.50**       | `"1.21.50"`          | ✅ Pale Garden (smaller range)                  |
-| **1.21-1.21.40**  | `"1.21-1.21.40"`     | ❌ No Pale Garden                               |
-| **1.20.60-81**    | `"1.20.60-81"`       | ✅ Cherry Grove                                 |
-| **1.20.0-51**     | `"1.20.0-51"`        | ✅ Cherry Grove                                 |
-| **1.19**          | `"1.19"`             | ✅ Deep Dark, Mangrove Swamp                    |
-| **1.18**          | `"1.18"`             | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
+| Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
+| ------------------- | -------------------------- | ----------------------------------------------- |
+| **26.30+**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
+| **1.21.60-26.23**   | Java 1.21.5-26.1           | ✅ Pale Garden (expanded range)                 |
+| **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
+| **1.21-1.21.40**    | Java 1.21.3                | ❌ No Pale Garden                               |
+| **1.20.60-1.20.81** | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.20.0-1.20.51**  | Java 1.20                  | ✅ Cherry Grove                                 |
+| **1.19**            | Java 1.19                  | ✅ Deep Dark, Mangrove Swamp                    |
+| **1.18**            | Java 1.18                  | ✅ Dripstone Caves, Lush Caves, Mountain biomes |
 
 #### Pale Garden Version Differences
 
@@ -339,15 +284,21 @@ Even with same version number, Java and Bedrock have biome generation difference
 - **Biome Boundaries**: Biome boundary positions may differ slightly between versions
 - **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
 
+#### Biome Sample Selection Tips
+
+- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+- **Avoid sampling near biome boundaries**
+- If cracking fails, try different coordinates within the same biome
+
 #### Important Limitation
 
-**High 32-bit cracking is based on cubiomes library, which supports up to Java 1.21.11 (via community fork).**
+**High 32-bit cracking is based on cubiomes library, integrated with MC 26.2 support from SeedMapper.**
 
-| cubiomes Info  | Details                                  |
-| -------------- | ---------------------------------------- |
-| Latest Version | 4.1.2 (fork)                             |
-| Last Update    | January 2025 (fork)                      |
-| Max Supported  | Java 1.21.5-26.1 (Bedrock 1.21.60-26.23) |
+| cubiomes Info  | Details                                    |
+| -------------- | ------------------------------------------ |
+| Latest Version | 4.1.2 (fork with MC 26.2 support)          |
+| Last Update    | July 2026 (integrated SeedMapper btree262) |
+| Max Supported  | Java 26.2 (Bedrock 26.30+)                 |
 
 **cubiomes Update Status:**
 
@@ -355,9 +306,19 @@ Even with same version number, Java and Bedrock have biome generation difference
 - Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
 - Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30+)
 
-> **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
+### Automatic Rarity Sorting
 
-### Overworld Biome ID Reference (1.21.60-26.23)
+The program automatically sorts samples by biome rarity, checking the rarest biomes first. If the first sample doesn't match, it immediately skips the current seed, greatly improving efficiency:
+
+```
+[*] Biome samples (sorted by rarity, rarest first):
+    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
+    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
+    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
+    ...
+```
+
+#### Overworld Biome ID Reference (1.21.60-26.23)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
@@ -395,12 +356,6 @@ Even with same version number, Java and Bedrock have biome generation difference
 > **Note**: Sulfur Caves (ID: 187) is now supported for cracking. Use low Y coordinate (Y≤60) for accurate detection. Cave biomes are not recommended for primary cracking due to lack of rarity data.
 
 > **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
-
-### Biome Sample Selection Tips
-
-- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-- **Avoid sampling near biome boundaries**
-- If cracking fails, try different coordinates within the same biome
 
 ---
 
@@ -466,7 +421,11 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
 
-**Note**: Old GPUs (compute units < 10) automatically use CPU mode for stability.
+**Notes**:
+
+- Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
+- Old GPUs (compute units < 10) automatically use CPU mode for stability
+- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
 
 ---
 
@@ -497,7 +456,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 1. **Version mismatch** - Biome samples' game version doesn't match the actual generation version
 2. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
 3. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
+4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 5. **Insufficient biome samples** - Recommend at least 5 samples
 6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
@@ -528,8 +487,10 @@ After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/se
 
 ---
 
-## Related Links
+## Related Links & References
 
+- [Windows GUI Version](MCBEseedcracker_win_ui/README.md)
+- [Linux Command Line Version](MCBEseedcracker_linux/README.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 

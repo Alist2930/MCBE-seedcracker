@@ -9,7 +9,7 @@ Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java Edition seed finder
 >
-> **Project Status**: Work in progress, currently for personal use. Feedback and suggestions are welcome.
+> **Project Status**: Nearly complete, currently in testing phase, available for use.
 
 ---
 

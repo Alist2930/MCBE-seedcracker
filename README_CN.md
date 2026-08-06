@@ -9,7 +9,7 @@ Minecraft 基岩版种子研究工具 (Windows / Linux)
 > - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库
 > - [SeedcrackerX](https://github.com/19MisterX98/SeedcrackerX) - Java 版种子查找器
 >
-> **项目状态**：半成品，目前仅自用。欢迎反馈问题和建议。
+> **项目状态**：近乎完善，目前在测试阶段，可供使用。
 
 ---
 

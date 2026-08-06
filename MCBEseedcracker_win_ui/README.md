@@ -41,63 +41,38 @@ MCBEseedcracker_win_ui/
 
 ---
 
-## Compilation
+### Windows Users (Recommended)
 
-### Prerequisites
+**Windows GUI Version** - no command line or code editing needed!
 
-1. **GCC Compiler**: [MinGW-w64](https://github.com/niXman/mingw-builds-binaries/releases) or TDM-GCC
-2. **OpenCL Support** (optional for GPU):
-   - NVIDIA GPU: Install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads) or display driver
-   - AMD/Intel GPU: Install display driver (already includes OpenCL support)
+See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for details.
 
-### Compile DLLs
+**Features:**
 
-Run compilation script:
+- ✅ Graphical interface - no coding required
+- ✅ Low 32-bit & High 32-bit cracking
+- ✅ Progress save/restore
+- ✅ Chinese/English support
+- ✅ MC 1.18/1.19/1.20/1.21/26.XX support
 
-```cmd
-compile.bat
-```
+## Usage
 
-This will generate:
+### 1. Low 32-bit Cracking (Structures)
 
-- `dll/crack_low32/crack_low32.dll` - CPU version
-- `dll/crack_low32/crack_low32_opencl.dll` - GPU version (if CUDA installed)
-- `dll/crack_high32/crack_high32.dll` - High 32-bit library
+1. Collect structure coordinates in-game (recommend 5 different structure types)
+2. Click "Add Structure" button, enter structure type and coordinates
+3. Select cracking range (test mode 0-100M or full mode 0-4.3B)
+4. (Optional) Manually set process count in Settings (default: auto-use all CPU cores, max 16 processes)
+5. Click "Start Cracking"
+6. Wait for completion, view candidate low 32-bit values
 
-### Manual Compilation
+**Process Count Settings:**
 
-**Low 32-bit (CPU):**
-
-```cmd
-cd crack_low32
-gcc -O3 -shared -fPIC -o crack_low32.dll crack_low32.c -lgomp
-```
-
-**Low 32-bit (GPU):**
-
-```cmd
-cd crack_low32
-gcc -O3 -shared -fPIC -o crack_low32_opencl.dll crack_low32_opencl.c -I"CUDA_PATH\include" -lOpenCL
-```
-
-**High 32-bit:**
-
-```cmd
-cd crack_high32
-gcc -O3 -shared -fPIC -o crack_high32.dll crack_high32.c -Icubiomes -lgomp
-```
+- **GPU Mode**: Process count setting has no effect (GPU single-process, multi-thread parallel)
+- **CPU Mode**: Process count can be manually set (default: use all cores, max 16 processes)
+- **Recommendation**: Use default auto-setting, 16 processes is already optimal
 
 ---
-
-## Features
-
-- ✅ **Graphical Interface** - Intuitive Windows desktop app
-- ✅ **GPU Acceleration** - Low 32-bit cracking with OpenCL GPU acceleration (15x faster)
-- ✅ **Low 32-bit Cracking** - Crack seed low 32 bits using structure coordinates
-- ✅ **High 32-bit Cracking** - Crack seed high 32 bits using biome samples
-- ✅ **Progress Save/Restore** - Resume cracking after interruption
-- ✅ **Chinese/English Support** - Bilingual interface
-- ✅ **Sub-version Support** - Support Bedrock sub-version selection (e.g. 1.21.50, 1.21-1.21.40)
 
 ### GPU Acceleration (Low 32-bit)
 
@@ -136,91 +111,76 @@ Edit `crack_config.json` in the application directory:
 
 ---
 
-## Usage
+#### Supported Structures
 
-### 1. Low 32-bit Cracking (Structures)
+| Name                    | Description               | Spread Type |
+| ----------------------- | ------------------------- | ----------- |
+| village                 | Village/Zombie Village    | triangular  |
+| mansion                 | Woodland Mansion          | triangular  |
+| end_city                | End City                  | triangular  |
+| ocean_monument          | Ocean Monument            | triangular  |
+| ancient_city            | Ancient City              | triangular  |
+| buried_treasure         | Buried Treasure           | triangular  |
+| pillager_outpost        | Pillager Outpost          | triangular  |
+| ocean_ruins             | Ocean Ruins               | **linear**  |
+| shipwreck               | Shipwreck                 | **linear**  |
+| nether_complexes        | Nether Fortress/Bastion   | **linear**  |
+| desert_temple           | Desert Temple             | **linear**  |
+| igloo                   | Igloo                     | **linear**  |
+| swamp_hut               | Witch Hut                 | **linear**  |
+| jungle_temple           | Jungle Temple             | **linear**  |
+| ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
+| ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
 
-1. Collect structure coordinates in-game (recommend 5 different structure types)
-2. Click "Add Structure" button, enter structure type and coordinates
-3. Select cracking range (test mode 0-100M or full mode 0-4.3B)
-4. (Optional) Manually set process count in Settings (default: auto-use all CPU cores, max 16 processes)
-5. Click "Start Cracking"
-6. Wait for completion, view candidate low 32-bit values
-
-**Process Count Settings:**
-
-- **GPU Mode**: Process count setting has no effect (GPU single-process, multi-thread parallel)
-- **CPU Mode**: Process count can be manually set (default: use all cores, max 16 processes)
-- **Recommendation**: Use default auto-setting, 16 processes is already optimal
-
-**Supported Structures:**
-
-| Structure Type          | Chinese Name              | Distribution |
-| ----------------------- | ------------------------- | ------------ |
-| village                 | Village/Zombie Village    | triangular   |
-| mansion                 | Woodland Mansion          | triangular   |
-| end_city                | End City                  | triangular   |
-| ocean_monument          | Ocean Monument            | triangular   |
-| ancient_city            | Ancient City              | triangular   |
-| buried_treasure         | Buried Treasure           | triangular   |
-| ocean_ruins             | Ocean Ruins               | **linear**   |
-| shipwreck               | Shipwreck                 | **linear**   |
-| nether_complexes        | Nether Fortress/Bastion   | **linear**   |
-| desert_temple           | Desert Temple             | **linear**   |
-| igloo                   | Igloo                     | **linear**   |
-| swamp_hut               | Swamp Hut                 | **linear**   |
-| jungle_temple           | Jungle Temple             | **linear**   |
-| pillager_outpost        | Pillager Outpost          | triangular   |
-| ruined_portal_overworld | Ruined Portal (Overworld) | **linear**   |
-| ruined_portal_nether    | Ruined Portal (Nether)    | **linear**   |
-
-> **Tip**: Prioritize linear type structures (Desert Temple, Swamp Hut), less computation and faster cracking.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Avoid using Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether structures due to complex generation rules that may cause one-chunk offset in-game.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
-**Coordinates just need to be within the same chunk.**
+**The input structure coordinates can be any position within the structure's locating chunk.**
 
-**Structure Chunk Location Method:**
+#### Structure Chunk Location Method
 
 - **Desert Temple**: Chunk containing the center position
 
-  ![Desert Temple Chunk Location](../assets/imgs/desert_temple.png)
+  ![Desert Temple Chunk Location](assets/imgs/desert_temple.png)
 
 - **Ocean Monument**: Chunk containing the center position
 
-  ![Ocean Monument Chunk Location](../assets/imgs/ocean_monument.jpg)
+  ![Ocean Monument Chunk Location](assets/imgs/ocean_monument.jpg)
 
 - **Witch Hut**: Chunk with the largest building area
 
-  ![Witch Hut Chunk Location](../assets/imgs/swamp_hut.png)
+  ![Witch Hut Chunk Location](assets/imgs/swamp_hut.png)
 
 - **Jungle Temple**: Chunk with the largest building area
 
-  ![Jungle Temple Chunk Location](../assets/imgs/jungle_temple.png)
+  ![Jungle Temple Chunk Location](assets/imgs/jungle_temple.png)
 
 - **End City**: Chunk with the largest shulker box structure area at entrance
 
-  ![End City Chunk Location](../assets/imgs/end_city.png)
+  ![End City Chunk Location](assets/imgs/end_city.png)
 
 - **Shipwreck**: For complete ships, use the bow chunk (bow is roughly at the chunk boundary); for incomplete ships, use the chunk with the largest ship area
 
   Complete shipwreck:
 
-  ![Complete Shipwreck Chunk Location](../assets/imgs/shipwreck_complete.png)
+  ![Complete Shipwreck Chunk Location](assets/imgs/shipwreck_complete.png)
 
   Incomplete shipwreck:
 
-  ![Incomplete Shipwreck Chunk Location](../assets/imgs/shipwreck_incomplete.png)
+  ![Incomplete Shipwreck Chunk Location](assets/imgs/shipwreck_incomplete.png)
 
 - **Ocean Ruins**: For single ruins, use the chunk with the largest ruins area; for ruins groups, use the chunk with the largest area of the middle ruins
 
   Single ocean ruins:
 
-  ![Single Ocean Ruins Chunk Location](../assets/imgs/ocean_ruins.png)
+  ![Single Ocean Ruins Chunk Location](assets/imgs/ocean_ruins.png)
 
   Ocean ruins group:
 
-  ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
+  ![Ocean Ruins Group Chunk Location](assets/imgs/ocean_ruins_group.png)
+
+---
 
 ### 2. High 32-bit Cracking (Biomes)
 
@@ -290,15 +250,21 @@ Even with same version number, Java and Bedrock have biome generation difference
 - **Biome Boundaries**: Biome boundary positions may differ slightly between versions
 - **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
 
+#### Biome Sample Selection Tips
+
+- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+- **Avoid sampling near biome boundaries**
+- If cracking fails, try different coordinates within the same biome
+
 #### Important Limitation
 
-**High 32-bit cracking is based on cubiomes library, which supports up to Java 1.21.11 (via community fork).**
+**High 32-bit cracking is based on cubiomes library, integrated with MC 26.2 support from SeedMapper.**
 
-| cubiomes Info  | Details                                  |
-| -------------- | ---------------------------------------- |
-| Latest Version | 4.1.2 (fork)                             |
-| Last Update    | January 2025 (fork)                      |
-| Max Supported  | Java 1.21.5-26.1 (Bedrock 1.21.60-26.23) |
+| cubiomes Info  | Details                                    |
+| -------------- | ------------------------------------------ |
+| Latest Version | 4.1.2 (fork with MC 26.2 support)          |
+| Last Update    | July 2026 (integrated SeedMapper btree262) |
+| Max Supported  | Java 26.2 (Bedrock 26.30+)                 |
 
 **cubiomes Update Status:**
 
@@ -306,13 +272,19 @@ Even with same version number, Java and Bedrock have biome generation difference
 - Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
 - Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30+)
 
-#### Version Selection Tips
+### Automatic Rarity Sorting
 
-- **Latest version first**: Recommend selecting your actual game version
-- **Biome version matching**: Ensure selected version supports your collected biomes
-- **Default recommendation**: Program defaults to 26.30+ (latest version with Sulfur Caves support)
+The program automatically sorts samples by biome rarity, checking the rarest biomes first. If the first sample doesn't match, it immediately skips the current seed, greatly improving efficiency:
 
-**Overworld Biome ID Reference (1.21.60-26.23)**
+```
+[*] Biome samples (sorted by rarity, rarest first):
+    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
+    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
+    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
+    ...
+```
+
+#### Overworld Biome ID Reference (1.21.60-26.23)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
@@ -351,62 +323,52 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 > **Note**: Biome names on ChunkBase and similar sites follow Java Edition naming, which differs from Bedrock. For example: Java's `stony_shore` is `stone_beach` in Bedrock, Java's `dark_forest` is `roofed_forest` in Bedrock. Please note the distinction when verifying.
 
-**Sampling Tips:**
-
-- Sampling height Y >= 200 recommended (avoid underground biome interference)
-- Rare biomes (Cherry Grove, Pale Garden) work better
-- Avoid common biomes (Plains, Ocean)
-- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-
-### 3. Verify Seed
-
-After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map).
-
 ---
 
-## Performance Reference
+## Compilation
 
-Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
+### Prerequisites
 
-| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
-| ----------- | ---- | ------- | ---------------- | ------------------- |
-| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
-| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
-| High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
+1. **GCC Compiler**: [MinGW-w64](https://github.com/niXman/mingw-builds-binaries/releases) or TDM-GCC
+2. **OpenCL Support** (optional for GPU):
+   - NVIDIA GPU: Install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads) or display driver
+   - AMD/Intel GPU: Install display driver (already includes OpenCL support)
 
-**Note**: Old GPUs (compute units < 10) automatically use CPU mode for stability.
+### Compile DLLs
 
----
+Run compilation script:
 
-## Project Structure
-
+```cmd
+compile.bat
 ```
-MCBEseedcracker_win_ui/
-├── main.py                  # Main entry point
-├── ui/
-│   ├── main_window.py       # Main window
-│   ├── widgets/             # Custom widgets
-│   │   ├── biome_list_widget.py
-│   │   ├── structure_list_widget.py
-│   │   └── progress_widget.py
-│   ├── workers/             # Background tasks
-│   │   ├── low32_worker.py
-│   │   └── high32_worker.py
-│   ├── utils/               # Utility functions
-│   │   ├── crack_engine.py
-│   │   ├── crack_high32_engine.py
-│   │   ├── i18n.py
-│   │   └── ...
-│   ├── data/                # Data files
-│   │   ├── biomes.json
-│   │   └── structures.json
-│   └── resources/           # Resource files
-│       └── translations/    # Translation files
-├── dll/                     # Pre-compiled DLLs
-│   ├── crack_low32/
-│   └── crack_high32/
-├── build.spec               # PyInstaller config
-└── requirements.txt         # Python dependencies
+
+This will generate:
+
+- `dll/crack_low32/crack_low32.dll` - CPU version
+- `dll/crack_low32/crack_low32_opencl.dll` - GPU version (if CUDA installed)
+- `dll/crack_high32/crack_high32.dll` - High 32-bit library
+
+### Manual Compilation
+
+**Low 32-bit (CPU):**
+
+```cmd
+cd crack_low32
+gcc -O3 -shared -fPIC -o crack_low32.dll crack_low32.c -lgomp
+```
+
+**Low 32-bit (GPU):**
+
+```cmd
+cd crack_low32
+gcc -O3 -shared -fPIC -o crack_low32_opencl.dll crack_low32_opencl.c -I"CUDA_PATH\include" -lOpenCL
+```
+
+**High 32-bit:**
+
+```cmd
+cd crack_high32
+gcc -O3 -shared -fPIC -o crack_high32.dll crack_high32.c -Icubiomes -lgomp
 ```
 
 ---
@@ -439,9 +401,27 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 
 ---
 
+## Performance Reference
+
+Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
+
+| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
+| ----------- | ---- | ------- | ---------------- | ------------------- |
+| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
+| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
+| High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
+
+**Notes**:
+
+- Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
+- Old GPUs (compute units < 10) automatically use CPU mode for stability
+- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
+
+---
+
 ## FAQ
 
-### Low 32-bit Cracking Failed
+### Low 32-bit cracking failed
 
 **Possible causes:**
 
@@ -466,7 +446,7 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 1. **Version mismatch** - Biome samples' game version doesn't match the actual generation version
 2. **Incorrect low 32-bit value** - Low 32-bit cracking result is wrong
 3. **Incorrect biome samples** - Coordinates or biome IDs are wrong
-4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference
+4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 5. **Insufficient biome samples** - Recommend at least 5 samples
 6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
 
@@ -477,10 +457,24 @@ Build output is in `dist/MCBE Seed Cracker/` directory.
 - Increase sampling height
 - Choose rare biomes as samples
 
+### Cracking takes too long
+
+**Low 32-bit cracking:** Normally about 20-30 minutes (4-core CPU)
+
+**High 32-bit cracking:** Normally about 10-20 hours (4-core CPU)
+
+If significantly longer:
+
+- Check CPU usage to confirm multi-threading is working
+- Reduce biome sample count (but will lower accuracy)
+- Use `--test` parameter for small range testing first
+
 ---
 
-## Related Links
+## Related Links & References
 
+- [Windows GUI Version](MCBEseedcracker_win_ui/README.md)
+- [Linux Command Line Version](MCBEseedcracker_linux/README.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 
