@@ -398,6 +398,24 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 ---
 
+## Performance Reference
+
+Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
+
+| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
+| ----------- | ---- | ------- | ---------------- | ------------------- |
+| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
+| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
+| High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
+
+**Notes**:
+
+- Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
+- Old GPUs (compute units < 10) automatically use CPU mode for stability
+- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
+
+---
+
 ## FAQ
 
 ### Low 32-bit cracking failed
@@ -447,24 +465,6 @@ If significantly longer:
 - Check CPU usage to confirm multi-threading is working
 - Reduce biome sample count (but will lower accuracy)
 - Use `--test` parameter for small range testing first
-
----
-
-## Performance Reference
-
-Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
-
-| Cracker     | Mode | Speed   | Est. Time (2^32) | Notes               |
-| ----------- | ---- | ------- | ---------------- | ------------------- |
-| Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
-| Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
-| High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
-
-**Notes**:
-
-- Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
-- Old GPUs (compute units < 10) automatically use CPU mode for stability
-- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
 
 ---
 

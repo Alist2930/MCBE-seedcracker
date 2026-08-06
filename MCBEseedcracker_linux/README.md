@@ -8,6 +8,29 @@ Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
 
 ---
 
+## Directory Structure
+
+```
+MCBEseedcracker_linux/     # Linux command line version
+├── config.json            # Configuration file (low32 and high32)
+├── config_loader.py       # Configuration loader
+├── build.sh               # Compilation script
+├── crack_low32/
+│   ├── crack_low32.c      # Compiled source
+│   ├── crack_low32_opencl.c  # GPU version
+│   ├── crack_low32.cl     # OpenCL kernel
+│   ├── crack_low32.so     # CPU library
+│   ├── crack_low32_opencl.so  # GPU library
+│   └── crack_low32.py     # Command-line script
+└── crack_high32/
+    ├── crack_high32.c     # Compiled source
+    ├── crack_high32.so    # Compiled library
+    ├── crack_high32.py    # Command-line script
+    └── cubiomes/          # Biome generation library
+```
+
+---
+
 ## Requirements
 
 - **OS**: Linux (x86_64)

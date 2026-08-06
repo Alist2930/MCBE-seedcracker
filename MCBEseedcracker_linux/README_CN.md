@@ -8,6 +8,29 @@ Minecraft 基岩版种子破解器 - Linux 命令行版本
 
 ---
 
+## 目录结构
+
+```
+MCBEseedcracker_linux/     # Linux 命令行版
+├── config.json            # 配置文件（低32位和高32位）
+├── config_loader.py       # 配置加载器
+├── build.sh               # 编译脚本
+├── crack_low32/
+│   ├── crack_low32.c      # 编译源码
+│   ├── crack_low32_opencl.c  # GPU 版本
+│   ├── crack_low32.cl     # OpenCL 内核
+│   ├── crack_low32.so     # CPU 库
+│   ├── crack_low32_opencl.so  # GPU 库
+│   └── crack_low32.py     # 命令行脚本
+└── crack_high32/
+    ├── crack_high32.c     # 编译源码
+    ├── crack_high32.so    # 编译后的库
+    ├── crack_high32.py    # 命令行脚本
+    └── cubiomes/          # 群系生成库
+```
+
+---
+
 ## 环境要求
 
 - **操作系统**：Linux (x86_64)
