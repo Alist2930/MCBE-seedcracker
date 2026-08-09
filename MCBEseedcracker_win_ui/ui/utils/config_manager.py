@@ -1,15 +1,7 @@
 import json
 import os
-import sys
 
-
-def get_base_path():
-    """Get absolute path of program directory"""
-    if getattr(sys, 'frozen', False):
-        # Path after PyInstaller packaging
-        return os.path.dirname(sys.executable)
-    # Development environment path
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from .paths import get_base_path
 
 
 class ConfigManager:

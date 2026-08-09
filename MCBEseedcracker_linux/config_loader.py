@@ -5,10 +5,67 @@ Configuration Loader for MCBEseedcracker Linux
 Reads configuration from config.json file.
 If config.json doesn't exist, creates default configuration.
 """
+import copy
 import json
 import sys
-import shutil
 from pathlib import Path
+
+MC_1_18 = 22
+MC_1_19 = 24
+MC_1_20 = 25
+MC_1_21_3 = 27  # Java 1.21-1.21.3
+MC_1_21_WD = 28  # Java 1.21.4 (Winter Drop, Bedrock 1.21.50)
+MC_1_21_5 = 29  # Java 1.21.5-26.1 (Pale Garden expanded range, Bedrock 1.21.60-26.23)
+MC_26_2 = 38  # Java 26.2 (Chaos Cubed Drop, Bedrock 26.30+)
+
+# Bedrock version to cubiomes version constant (based on ChunkBase)
+CUBIOMES_VERSION_MAP = {
+    '26.30+': MC_26_2,  # Java 26.2 (Sulfur Caves)
+    '1.21.60-26.23': MC_1_21_5,  # Java 1.21.5-26.1 (Pale Garden expanded range)
+    '1.21.50': MC_1_21_WD,  # Java 1.21.4 (Pale Garden supported)
+    '1.21-1.21.40': MC_1_21_3,  # Does not support Pale Garden
+    '1.20.60-81': MC_1_20,
+    '1.20.0-51': MC_1_20,
+    '1.19': MC_1_19,
+    '1.18': MC_1_18,
+}
+LATEST_VERSION = '26.30+'
+
+DEFAULT_TARGETS = [
+    {"structure": "swamp_hut", "x": 2136, "z": -1176},
+    {"structure": "jungle_temple", "x": -360, "z": -248},
+    {"structure": "desert_temple", "x": -936, "z": 4744},
+    {"structure": "ocean_monument", "x": 792, "z": -792},
+    {"structure": "end_city", "x": 1352, "z": -1208},
+]
+
+DEFAULT_SAMPLES = [
+    {"x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden"},
+    {"x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove"},
+    {"x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest"},
+    {"x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga"},
+    {"x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest"},
+]
+
+DEFAULT_LOW32_CONFIG = {
+    'test_mode': False,
+    'start': 0,
+    'end': 4294967296,  # 2^32
+    'use_gpu': True,
+    'auto_fallback': True,
+    'seeds_per_thread': 256,
+    'max_results': 10000,
+    'targets': DEFAULT_TARGETS,
+}
+
+DEFAULT_HIGH32_CONFIG = {
+    'test_mode': False,
+    'start': 0,
+    'end': 100000000,  # 100M
+    'low32': 1818588773,
+    'mc_version': LATEST_VERSION,
+    'samples': DEFAULT_SAMPLES,
+}
 
 def load_config():
     """Load configuration from config.json
@@ -43,35 +100,10 @@ def load_config():
     
     # If config.json doesn't exist, create it with default values
     print(f"\n[INFO] config.json not found, creating default configuration...")
-    default_config = {
-        "low32": {
-            "test_mode": False,
-            "start": 0,
-            "end": 4294967296,
-            "use_gpu": True,
-            "targets": [
-                {"structure": "swamp_hut", "x": 2136, "z": -1176},
-                {"structure": "jungle_temple", "x": -360, "z": -248},
-                {"structure": "desert_temple", "x": -936, "z": 4744},
-                {"structure": "ocean_monument", "x": 792, "z": -792},
-                {"structure": "end_city", "x": 1352, "z": -1208}
-            ]
-        },
-        "high32": {
-            "test_mode": False,
-            "start": 0,
-            "end": 100000000,
-            "low32": 1818588773,
-            "mc_version": "26.30+",
-            "samples": [
-                {"x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden"},
-                {"x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove"},
-                {"x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest"},
-                {"x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga"},
-                {"x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest"}
-            ]
-        }
-    }
+    default_config = copy.deepcopy({
+        "low32": DEFAULT_LOW32_CONFIG,
+        "high32": DEFAULT_HIGH32_CONFIG,
+    })
     
     with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(default_config, f, indent=2)
@@ -81,67 +113,30 @@ def load_config():
     
     return default_config
 
+def get_section_config(section, default):
+    """Get a config section, filling in any missing key from the defaults"""
+    config = load_config()
+    default = copy.deepcopy(default)
+
+    if config and section in config:
+        for key, value in default.items():
+            if key not in config[section]:
+                config[section][key] = value
+        return config[section]
+
+    return default
+
 def get_low32_config():
     """Get low32-bit cracker configuration
 
     Returns:
         dict with keys: test_mode, start, end, use_gpu, auto_fallback, seeds_per_thread, max_results, targets
     """
-    config = load_config()
-
-    default = {
-        'test_mode': False,
-        'start': 0,
-        'end': 4294967296,  # 2^32
-        'use_gpu': True,
-        'auto_fallback': True,
-        'seeds_per_thread': 256,
-        'max_results': 10000,
-        'targets': [
-            {"structure": "swamp_hut", "x": 2136, "z": -1176},
-            {"structure": "jungle_temple", "x": -360, "z": -248},
-            {"structure": "desert_temple", "x": -936, "z": 4744},
-            {"structure": "ocean_monument", "x": 792, "z": -792},
-            {"structure": "end_city", "x": 1352, "z": -1208},
-        ]
-    }
-
-    if config and 'low32' in config:
-        # Merge with defaults
-        for key, value in default.items():
-            if key not in config['low32']:
-                config['low32'][key] = value
-        return config['low32']
-
-    return default
+    return get_section_config('low32', DEFAULT_LOW32_CONFIG)
 
 def get_high32_config():
     """Get high32-bit cracker configuration"""
-    config = load_config()
-    
-    default = {
-        'test_mode': False,
-        'start': 0,
-        'end': 100000000,  # 100M
-        'low32': 1818588773,
-        'mc_version': '1.21.60',
-        'samples': [
-            {"x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden"},
-            {"x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove"},
-            {"x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest"},
-            {"x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga"},
-            {"x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest"}
-        ]
-    }
-    
-    if config and 'high32' in config:
-        # Merge with defaults
-        for key, value in default.items():
-            if key not in config['high32']:
-                config['high32'][key] = value
-        return config['high32']
-    
-    return default
+    return get_section_config('high32', DEFAULT_HIGH32_CONFIG)
 
 def mc_version_to_cubiomes(mc_version):
     """Convert MC version string to cubiomes version constant
@@ -162,31 +157,19 @@ def mc_version_to_cubiomes(mc_version):
     Returns:
         Integer version constant for cubiomes
     """
-    # Version mapping (only supported versions)
-    version_map = {
-        '26.30+': 38,  # MC_26_2
-        '1.21.60-26.23': 29,  # MC_1_21_5
-        '1.21.50': 28,  # MC_1_21_WD
-        '1.21-1.21.40': 27,  # MC_1_21_3
-        '1.20.60-81': 25,  # MC_1_20
-        '1.20.0-51': 25,  # MC_1_20
-        '1.19': 24,  # MC_1_19
-        '1.18': 22,  # MC_1_18
-    }
-    
     # Check if exact version is in map
-    if mc_version in version_map:
-        return version_map[mc_version]
+    if mc_version in CUBIOMES_VERSION_MAP:
+        return CUBIOMES_VERSION_MAP[mc_version]
     
     # Try partial match (e.g., '1.21.60' should match '1.21.60-26.23')
     parts = mc_version.split('.')
     if len(parts) >= 2:
         major_minor = f"{parts[0]}.{parts[1]}"
         # Try to find closest match
-        for ver_key in version_map:
+        for ver_key in CUBIOMES_VERSION_MAP:
             if ver_key.startswith(major_minor):
-                return version_map[ver_key]
+                return CUBIOMES_VERSION_MAP[ver_key]
     
     # Default to latest version
-    print(f"[WARNING] Unknown MC version '{mc_version}', using latest (26.30+)")
-    return 38  # MC_26_2
+    print(f"[WARNING] Unknown MC version '{mc_version}', using latest ({LATEST_VERSION})")
+    return CUBIOMES_VERSION_MAP[LATEST_VERSION]

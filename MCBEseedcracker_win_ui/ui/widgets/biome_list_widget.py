@@ -7,10 +7,10 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-import json
-import os
-from ..utils.language_manager import lang_manager
 from ..utils.biome_icon_loader import biome_icon_loader
+from ..utils.data_loader import get_bilingual_name, get_biome_rarity, load_biome_data
+from ..utils.language_manager import lang_manager
+from ..utils.version_config import LATEST_VERSION
 
 
 class BiomeListWidget(QWidget):
@@ -18,38 +18,22 @@ class BiomeListWidget(QWidget):
         super().__init__()
         self.biomes = []
         self.biome_data = self.load_biome_data()
-        self.mc_version = "26.30+"  # Default to latest version (Sulfur Caves)
+        self.mc_version = LATEST_VERSION  # Default to latest version (Sulfur Caves)
         self.init_ui()
     
     def load_biome_data(self):
-        data_file = os.path.join(
-            os.path.dirname(__file__), "..", "data", "biomes.json"
-        )
-        if os.path.exists(data_file):
-            with open(data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            return {
+        return load_biome_data({
                 "plains": {"name_zh": "平原", "name_en": "Plains", "id": 1, "rarity": {"1.18": 0.10660260, "1.19": 0.10651130, "1.20.0-51": 0.10665340, "1.20.60-81": 0.10665340, "1.21-1.21.40": 0.10665340, "1.21.50": 0.10519710, "1.21.60-26.23": 0.10688, "26.30+": 0.10688}},
                 "forest": {"name_zh": "森林", "name_en": "Forest", "id": 4, "rarity": {"1.18": 0.12118830, "1.19": 0.12192850, "1.20.0-51": 0.12179220, "1.20.60-81": 0.12179220, "1.21-1.21.40": 0.12179220, "1.21.50": 0.12070520, "1.21.60-26.23": 0.12307, "26.30+": 0.12307}},
                 "desert": {"name_zh": "沙漠", "name_en": "Desert", "id": 2, "rarity": {"1.18": 0.02353480, "1.19": 0.02318180, "1.20.0-51": 0.02315620, "1.20.60-81": 0.02315620, "1.21-1.21.40": 0.02315620, "1.21.50": 0.02471080, "1.21.60-26.23": 0.02329, "26.30+": 0.02329}},
                 "cherry_grove": {"name_zh": "樱花树林", "name_en": "Cherry Grove", "id": 185, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 0.00278580, "1.20.60-81": 0.00278580, "1.21-1.21.40": 0.00278580, "1.21.50": 0.00280480, "1.21.60-26.23": 0.00295, "26.30+": 0.00295}},
                 "pale_garden": {"name_zh": "苍白之园", "name_en": "Pale Garden", "id": 186, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 0.00078550, "1.21.60-26.23": 0.00121, "26.30+": 0.00121}},
                 "sulfur_caves": {"name_zh": "硫磺洞穴", "name_en": "Sulfur Caves", "id": 187, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 1.00000000, "1.21.60-26.23": 1.00000000, "26.30+": 0.005}}
-            }
+        })
 
-    def get_biome_rarity(self, biome_name, mc_version="26.30+"):
+    def get_biome_rarity(self, biome_name, mc_version=LATEST_VERSION):
         """Get biome rarity for specific version"""
-        try:
-            if biome_name in self.biome_data:
-                biome_info = self.biome_data[biome_name]
-                if isinstance(biome_info, dict):
-                    rarity_dict = biome_info.get('rarity', {})
-                    if isinstance(rarity_dict, dict):
-                        return rarity_dict.get(mc_version, 1.0)
-        except Exception:
-            pass
-        return 1.0
+        return get_biome_rarity(self.biome_data, biome_name, mc_version)
     
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -145,11 +129,7 @@ class BiomeListWidget(QWidget):
         self.table.setRowCount(len(self.biomes))
         for i, biome in enumerate(self.biomes):
             biome_info = self.biome_data.get(biome["type"], {})
-            
-            if lang_manager.language == "zh_CN":
-                name = f"{biome_info.get('name_zh', biome['type'])} ({biome_info.get('name_en', '')})"
-            else:
-                name = biome_info.get('name_en', biome['type'])
+            name = get_bilingual_name(biome_info, biome["type"])
             
             item = QTableWidgetItem(name)
             
@@ -197,7 +177,7 @@ class BiomeListWidget(QWidget):
 
 
 class AddBiomeDialog(QDialog):
-    def __init__(self, biome_data, mc_version="26.30+", parent=None, edit_mode=False):
+    def __init__(self, biome_data, mc_version=LATEST_VERSION, parent=None, edit_mode=False):
         super().__init__(parent)
         self.biome_data = biome_data
         self.mc_version = mc_version
@@ -222,16 +202,13 @@ class AddBiomeDialog(QDialog):
         # Sort by rarity (lower rarity = more rare = higher priority for seed cracking)
         try:
             sorted_biomes = sorted(self.biome_data.items(),
-                                   key=lambda x: self.get_biome_rarity(x[0], self.mc_version))
+                                   key=lambda x: get_biome_rarity(self.biome_data, x[0], self.mc_version))
         except Exception:
             # Fallback to ID sorting if rarity sorting fails
             sorted_biomes = sorted(self.biome_data.items(), key=lambda x: x[1].get('id', 999))
 
         for key, value in sorted_biomes:
-            if lang_manager.language == "zh_CN":
-                display_name = f"{value['name_zh']} ({value['name_en']}) - ID: {value['id']}"
-            else:
-                display_name = f"{value['name_en']} - ID: {value['id']}"
+            display_name = f"{get_bilingual_name(value, key)} - ID: {value['id']}"
             
             self.type_combo.addItem(display_name, key)
             

@@ -11,8 +11,11 @@ from PyQt5.QtCore import Qt
 from ui.widgets.structure_list_widget import StructureListWidget
 from ui.widgets.biome_list_widget import BiomeListWidget
 from ui.widgets.progress_widget import ProgressWidget
-from ui.utils.config_manager import ConfigManager, get_base_path
+from ui.utils.config_manager import ConfigManager
 from ui.utils.language_manager import lang_manager
+from ui.utils.paths import get_progress_path, get_session_path
+from ui.utils.progress_store import clear_progress, compute_progress, load_progress
+from ui.utils.seed_utils import MAX_UINT32, TEST_MODE_END, to_signed64
 from ui.utils.version_config import WINUI_VERSION_OPTIONS, get_cubiomes_version, get_version_warning
 from ui.workers.low32_worker import Low32Worker
 from ui.workers.high32_worker import High32Worker
@@ -342,69 +345,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("add_structure_first"))
             return
         
-        try:
-            start = int(self.low32_start_input.text())
-            end = int(self.low32_end_input.text())
-            
-            if start < 0 or start > 4294967295:
-                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_value_range"))
-                return
-            
-            if end < 0 or end > 4294967295:
-                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("end_value_range"))
-                return
-            
-            if start > end:
-                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_less_than_end"))
-                return
-                
-        except ValueError:
-            QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("invalid_number"))
+        seed_range = self.read_seed_range(self.low32_start_input, self.low32_end_input)
+        if seed_range is None:
             return
-        
-        original_start = start
-        progress_file = os.path.join(get_base_path(), "progress_low32.json")
-        if os.path.exists(progress_file):
-            print(f"[UI] Found progress file: {progress_file}")
-            reply = QMessageBox.question(
-                self, lang_manager.get("continue_cracking"),
-                lang_manager.get("progress_detected"),
-                QMessageBox.Yes | QMessageBox.No
-            )
-            if reply == QMessageBox.Yes:
-                try:
-                    with open(progress_file, 'r', encoding='utf-8') as f:
-                        progress_data = json.load(f)
-                    
-                    print(f"[UI] Progress data loaded: {progress_data}")
-                    
-                    saved_start = progress_data.get("current_position", start)
-                    original_start = progress_data.get("original_start_value", start)
+        start, end = seed_range
 
-                    print(f"[UI] Saved start: {saved_start:,}")
-                    print(f"[UI] Original start: {original_start:,}")
-                    print(f"[UI] Current start: {start:,}")
+        start, original_start = self.prompt_resume_progress(
+            "low32", start, end, self.low32_progress, self.low32_status_label
+        )
 
-                    if saved_start > start:
-                        start = saved_start
-                        print(f"[UI] Resuming from position: {start:,}")
-                        print(f"[UI] Original start value: {original_start:,}")
-
-                    # Calculate progress relative to original start value
-                    total_range = end - original_start + 1
-                    progress = (start - original_start) / total_range * 100 if total_range > 0 else 100
-                    # Clamp progress to valid range [0, 100]
-                    progress = max(0, min(100, progress))
-                    print(f"[UI] Calculated progress: {progress:.2f}%")
-                    self.low32_progress.update_progress(progress, 0, 0)
-                    self.low32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
-                except Exception as e:
-                    print(f"[UI ERROR] Failed to load progress: {e}")
-            else:
-                print(f"[UI] User chose to start from beginning, removing progress file")
-                if os.path.exists(progress_file):
-                    os.remove(progress_file)
-        
         self.structure_list.set_enabled(False)
         self.set_low32_settings_enabled(False)
         self.start_low32_btn.setEnabled(False)
@@ -430,6 +379,75 @@ class MainWindow(QMainWindow):
         self.low32_worker.start()
         self.low32_status_label.setText(lang_manager.get("start_low32_cracking"))
     
+    def read_seed_range(self, start_input, end_input):
+        """Read and validate a 32-bit seed range, None when invalid"""
+        try:
+            start = int(start_input.text())
+            end = int(end_input.text())
+
+            if start < 0 or start > MAX_UINT32:
+                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_value_range"))
+                return None
+
+            if end < 0 or end > MAX_UINT32:
+                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("end_value_range"))
+                return None
+
+            if start > end:
+                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_less_than_end"))
+                return None
+
+            return start, end
+        except ValueError:
+            QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("invalid_number"))
+            return None
+
+    def prompt_resume_progress(self, mode, start, end, progress_widget, status_label):
+        """Offer to resume a saved crack, returning (start, original_start)"""
+        original_start = start  # Default: use user input start value as original
+        progress_file = get_progress_path(mode)
+
+        if not os.path.exists(progress_file):
+            return start, original_start
+
+        print(f"[UI] Found {mode} progress file: {progress_file}")
+        reply = QMessageBox.question(
+            self, lang_manager.get("continue_cracking"),
+            lang_manager.get("progress_detected"),
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if reply != QMessageBox.Yes:
+            print(f"[UI] User chose to start from beginning, removing {mode} progress file")
+            clear_progress(mode)
+            return start, original_start
+
+        progress_data = load_progress(mode)
+        if progress_data is None:
+            return start, original_start
+
+        print(f"[UI] {mode} progress data loaded: {progress_data}")
+
+        saved_start = progress_data.get("current_position", start)
+        original_start = progress_data.get("original_start_value", start)
+
+        print(f"[UI] Saved start: {saved_start:,}")
+        print(f"[UI] Original start: {original_start:,}")
+        print(f"[UI] Current start: {start:,}")
+
+        if saved_start > start:
+            start = saved_start
+            print(f"[UI] Resuming from position: {start:,}")
+            print(f"[UI] Original start value: {original_start:,}")
+
+        # Calculate progress relative to original start value
+        progress = compute_progress(start, original_start, end)
+        print(f"[UI] Calculated progress: {progress:.2f}%")
+        progress_widget.update_progress(progress, 0, 0)
+        status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
+
+        return start, original_start
+
     def pause_low32_cracking(self):
         if self.low32_worker:
             text = self.pause_low32_btn.text()
@@ -462,10 +480,8 @@ class MainWindow(QMainWindow):
                 self.low32_worker = None
                 print(f"[UI] Worker stopped and cleared")
             
-            progress_low32_file = os.path.join(get_base_path(), "progress_low32.json")
-            if os.path.exists(progress_low32_file):
-                print(f"[UI] Removing progress file")
-                os.remove(progress_low32_file)
+            print(f"[UI] Removing progress file")
+            clear_progress("low32")
             
             self.start_low32_btn.setEnabled(True)
             self.pause_low32_btn.setEnabled(False)
@@ -509,69 +525,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("add_biome_first"))
             return
         
-        try:
-            start = int(self.high32_start_input.text())
-            end = int(self.high32_end_input.text())
-            
-            if start < 0 or start > 4294967295:
-                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_value_range"))
-                return
-            
-            if end < 0 or end > 4294967295:
-                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("end_value_range"))
-                return
-            
-            if start > end:
-                QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_less_than_end"))
-                return
-                
-        except ValueError:
-            QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("invalid_number"))
+        seed_range = self.read_seed_range(self.high32_start_input, self.high32_end_input)
+        if seed_range is None:
             return
-        
-        progress_file = os.path.join(get_base_path(), "progress_high32.json")
-        original_start = start  # Default: use user input start value as original
+        start, end = seed_range
 
-        if os.path.exists(progress_file):
-            print(f"[UI] Found high32 progress file: {progress_file}")
-            reply = QMessageBox.question(
-                self, lang_manager.get("continue_cracking"),
-                lang_manager.get("progress_detected"),
-                QMessageBox.Yes | QMessageBox.No
-            )
-            if reply == QMessageBox.Yes:
-                try:
-                    with open(progress_file, 'r', encoding='utf-8') as f:
-                        progress_data = json.load(f)
-                    
-                    print(f"[UI] High32 progress data loaded: {progress_data}")
-                    
-                    saved_start = progress_data.get("current_position", 0)
-                    original_start = progress_data.get("original_start_value", start)
+        start, original_start = self.prompt_resume_progress(
+            "high32", start, end, self.high32_progress, self.high32_status_label
+        )
 
-                    print(f"[UI] Saved start: {saved_start:,}")
-                    print(f"[UI] Original start: {original_start:,}")
-                    print(f"[UI] Current start: {start:,}")
-
-                    if saved_start > start:
-                        start = saved_start
-                        print(f"[UI] Resuming from position: {start:,}")
-
-                    # Calculate progress relative to original start value
-                    total_range = end - original_start + 1
-                    progress = (start - original_start) / total_range * 100 if total_range > 0 else 100
-                    # Clamp progress to valid range [0, 100]
-                    progress = max(0, min(100, progress))
-                    print(f"[UI] Calculated progress: {progress:.2f}%")
-                    self.high32_progress.update_progress(progress, 0, 0)
-                    self.high32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
-                except Exception as e:
-                    print(f"[UI ERROR] Failed to load high32 progress: {e}")
-            else:
-                print(f"[UI] User chose to start from beginning, removing high32 progress file")
-                if os.path.exists(progress_file):
-                    os.remove(progress_file)
-        
         self.biome_list.set_enabled(False)
         self.set_high32_settings_enabled(False)
         self.set_high32_inputs_enabled(False)
@@ -631,9 +593,7 @@ class MainWindow(QMainWindow):
                 self.high32_worker.stop()
                 self.high32_worker = None
             
-            progress_high32_file = os.path.join(get_base_path(), "progress_high32.json")
-            if os.path.exists(progress_high32_file):
-                os.remove(progress_high32_file)
+            clear_progress("high32")
             
             self.start_high32_btn.setEnabled(True)
             self.pause_high32_btn.setEnabled(False)
@@ -669,9 +629,7 @@ class MainWindow(QMainWindow):
     
     def add_high32_result(self, seed):
         self.high32_results.append(seed)
-        SIGNED64_MAX = 9223372036854775807
-        UINT64_MAX = 18446744073709551615
-        display_seed = seed if seed <= SIGNED64_MAX else seed - UINT64_MAX - 1
+        display_seed = to_signed64(seed)
         self.high32_results_list.addItem(f"{lang_manager.get('full_seed')}: {display_seed}")
 
     def update_low32_compute_device(self, device_info):
@@ -681,7 +639,6 @@ class MainWindow(QMainWindow):
 
     def update_low32_structure_info(self, structure_info):
         """Update status label with structure sorting info (simplified)"""
-        import json
         try:
             order_info = json.loads(structure_info)
 
@@ -728,15 +685,7 @@ class MainWindow(QMainWindow):
         
         self.low32_status_label.setText(lang_manager.get("low32_finished_msg").format(len(results)))
         
-        try:
-            from PyQt5.QtMultimedia import QSound
-            sound_path = os.path.join(os.path.dirname(__file__), "..", "sounds", "complete.wav")
-            if os.path.exists(sound_path):
-                QSound.play(sound_path)
-            else:
-                QApplication.beep()
-        except:
-            QApplication.beep()
+        self.play_finished_sound()
     
     def high32_finished(self, results):
         self.start_high32_btn.setEnabled(True)
@@ -754,6 +703,10 @@ class MainWindow(QMainWindow):
         
         self.high32_status_label.setText(lang_manager.get("high32_finished_msg").format(len(results)))
         
+        self.play_finished_sound()
+    
+    def play_finished_sound(self):
+        """Play the completion sound, falling back to the system beep"""
         try:
             from PyQt5.QtMultimedia import QSound
             sound_path = os.path.join(os.path.dirname(__file__), "..", "sounds", "complete.wav")
@@ -761,7 +714,7 @@ class MainWindow(QMainWindow):
                 QSound.play(sound_path)
             else:
                 QApplication.beep()
-        except:
+        except Exception:
             QApplication.beep()
     
     def show_error(self, error_msg):
@@ -769,24 +722,22 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(lang_manager.get("cracking_error"))
     
     def enable_low32_test_mode(self):
-        self.low32_start_input.setText("0")
-        self.low32_end_input.setText("100000000")
-        QMessageBox.information(self, lang_manager.get("info"), lang_manager.get("test_mode_enabled"))
+        self.apply_seed_range(self.low32_start_input, self.low32_end_input, TEST_MODE_END, "test_mode_enabled")
     
     def enable_low32_full_mode(self):
-        self.low32_start_input.setText("0")
-        self.low32_end_input.setText("4294967295")
-        QMessageBox.information(self, lang_manager.get("info"), lang_manager.get("full_mode_enabled"))
+        self.apply_seed_range(self.low32_start_input, self.low32_end_input, MAX_UINT32, "full_mode_enabled")
     
     def enable_high32_test_mode(self):
-        self.high32_start_input.setText("0")
-        self.high32_end_input.setText("100000000")
-        QMessageBox.information(self, lang_manager.get("info"), lang_manager.get("test_mode_enabled"))
+        self.apply_seed_range(self.high32_start_input, self.high32_end_input, TEST_MODE_END, "test_mode_enabled")
     
     def enable_high32_full_mode(self):
-        self.high32_start_input.setText("0")
-        self.high32_end_input.setText("4294967295")
-        QMessageBox.information(self, lang_manager.get("info"), lang_manager.get("full_mode_enabled"))
+        self.apply_seed_range(self.high32_start_input, self.high32_end_input, MAX_UINT32, "full_mode_enabled")
+    
+    def apply_seed_range(self, start_input, end_input, end, message_key):
+        """Fill a seed range into the inputs and confirm the selected mode"""
+        start_input.setText("0")
+        end_input.setText(str(end))
+        QMessageBox.information(self, lang_manager.get("info"), lang_manager.get(message_key))
     
     def set_low32_settings_enabled(self, enabled):
         self.low32_start_input.setEnabled(enabled)
@@ -903,86 +854,84 @@ class MainWindow(QMainWindow):
         )
     
     def copy_low32_seed(self, item):
-        text = item.text()
-        seed = text.split(": ")[1]
-        clipboard = QApplication.clipboard()
-        clipboard.setText(seed)
-        self.statusBar().showMessage(f"{lang_manager.get('seed_copied')}: {seed}")
+        self.copy_seed_item(item)
     
     def copy_high32_seed(self, item):
-        text = item.text()
-        seed = text.split(": ")[1]
+        self.copy_seed_item(item)
+    
+    def copy_seed_item(self, item):
+        """Copy the seed of a result list item to the clipboard"""
+        seed = item.text().split(": ")[1]
         clipboard = QApplication.clipboard()
         clipboard.setText(seed)
         self.statusBar().showMessage(f"{lang_manager.get('seed_copied')}: {seed}")
     
     def copy_selected_low32_seed(self):
-        current_item = self.low32_results_list.currentItem()
-        if current_item:
-            self.copy_low32_seed(current_item)
-        else:
-            QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("select_seed_first"))
+        self.copy_selected_seed(self.low32_results_list)
     
     def copy_selected_high32_seed(self):
-        current_item = self.high32_results_list.currentItem()
+        self.copy_selected_seed(self.high32_results_list)
+    
+    def copy_selected_seed(self, results_list):
+        """Copy the currently selected seed of a result list"""
+        current_item = results_list.currentItem()
         if current_item:
-            self.copy_high32_seed(current_item)
+            self.copy_seed_item(current_item)
         else:
             QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("select_seed_first"))
     
     def export_low32_results(self):
-        if not self.low32_results:
-            QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("no_results_to_export"))
-            return
-        
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, lang_manager.get("export_low32_title"), "low32_results.txt", lang_manager.get("text_files")
+        self.export_results(
+            self.low32_results,
+            title_key="export_low32_title",
+            default_name="low32_results.txt",
+            header_key="export_low32_header",
+            seed_type_key="candidate_seed",
+            list_key="candidate_seeds_list",
         )
-        
-        if file_path:
-            try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(f"{lang_manager.get('export_low32_header')}\n")
-                    f.write("=" * 50 + "\n\n")
-                    f.write(f"{lang_manager.get('mc_version_label')}: {self.mc_version_combo.currentText()}\n")
-                    f.write(f"{lang_manager.get('found_seeds').format(len(self.low32_results), lang_manager.get('candidate_seed'))}\n\n")
-                    f.write(f"{lang_manager.get('candidate_seeds_list')}:\n")
-                    for i, seed in enumerate(self.low32_results, 1):
-                        f.write(f"{i}. {seed}\n")
-                
-                QMessageBox.information(self, lang_manager.get("success"), lang_manager.get("results_exported_msg").format(file_path))
-                self.statusBar().showMessage(lang_manager.get("results_exported").format(""))
-            except Exception as e:
-                QMessageBox.critical(self, lang_manager.get("error"), lang_manager.get("export_failed_msg").format(str(e)))
     
     def export_high32_results(self):
-        if not self.high32_results:
+        self.export_results(
+            self.high32_results,
+            title_key="export_high32_title",
+            default_name="high32_results.txt",
+            header_key="export_high32_header",
+            seed_type_key="full_seed",
+            list_key="full_seeds_list",
+            info_lines=[f"{lang_manager.get('low32_value_label')}: {self.low32_value_input.text()}"],
+            transform=to_signed64,
+        )
+    
+    def export_results(self, results, title_key, default_name, header_key, seed_type_key,
+                       list_key, info_lines=None, transform=None):
+        """Ask for a file and write a seed result list to it"""
+        if not results:
             QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("no_results_to_export"))
             return
         
         file_path, _ = QFileDialog.getSaveFileName(
-            self, lang_manager.get("export_high32_title"), "high32_results.txt", lang_manager.get("text_files")
+            self, lang_manager.get(title_key), default_name, lang_manager.get("text_files")
         )
         
-        if file_path:
-            try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(f"{lang_manager.get('export_high32_header')}\n")
-                    f.write("=" * 50 + "\n\n")
-                    f.write(f"{lang_manager.get('mc_version_label')}: {self.mc_version_combo.currentText()}\n")
-                    f.write(f"{lang_manager.get('low32_value_label')}: {self.low32_value_input.text()}\n")
-                    f.write(f"{lang_manager.get('found_seeds').format(len(self.high32_results), lang_manager.get('full_seed'))}\n\n")
-                    f.write(f"{lang_manager.get('full_seeds_list')}:\n")
-                    SIGNED64_MAX = 9223372036854775807
-                    UINT64_MAX = 18446744073709551615
-                    for i, seed in enumerate(self.high32_results, 1):
-                        display_seed = seed if seed <= SIGNED64_MAX else seed - UINT64_MAX - 1
-                        f.write(f"{i}. {display_seed}\n")
-                
-                QMessageBox.information(self, lang_manager.get("success"), lang_manager.get("results_exported_msg").format(file_path))
-                self.statusBar().showMessage(lang_manager.get("results_exported").format(""))
-            except Exception as e:
-                QMessageBox.critical(self, lang_manager.get("error"), lang_manager.get("export_failed_msg").format(str(e)))
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(f"{lang_manager.get(header_key)}\n")
+                f.write("=" * 50 + "\n\n")
+                f.write(f"{lang_manager.get('mc_version_label')}: {self.mc_version_combo.currentText()}\n")
+                for line in info_lines or []:
+                    f.write(f"{line}\n")
+                f.write(f"{lang_manager.get('found_seeds').format(len(results), lang_manager.get(seed_type_key))}\n\n")
+                f.write(f"{lang_manager.get(list_key)}:\n")
+                for i, seed in enumerate(results, 1):
+                    f.write(f"{i}. {transform(seed) if transform else seed}\n")
+            
+            QMessageBox.information(self, lang_manager.get("success"), lang_manager.get("results_exported_msg").format(file_path))
+            self.statusBar().showMessage(lang_manager.get("results_exported").format(""))
+        except Exception as e:
+            QMessageBox.critical(self, lang_manager.get("error"), lang_manager.get("export_failed_msg").format(str(e)))
     
     def closeEvent(self, event):
         if self.low32_worker and self.low32_worker.isRunning():
@@ -1026,14 +975,14 @@ class MainWindow(QMainWindow):
         }
         
         try:
-            session_file = os.path.join(get_base_path(), "session_data.json")
+            session_file = get_session_path()
             with open(session_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"[ERROR] Failed to save session data: {e}")
     
     def load_session_data(self):
-        session_file = os.path.join(get_base_path(), "session_data.json")
+        session_file = get_session_path()
         if os.path.exists(session_file):
             try:
                 with open(session_file, 'r', encoding='utf-8') as f:
@@ -1088,29 +1037,36 @@ class MainWindow(QMainWindow):
                 if "high32_process_count" in data:
                     self.high32_process_count_input.setValue(data["high32_process_count"])
                 
-                progress_low32_file = os.path.join(get_base_path(), "progress_low32.json")
-                if os.path.exists(progress_low32_file):
+                if os.path.exists(get_progress_path("low32")):
                     self.restore_low32_progress_ui()
                 
-                progress_high32_file = os.path.join(get_base_path(), "progress_high32.json")
-                if os.path.exists(progress_high32_file):
+                if os.path.exists(get_progress_path("high32")):
                     self.restore_high32_progress_ui()
                 
             except Exception as e:
                 print(f"[ERROR] Failed to load session data: {e}")
     
     def restore_low32_progress_ui(self):
+        print(f"[UI] Restoring low32 progress UI...")
+        if self.restore_progress_ui("low32", self.low32_progress, self.low32_status_label):
+            print(f"[UI] Low32 progress UI restored successfully")
+    
+    def restore_high32_progress_ui(self):
+        self.restore_progress_ui("high32", self.high32_progress, self.high32_status_label)
+    
+    def restore_progress_ui(self, mode, progress_widget, status_label):
+        """Show the saved progress of a crack mode, returns True when restored"""
         try:
-            print(f"[UI] Restoring low32 progress UI...")
-            progress_file = os.path.join(get_base_path(), "progress_low32.json")
-            with open(progress_file, 'r', encoding='utf-8') as f:
-                progress_data = json.load(f)
+            progress_data = load_progress(mode)
+            if progress_data is None:
+                return False
             
             print(f"[UI] Progress data: {progress_data}")
             
             start = progress_data.get("start_value", 0)
-            end = progress_data.get("end_value", 4294967295)
+            end = progress_data.get("end_value", MAX_UINT32)
             current = progress_data.get("current_position", start)
+            # Use original_start_value for progress calculation
             original_start = progress_data.get("original_start_value", start)
             
             print(f"[UI] Start: {start:,}")
@@ -1120,40 +1076,15 @@ class MainWindow(QMainWindow):
             
             if current >= end:
                 print(f"[UI] Progress already completed, skipping restore")
-                return
+                return False
             
-            progress = (current - original_start) / (end - original_start + 1) * 100 if end > original_start else 0
-            # Clamp progress to valid range [0, 100]
-            progress = max(0, min(100, progress))
+            progress = compute_progress(current, original_start, end) if end > original_start else 0
             print(f"[UI] Calculated progress: {progress:.2f}%")
-            self.low32_progress.update_progress(progress, 0, 0)
+            progress_widget.update_progress(progress, 0, 0)
             
-            self.low32_status_label.setText(lang_manager.get("progress_restored"))
-            print(f"[UI] Low32 progress UI restored successfully")
-            
-        except Exception as e:
-            print(f"[ERROR] Failed to restore low32 progress UI: {e}")
-    
-    def restore_high32_progress_ui(self):
-        try:
-            progress_file = os.path.join(get_base_path(), "progress_high32.json")
-            with open(progress_file, 'r', encoding='utf-8') as f:
-                progress_data = json.load(f)
-            
-            start = progress_data.get("start_value", 0)
-            end = progress_data.get("end_value", 4294967295)
-            current = progress_data.get("current_position", start)
-            original_start = progress_data.get("original_start_value", start)  # Use original_start_value for progress calculation
-            
-            if current >= end:
-                return
-            
-            progress = (current - original_start) / (end - original_start + 1) * 100 if end > original_start else 0
-            # Clamp progress to valid range [0, 100]
-            progress = max(0, min(100, progress))
-            self.high32_progress.update_progress(progress, 0, 0)
-            
-            self.high32_status_label.setText(lang_manager.get("progress_restored"))
+            status_label.setText(lang_manager.get("progress_restored"))
+            return True
             
         except Exception as e:
-            print(f"[ERROR] Failed to restore high32 progress UI: {e}")
+            print(f"[ERROR] Failed to restore {mode} progress UI: {e}")
+            return False

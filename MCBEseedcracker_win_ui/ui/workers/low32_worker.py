@@ -5,31 +5,28 @@ import os
 import sys
 import multiprocessing as mp
 import ctypes
-from ui.utils.language_manager import lang_manager
+from ui.utils import native, progress_store
+from ui.utils.data_loader import get_display_name, load_structure_data
+from ui.utils.paths import (
+    LOW32_CL_KERNEL, LOW32_COMPONENT, LOW32_DLL, LOW32_OPENCL_DLL,
+    get_base_path, get_dll_path as get_bundled_dll_path,
+)
+from ui.utils.parallel import resolve_process_count
+from ui.utils.seed_utils import TEST_MODE_END
+
+# Seed range scanned when measuring how strict a structure sample is
+STRICTNESS_TEST_SEEDS = 100000
 
 
 def get_dll_path(opencl=False):
     """Get DLL path for CPU or GPU version"""
-    dll_name = "crack_low32_opencl.dll" if opencl else "crack_low32.dll"
-    if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-        return os.path.join(base_path, "_internal", "dll", "crack_low32", dll_name)
-    return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_low32", dll_name)
+    dll_name = LOW32_OPENCL_DLL if opencl else LOW32_DLL
+    return get_bundled_dll_path(LOW32_COMPONENT, dll_name)
 
 
 def get_cl_path():
     """Get OpenCL kernel file path"""
-    if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-        return os.path.join(base_path, "_internal", "dll", "crack_low32", "crack_low32.cl")
-    return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_low32", "crack_low32.cl")
-
-
-def get_base_path():
-    """Get absolute path of program directory"""
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return get_bundled_dll_path(LOW32_COMPONENT, LOW32_CL_KERNEL)
 
 
 def get_config_path():
@@ -68,7 +65,7 @@ def has_opencl_gpu():
         if not os.path.exists(dll_path):
             return False, "OpenCL DLL not found"
 
-        lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+        lib = native.load_library(dll_path)
 
         lib.has_opencl_gpu.argtypes = []
         lib.has_opencl_gpu.restype = ctypes.c_int
@@ -113,27 +110,10 @@ def crack_worker_cpu(args):
             print(f"[ERROR] DLL not found: {dll_path}")
             return []
 
-        lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+        crack_low32 = native.bind_low32(native.load_library(dll_path))
 
-        lib.crack_low32.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-        ]
-        lib.crack_low32.restype = ctypes.c_int
-
-        num_targets = len(r_base)
-        r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-        ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-        oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-        offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-        spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-        results_arr = (ctypes.c_uint32 * 1000)()
-
-        found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
-        return [results_arr[i] for i in range(found)]
+        _found, seeds = native.call_low32(crack_low32, start, end, r_base, ox, oz, offset_range, spread_type)
+        return seeds
     except Exception as e:
         print(f"[ERROR] crack_worker exception: {e}")
         return []
@@ -161,15 +141,9 @@ class Low32Worker(QThread):
         self.results = []
 
         if test_mode:
-            self.end_value = min(end, 100000000)
+            self.end_value = min(end, TEST_MODE_END)
 
-        self.progress_file = os.path.join(get_base_path(), "progress_low32.json")
-
-        data_file = os.path.join(
-            os.path.dirname(__file__), "..", "data", "structures.json"
-        )
-        with open(data_file, 'r', encoding='utf-8') as f:
-            self.structure_data = json.load(f)
+        self.structure_data = load_structure_data()
 
     def run(self):
         try:
@@ -206,21 +180,7 @@ class Low32Worker(QThread):
                 print("[INFO] CPU mode (from config)")
                 use_gpu = False
 
-            # Determine process count
-            # User can specify process count, but it's limited to 16 to avoid resource exhaustion
-            max_processes = min(mp.cpu_count(), 16)
-
-            if self.user_process_count is not None:
-                # User specified process count
-                num_processes = min(self.user_process_count, max_processes)
-                if self.user_process_count > max_processes:
-                    print(f"[WARNING] Limiting processes from {self.user_process_count} to {max_processes} (to prevent resource exhaustion)")
-            else:
-                # Default: use maximum allowed (up to 16)
-                num_processes = max_processes
-
-            if mp.cpu_count() > 16:
-                print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes} (to prevent resource exhaustion)")
+            num_processes = resolve_process_count(self.user_process_count, log_prefix="WARNING")
 
             print(f"[INFO] CPU cores: {num_processes}")
 
@@ -256,7 +216,6 @@ class Low32Worker(QThread):
 
     def _run_cpu(self, r_base, ox, oz, offset_range, spread_type, num_processes):
         """Run crack using CPU multiprocessing"""
-        total_range = self.end_value - self.original_start_value + 1
         step_size = 200_000_000
         current = self.start_value
 
@@ -307,9 +266,7 @@ class Low32Worker(QThread):
                 step_processed = current - last_progress_current
 
                 processed = min(current, self.end_value + 1)
-                progress = (processed - self.original_start_value) / total_range * 100
-                # Clamp progress to valid range [0, 100]
-                progress = max(0, min(100, progress))
+                progress = progress_store.compute_progress(processed, self.original_start_value, self.end_value)
                 speed = int(step_processed / step_elapsed) if step_elapsed > 0 else 0
                 eta = int((self.end_value - processed + 1) / speed) if speed > 0 else 0
 
@@ -356,26 +313,10 @@ class Low32Worker(QThread):
                 os.add_dll_directory(dll_dir)
 
             print(f"[GPU] Loading DLL from: {abs_dll_path}")
-            lib = ctypes.CDLL(abs_dll_path, winmode=0x00000008)
-
-            lib.crack_low32_opencl.argtypes = [
-                ctypes.c_uint32, ctypes.c_uint32,
-                ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-                ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-                ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-                ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-            ]
-            lib.crack_low32_opencl.restype = ctypes.c_int
+            crack_low32_opencl = native.bind_low32(native.load_library(abs_dll_path), opencl=True)
 
             num_targets = len(r_base)
-            r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-            ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-            oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-            offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-            spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-
             max_results = config.get('max_results', 10000)
-            results_arr = (ctypes.c_uint32 * max_results)()
 
             total_range = self.end_value - self.start_value + 1
 
@@ -403,18 +344,16 @@ class Low32Worker(QThread):
                 batch_start_time = time.time()
 
                 # Emit progress before batch
-                progress_pct = (processed - self.original_start_value) / total_range * 100
-                # Clamp progress to valid range [0, 100]
-                progress_pct = max(0, min(100, progress_pct))
+                progress_pct = progress_store.compute_progress(processed, self.original_start_value, self.end_value)
                 elapsed = time.time() - global_start
                 speed = (processed - self.start_value) / elapsed if elapsed > 0 else 0
                 eta = (self.end_value - processed) / speed if speed > 0 else 0
                 self.progress_updated.emit(progress_pct, int(speed), int(eta))
 
-                found = lib.crack_low32_opencl(
-                    batch_start, batch_end,
-                    r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                    num_targets, results_arr, max_results
+                found, seeds = native.call_low32(
+                    crack_low32_opencl, batch_start, batch_end,
+                    r_base, ox, oz, offset_range, spread_type,
+                    max_results=max_results
                 )
 
                 if found < 0:
@@ -422,29 +361,20 @@ class Low32Worker(QThread):
                     if config.get('auto_fallback', True):
                         print("[INFO] Falling back to CPU mode...")
                         # Use user-specified process count when falling back to CPU
-                        max_processes = min(mp.cpu_count(), 16)
-                        if self.user_process_count is not None:
-                            num_processes = min(self.user_process_count, max_processes)
-                        else:
-                            num_processes = max_processes
-                        if mp.cpu_count() > 16:
-                            print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes}")
-                        self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
+                        self._run_cpu(r_base, ox, oz, offset_range, spread_type,
+                                      resolve_process_count(self.user_process_count))
                     else:
                         self.error_occurred.emit(f"GPU crack failed: {found}")
                     return
 
-                for i in range(found):
-                    seed = results_arr[i]
+                for seed in seeds:
                     self.results.append(seed)
                     self.found_seed.emit(seed)
 
                 processed = batch_end + 1
 
                 # Progress report (simplified, similar to CPU)
-                progress_pct = (processed - self.original_start_value) / total_range * 100
-                # Clamp progress to valid range [0, 100]
-                progress_pct = max(0, min(100, progress_pct))
+                progress_pct = progress_store.compute_progress(processed, self.original_start_value, self.end_value)
                 elapsed = time.time() - global_start
                 speed = (processed - self.start_value) / elapsed if elapsed > 0 else 0
                 eta = (self.end_value - processed) / speed if speed > 0 else 0
@@ -478,8 +408,8 @@ class Low32Worker(QThread):
 
             if config.get('auto_fallback', True):
                 print("[INFO] Falling back to CPU mode...")
-                num_processes = mp.cpu_count()
-                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
+                self._run_cpu(r_base, ox, oz, offset_range, spread_type,
+                              resolve_process_count(self.user_process_count))
             else:
                 self.error_occurred.emit(str(e))
         finally:
@@ -519,7 +449,7 @@ class Low32Worker(QThread):
             spread_type_list.append(spread_type_int)
 
         # Test strictness and sort (strictest first)
-        print("\n[INFO] Testing sample strictness (0-100000 seeds)...")
+        print(f"\n[INFO] Testing sample strictness (0-{STRICTNESS_TEST_SEEDS} seeds)...")
 
         strictness_scores = []
         structure_info_lines = []
@@ -547,35 +477,20 @@ class Low32Worker(QThread):
             try:
                 dll_path = get_dll_path(opencl=False)
                 if os.path.exists(dll_path):
-                    lib = ctypes.CDLL(dll_path, winmode=0x00000008)
-                    lib.crack_low32.argtypes = [
-                        ctypes.c_uint32, ctypes.c_uint32,
-                        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-                        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-                        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-                        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-                    ]
-                    lib.crack_low32.restype = ctypes.c_int
+                    crack_low32 = native.bind_low32(native.load_library(dll_path))
 
-                    r_base_arr = (ctypes.c_uint32 * 1)(r_base)
-                    ox_arr = (ctypes.c_uint32 * 1)(target_ox)
-                    oz_arr = (ctypes.c_uint32 * 1)(target_oz)
-                    offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
-                    spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
-                    results_arr = (ctypes.c_uint32 * 100000)()
-
-                    found = lib.crack_low32(
-                        0, 100000,
-                        r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                        1, results_arr, 100000
+                    found, _seeds = native.call_low32(
+                        crack_low32, 0, STRICTNESS_TEST_SEEDS,
+                        [r_base], [target_ox], [target_oz], [offset_range], [spread_type_int],
+                        max_results=STRICTNESS_TEST_SEEDS
                     )
 
                     strictness_scores.append(found)
                     name = config.get("name_zh", structure_type)
                     spread_type_str = "linear" if spread_type_int == 0 else "triangular"
-                    match_rate = found / 100000 * 100
+                    match_rate = found / STRICTNESS_TEST_SEEDS * 100
 
-                    info_line = f"    {i+1}. {name} at ({x}, {z}): {found}/100000 matches ({match_rate:.4f}%) [{spread_type_str}]"
+                    info_line = f"    {i+1}. {name} at ({x}, {z}): {found}/{STRICTNESS_TEST_SEEDS} matches ({match_rate:.4f}%) [{spread_type_str}]"
                     print(info_line)
                     structure_info_lines.append(info_line)
                 else:
@@ -623,18 +538,15 @@ class Low32Worker(QThread):
             name = config.get("name_zh", structure["type"])
             spread_type = "linear" if spread_type_list[i] == 0 else "triangular"
             strictness = strictness_scores[idx]
-            match_rate = strictness / 100000 * 100
+            match_rate = strictness / STRICTNESS_TEST_SEEDS * 100
 
-            order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}] - {strictness}/100000 ({match_rate:.4f}%)"
+            order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}] - {strictness}/{STRICTNESS_TEST_SEEDS} ({match_rate:.4f}%)"
             print(order_line)
             structure_info_lines.append(order_line)
 
             # Simplified format for UI: "(x, z) -> 结构名 (spread_type)"
             # Use appropriate language for structure name
-            if lang_manager.language == "zh_CN":
-                display_name = config.get("name_zh", structure["type"])
-            else:
-                display_name = config.get("name_en", structure["type"])
+            display_name = get_display_name(config, structure["type"])
 
             order_info.append({
                 "x": structure['x'],
@@ -649,13 +561,12 @@ class Low32Worker(QThread):
         print(structure_info_text)  # Keep console output for debugging
 
         # Send simplified order info as JSON string
-        import json
         self.structure_info_updated.emit(json.dumps(order_info))
 
         return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list
 
     def save_progress(self, current):
-        progress_data = {
+        progress_store.save_progress("low32", {
             "mode": "low32",
             "status": "running",
             "current_position": current,
@@ -666,14 +577,7 @@ class Low32Worker(QThread):
             "structures": self.structures,
             "results": self.results,
             "timestamp": time.time()
-        }
-
-        try:
-            with open(self.progress_file, 'w', encoding='utf-8') as f:
-                json.dump(progress_data, f, indent=2)
-            print(f"[SAVE SUCCESS] Progress saved to {self.progress_file}")
-        except Exception as e:
-            print(f"[SAVE ERROR] Failed to save progress: {e}")
+        }, log_prefix="SAVE")
 
     def pause(self):
         self.is_paused = True

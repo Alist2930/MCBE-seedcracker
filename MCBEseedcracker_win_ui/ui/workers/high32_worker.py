@@ -1,71 +1,33 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 import time
-import json
 import os
-import sys
 import multiprocessing as mp
-import ctypes
-from ui.utils.language_manager import lang_manager
-
-
-def get_dll_path():
-    if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-        return os.path.join(base_path, "_internal", "dll", "crack_high32", "crack_high32.dll")
-    return os.path.join(os.path.dirname(__file__), "..", "..", "dll", "crack_high32", "crack_high32.dll")
-
-
-def get_base_path():
-    """Get absolute path of program directory"""
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-class BiomeSample(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("y", ctypes.c_int), ("biome_id", ctypes.c_int)]
+from ui.utils import native, progress_store
+from ui.utils.data_loader import get_biome_id, get_biome_name, get_display_name, get_rarity, load_biome_data
+from ui.utils.paths import HIGH32_COMPONENT, HIGH32_DLL, get_dll_path
+from ui.utils.parallel import resolve_process_count
+from ui.utils.seed_utils import TEST_MODE_END
+from ui.utils.version_config import get_cubiomes_version
 
 
 def crack_batch(args):
     try:
         start_high, end_high, low32, samples, y_coord, mc_version = args
-        
-        dll_path = get_dll_path()
-        
+
+        dll_path = get_dll_path(HIGH32_COMPONENT, HIGH32_DLL)
+
         if not os.path.exists(dll_path):
             print(f"[ERROR] DLL not found: {dll_path}")
             return []
-        
-        dll = ctypes.CDLL(dll_path, winmode=0x00000008)
-        
-        dll.crack_high32_soa.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
-            ctypes.POINTER(BiomeSample), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
-        ]
-        dll.crack_high32_soa.restype = ctypes.c_int
-        
-        num_samples = len(samples)
-        sample_array = (BiomeSample * num_samples)()
-        for i, (x, z, y, biome_id) in enumerate(samples):
-            sample_array[i].x = x
-            sample_array[i].z = z
-            sample_array[i].y = y
-            sample_array[i].biome_id = biome_id
-        
-        MAX_RESULTS = 1000
-        results = (ctypes.c_uint64 * MAX_RESULTS)()
-        
-        found = dll.crack_high32_soa(
-            start_high, end_high, low32, y_coord,
-            sample_array, num_samples,
-            results, MAX_RESULTS, mc_version
+
+        crack_high32_soa = native.bind_high32(native.load_library(dll_path))
+
+        seeds = native.call_high32(
+            crack_high32_soa, start_high, end_high, low32, samples, y_coord, mc_version
         )
-        
-        seeds = [results[i] for i in range(found)]
         if seeds:
             print(f"[DEBUG] Found {len(seeds)} seeds in batch {start_high}-{end_high}")
-        
+
         return seeds
     except Exception as e:
         print(f"[ERROR] crack_batch exception: {e}")
@@ -78,19 +40,7 @@ class High32Worker(QThread):
     finished = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
     biome_info_updated = pyqtSignal(str)  # New signal for biome sorting info
-    
-    VERSION_MAP = {
-        # Bedrock version auto-mapping (based on ChunkBase)
-        "26.30+": 38,  # MC_26_2 (Java 26.2, Sulfur Caves)
-        "1.21.60-26.23": 29,  # MC_1_21_5 (1.21.5-1.21.11, Pale Garden expanded range)
-        "1.21.50": 28,  # MC_1_21_WD (Pale Garden supported with narrow range)
-        "1.21-1.21.40": 27,  # MC_1_21_3 (Pale Garden not supported)
-        "1.20.60-81": 25,  # MC_1_20
-        "1.20.0-51": 25,  # MC_1_20
-        "1.19": 24,  # MC_1_19
-        "1.18": 22,  # MC_1_18
-    }
-    
+
     def __init__(self, low32_value, biomes, start=0, end=4294967295, original_start=None, test_mode=False, mc_version="1.21.50", process_count=None):
         super().__init__()
         self.low32_value = low32_value
@@ -100,27 +50,22 @@ class High32Worker(QThread):
         self.end_value = end
         self.test_mode = test_mode
         self.mc_version_str = mc_version
-        self.mc_version = self.VERSION_MAP.get(mc_version, 38)  # Default to 26.30+
+        self.mc_version = get_cubiomes_version(mc_version)
         self.user_process_count = process_count  # User-specified process count
         self.is_paused = False
         self.is_stopped = False
         self.results = []
 
         if test_mode:
-            self.end_value = min(end, 100000000)
+            self.end_value = min(end, TEST_MODE_END)
 
-        self.progress_file = os.path.join(get_base_path(), "progress_high32.json")
-    
     def run(self):
         try:
-            biome_data_path = os.path.join(os.path.dirname(__file__), "..", "data", "biomes.json")
-            with open(biome_data_path, 'r', encoding='utf-8') as f:
-                biome_data = json.load(f)
+            biome_data = load_biome_data()
 
             biome_samples = []
             for b in self.biomes:
-                biome_name = b['type']
-                biome_id = biome_data.get(biome_name, {}).get('id')
+                biome_id = get_biome_id(biome_data, b['type'])
                 y_coord = b.get('y', 200)  # Default to 200 if Y not provided
                 if biome_id is not None:
                     biome_samples.append((b['x'], b['z'], y_coord, biome_id))
@@ -130,19 +75,12 @@ class High32Worker(QThread):
                 return
 
             # Sort by rarity (lower rarity = more rare = higher priority)
-            def get_rarity(biome_id):
-                biome_name = None
-                for name, data in biome_data.items():
-                    if data.get('id') == biome_id:
-                        biome_name = name
-                        break
-                if biome_name and biome_name in biome_data:
-                    rarity_dict = biome_data[biome_name].get('rarity', {})
-                    # Use mc_version_str (e.g., "1.21.50") instead of mc_version (integer code)
-                    return rarity_dict.get(self.mc_version_str, 1.0)
-                return 1.0
+            # Use mc_version_str (e.g., "1.21.50") instead of mc_version (integer code)
+            def biome_rarity(biome_id):
+                biome_name = get_biome_name(biome_data, biome_id)
+                return get_rarity(biome_data.get(biome_name, {}), self.mc_version_str)
 
-            biome_samples_sorted = sorted(biome_samples, key=lambda s: get_rarity(s[3]))  # s[3] is biome_id
+            biome_samples_sorted = sorted(biome_samples, key=lambda s: biome_rarity(s[3]))  # s[3] is biome_id
 
             # Print sorted biome info (temporary verification)
             biome_info_lines = []
@@ -150,18 +88,10 @@ class High32Worker(QThread):
             biome_info_lines.append("Biome samples (sorted by rarity, rarest first):")
             biome_info_lines.append("="*60)
             for i, (x, z, y, biome_id) in enumerate(biome_samples_sorted, 1):
-                biome_name = None
-                for name, data in biome_data.items():
-                    if data.get('id') == biome_id:
-                        biome_name = name
-                        break
-                rarity = get_rarity(biome_id)
+                biome_name = get_biome_name(biome_data, biome_id)
+                rarity = biome_rarity(biome_id)
                 if biome_name:
-                    # Use appropriate language for biome name
-                    if lang_manager.language == "zh_CN":
-                        biome_display_name = biome_data[biome_name].get('name_zh', biome_name)
-                    else:
-                        biome_display_name = biome_data[biome_name].get('name_en', biome_name)
+                    biome_display_name = get_display_name(biome_data[biome_name], biome_name)
                     biome_info_lines.append(f"    {i}. ({x}, {z}, Y={y}) -> {biome_display_name} (ID: {biome_id}, {rarity*100:.4f}%)")
             biome_info_lines.append("="*60)
 
@@ -170,28 +100,10 @@ class High32Worker(QThread):
             print(biome_info_text)  # Keep console output for debugging
             self.biome_info_updated.emit(biome_info_text)
 
-            # Determine process count
-            # User can specify process count, but it's limited to 16 to avoid resource exhaustion
-            # On systems with >16 cores, using all cores causes:
-            # - DLL loading conflicts (multiple processes loading same .dll)
-            # - Memory bandwidth saturation
-            # - Cache contention
-            max_processes = min(mp.cpu_count(), 16)
-
-            if self.user_process_count is not None:
-                # User specified process count
-                num_processes = min(self.user_process_count, max_processes)
-                if self.user_process_count > max_processes:
-                    print(f"[HIGH32 WARNING] Limiting processes from {self.user_process_count} to {max_processes} (to prevent resource exhaustion)")
-            else:
-                # Default: use maximum allowed (up to 16)
-                num_processes = max_processes
-
-            if mp.cpu_count() > 16:
-                print(f"[HIGH32 INFO] Limiting processes from {mp.cpu_count()} to {num_processes} (to prevent resource exhaustion)")
+            num_processes = resolve_process_count(self.user_process_count, log_prefix="HIGH32 WARNING")
 
             batch_size = 1000000
-            dll_path = get_dll_path()
+            dll_path = get_dll_path(HIGH32_COMPONENT, HIGH32_DLL)
 
             print(f"[HIGH32 INFO] Using {num_processes} processes for parallel cracking")
             print(f"[HIGH32 INFO] Low32 value: {self.low32_value}")
@@ -285,7 +197,7 @@ class High32Worker(QThread):
             self.error_occurred.emit(str(e))
     
     def save_progress(self, current):
-        progress_data = {
+        progress_store.save_progress("high32", {
             "mode": "high32",
             "status": "running",
             "low32_value": self.low32_value,
@@ -297,15 +209,9 @@ class High32Worker(QThread):
             "biomes": self.biomes,
             "results": self.results,
             "timestamp": time.time()
-        }
-        
-        try:
-            with open(self.progress_file, 'w', encoding='utf-8') as f:
-                json.dump(progress_data, f, indent=2)
-            print(f"[HIGH32 SAVE SUCCESS] Progress saved to {self.progress_file}")
-        except Exception as e:
-            print(f"[HIGH32 SAVE ERROR] Failed to save progress: {e}")
-    
+        }, log_prefix="HIGH32 SAVE")
+
+
     def pause(self):
         self.is_paused = True
     

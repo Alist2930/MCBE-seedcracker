@@ -7,8 +7,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-import json
-import os
+from ..utils.data_loader import get_bilingual_name, load_structure_data
 from ..utils.language_manager import lang_manager
 from ..utils.structure_icon_loader import structure_icon_loader
 
@@ -21,20 +20,13 @@ class StructureListWidget(QWidget):
         self.init_ui()
     
     def load_structure_data(self):
-        data_file = os.path.join(
-            os.path.dirname(__file__), "..", "data", "structures.json"
-        )
-        if os.path.exists(data_file):
-            with open(data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            return {
+        return load_structure_data({
                 "desert_temple": {"name_zh": "沙漠神殿", "name_en": "Desert Temple", "id": 1},
                 "swamp_hut": {"name_zh": "女巫屋", "name_en": "Swamp Hut", "id": 2},
                 "jungle_temple": {"name_zh": "丛林神庙", "name_en": "Jungle Temple", "id": 3},
                 "ocean_monument": {"name_zh": "海底神殿", "name_en": "Ocean Monument", "id": 4},
                 "end_city": {"name_zh": "末地城", "name_en": "End City", "id": 5}
-            }
+        })
     
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -122,11 +114,7 @@ class StructureListWidget(QWidget):
         self.table.setRowCount(len(self.structures))
         for i, structure in enumerate(self.structures):
             structure_info = self.structure_data.get(structure["type"], {})
-            
-            if lang_manager.language == "zh_CN":
-                name = f"{structure_info.get('name_zh', structure['type'])} ({structure_info.get('name_en', '')})"
-            else:
-                name = structure_info.get('name_en', structure['type'])
+            name = get_bilingual_name(structure_info, structure["type"])
             
             item = QTableWidgetItem(name)
             
@@ -193,10 +181,7 @@ class AddStructureDialog(QDialog):
         
         completer_model = QStandardItemModel()
         for key, value in self.structure_data.items():
-            if lang_manager.language == "zh_CN":
-                display_name = f"{value['name_zh']} ({value['name_en']})"
-            else:
-                display_name = value['name_en']
+            display_name = get_bilingual_name(value, key)
             
             self.type_combo.addItem(display_name, key)
             

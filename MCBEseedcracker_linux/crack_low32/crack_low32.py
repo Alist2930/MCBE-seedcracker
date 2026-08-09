@@ -17,17 +17,24 @@ import ctypes
 import time
 import argparse
 import multiprocessing as mp
-import json
 import os
 import sys
 from pathlib import Path
 
 # Add parent directory to path to import config_loader
 sys.path.insert(0, str(Path(__file__).parent.parent))
+import common
 import config_loader
 
 CONST_A = 2570712328
 CONST_B = 4048968661
+
+CPU_LIB = Path(__file__).parent / 'crack_low32.so'
+OPENCL_LIB = Path(__file__).parent / 'crack_low32_opencl.so'
+# Result buffer size of a single CPU batch
+CPU_MAX_RESULTS = 1000
+# Seed range scanned when measuring how strict a structure sample is
+STRICTNESS_TEST_SEEDS = 100000
 
 STRUCTURE_CONFIGS = {
     "village": {"name": "Village", "salt": 10387312, "spacing": 34, "separation": 8, "spread_type": "triangular"},
@@ -51,13 +58,7 @@ STRUCTURE_CONFIGS = {
 # ===== Target structures (loaded from config.json) =====
 # Load from config file (users can edit config.json)
 _cfg = config_loader.get_low32_config()
-TARGETS = _cfg.get('targets', [
-    {"structure": "swamp_hut", "x": 2136, "z": -1176},
-    {"structure": "jungle_temple", "x": -360, "z": -248},
-    {"structure": "desert_temple", "x": -936, "z": 4744},
-    {"structure": "ocean_monument", "x": 792, "z": -792},
-    {"structure": "end_city", "x": 1352, "z": -1208},
-])
+TARGETS = _cfg.get('targets', config_loader.DEFAULT_TARGETS)
 
 def load_gpu_config():
     """Load GPU configuration from main config.json"""
@@ -72,13 +73,10 @@ def load_gpu_config():
 def has_opencl_gpu():
     """Check if OpenCL GPU is available"""
     try:
-        script_dir = Path(__file__).parent
-        opencl_so = script_dir / 'crack_low32_opencl.so'
-
-        if not opencl_so.exists():
+        if not OPENCL_LIB.exists():
             return False, "OpenCL SO not found"
 
-        lib = ctypes.CDLL(str(opencl_so))
+        lib = ctypes.CDLL(str(OPENCL_LIB))
 
         lib.has_opencl_gpu.argtypes = []
         lib.has_opencl_gpu.restype = ctypes.c_int
@@ -111,7 +109,21 @@ def has_opencl_gpu():
     except Exception as e:
         return False, str(e)
 
-def test_sample_strictness(config, x, z, num_test_seeds=100000):
+def target_parameters(config, x, z):
+    """Derive the native search parameters of one structure target"""
+    spacing, separation = config["spacing"], config["separation"]
+
+    cx, cz = x >> 4, z >> 4
+    rx, rz = cx // spacing, cz // spacing
+    ox, oz = cx % spacing, cz % spacing
+
+    r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
+    spread_type = config.get("spread_type", "linear")
+    spread_type_int = 1 if spread_type == "triangular" else 0
+
+    return r_base, ox, oz, spacing - separation, spread_type_int, rx, rz
+
+def test_sample_strictness(config, x, z, num_test_seeds=STRICTNESS_TEST_SEEDS):
     """
     Test the strictness (matching probability) of a structure sample.
     Returns the number of matches in num_test_seeds attempts.
@@ -125,48 +137,16 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
     Returns:
         Number of matches (lower = stricter)
     """
-    spacing = config["spacing"]
-    separation = config["separation"]
-
-    # Calculate target parameters
-    cx, cz = x >> 4, z >> 4
-    rx, rz = cx // spacing, cz // spacing
-    target_ox, target_oz = cx % spacing, cz % spacing
-
-    # Calculate r_base
-    r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
+    r_base, ox, oz, offset_range, spread_type_int, _, _ = target_parameters(config, x, z)
 
     # Load C library for fast testing
-    lib_path = Path(__file__).parent / 'crack_low32.so'
     try:
-        lib = ctypes.CDLL(str(lib_path))
-        lib.crack_low32.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-        ]
-        lib.crack_low32.restype = ctypes.c_int
+        lib = common.load_low32_lib(CPU_LIB)
+        target_arrays = common.build_target_arrays([r_base], [ox], [oz], [offset_range], [spread_type_int])
 
-        # Test using C library
-        offset_range = spacing - separation
-        spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
+        results = common.call_low32(lib, 0, num_test_seeds, target_arrays, num_test_seeds)
 
-        r_base_arr = (ctypes.c_uint32 * 1)(r_base)
-        ox_arr = (ctypes.c_uint32 * 1)(target_ox)
-        oz_arr = (ctypes.c_uint32 * 1)(target_oz)
-        offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
-        spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
-        results_arr = (ctypes.c_uint32 * num_test_seeds)()
-
-        found = lib.crack_low32(
-            0, num_test_seeds,
-            r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-            1, results_arr, num_test_seeds
-        )
-
-        return found
+        return len(results) if results else 0
     except Exception as e:
         print(f"[WARNING] Failed to test strictness with C library: {e}")
         return 0
@@ -183,19 +163,13 @@ def prepare_targets(targets):
     for t in sorted_targets:
         config = STRUCTURE_CONFIGS[t["structure"]]
         x, z = t["x"], t["z"]
-        spacing, separation = config["spacing"], config["separation"]
 
-        cx, cz = x >> 4, z >> 4
-        rx, rz = cx // spacing, cz // spacing
-        ox, oz = cx % spacing, cz % spacing
-
-        r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
-        spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
+        r_base, ox, oz, offset_range, spread_type_int, rx, rz = target_parameters(config, x, z)
 
         r_base_list.append(r_base)
         ox_list.append(ox)
         oz_list.append(oz)
-        offset_range_list.append(spacing - separation)
+        offset_range_list.append(offset_range)
         spread_type_list.append(spread_type_int)
         structure_info.append({"name": config["name"], "x": x, "z": z, "rx": rx, "rz": rz, "spread_type": config.get("spread_type", "linear")})
 
@@ -206,7 +180,7 @@ def prepare_targets(targets):
         config = STRUCTURE_CONFIGS[t["structure"]]
         x, z = t["x"], t["z"]
 
-        matches = test_sample_strictness(config, x, z, num_test_seeds=100000)
+        matches = test_sample_strictness(config, x, z)
         strictness_scores.append(matches)
 
     # Sort by strictness (fewer matches = stricter = higher priority)
@@ -240,28 +214,10 @@ def crack_worker_cpu(args):
     """CPU worker for multiprocessing"""
     start, end, r_base, ox, oz, offset_range, spread_type = args
     
-    lib_path = Path(__file__).parent / 'crack_low32.so'
-    lib = ctypes.CDLL(str(lib_path))
+    lib = common.load_low32_lib(CPU_LIB)
+    target_arrays = common.build_target_arrays(r_base, ox, oz, offset_range, spread_type)
     
-    lib.crack_low32.argtypes = [
-        ctypes.c_uint32, ctypes.c_uint32,
-        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-    ]
-    lib.crack_low32.restype = ctypes.c_int
-    
-    num_targets = len(r_base)
-    r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-    ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-    oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-    offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-    spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-    results_arr = (ctypes.c_uint32 * 1000)()
-    
-    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
-    return [results_arr[i] for i in range(found)]
+    return common.call_low32(lib, start, end, target_arrays, CPU_MAX_RESULTS) or []
 
 def run_crack_cpu(search_start, search_end, num_processes, all_results):
     """Run crack using CPU multiprocessing"""
@@ -298,8 +254,7 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
         progress = (processed - search_start) / total_seeds * 100
         eta = (search_end_exclusive - processed) / speed if speed > 0 else 0
         
-        eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
-        print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
+        print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {common.format_eta(eta)}")
     
     pool.close()
     pool.join()
@@ -308,33 +263,15 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
 
 def run_crack_gpu(search_start, search_end, all_results, config):
     """Run crack using GPU (OpenCL) with batch processing"""
-    lib_path = Path(__file__).parent / 'crack_low32_opencl.so'
-
     # Change working directory to find crack_low32.cl
     original_dir = os.getcwd()
-    os.chdir(lib_path.parent)
+    os.chdir(OPENCL_LIB.parent)
 
     try:
-        lib = ctypes.CDLL(str(lib_path))
-
-        lib.crack_low32_opencl.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-        ]
-        lib.crack_low32_opencl.restype = ctypes.c_int
-
-        num_targets = len(R_BASE)
-        r_base_arr = (ctypes.c_uint32 * num_targets)(*R_BASE)
-        ox_arr = (ctypes.c_uint32 * num_targets)(*OX)
-        oz_arr = (ctypes.c_uint32 * num_targets)(*OZ)
-        offset_range_arr = (ctypes.c_uint32 * num_targets)(*OFFSET_RANGE)
-        spread_type_arr = (ctypes.c_int * num_targets)(*SPREAD_TYPE)
+        lib = common.load_low32_lib(OPENCL_LIB, opencl=True)
+        target_arrays = common.build_target_arrays(R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE)
 
         max_results = config.get('max_results', 10000)
-        results_arr = (ctypes.c_uint32 * max_results)()
 
         # Calculate batch size based on GPU capability
         # Modern GPUs can handle ~1B seeds per batch efficiently
@@ -353,22 +290,15 @@ def run_crack_gpu(search_start, search_end, all_results, config):
             batch_start = processed
             batch_end = min(processed + batch_size - 1, search_end)
 
-            batch_elapsed_start = time.time()
-
-            found = lib.crack_low32_opencl(
-                batch_start, batch_end,
-                r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                num_targets, results_arr, max_results
+            results = common.call_low32(
+                lib, batch_start, batch_end, target_arrays, max_results, opencl=True
             )
 
-            batch_elapsed = time.time() - batch_elapsed_start
-
-            if found < 0:
+            if results is None:
                 print(f"[ERROR] GPU crack failed at batch {processed:,}")
                 return -1
 
-            for i in range(found):
-                seed = results_arr[i]
+            for seed in results:
                 all_results.append(seed)
                 print(f">>> [!] Found seed: {seed} (0x{seed:08X})")
 
@@ -381,7 +311,7 @@ def run_crack_gpu(search_start, search_end, all_results, config):
             eta = (search_end - processed) / speed if speed > 0 else 0
 
             print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | "
-                  f"Speed: {speed:,.0f}/s | ETA: {eta:.0f}s")
+                  f"Speed: {speed:,.0f}/s | ETA: {common.format_eta(eta)}")
 
         elapsed = time.time() - global_start
         speed = total_seeds / elapsed if elapsed > 0 else 0
@@ -411,14 +341,7 @@ def main():
     cfg = config_loader.get_low32_config()
     
     # Override config with command-line arguments
-    if args.test:
-        test_mode = True
-        search_start = 0
-        search_end = 100000000
-    else:
-        test_mode = args.test if args.test is not None else cfg.get('test_mode', False)
-        search_start = args.start if args.start is not None else cfg.get('start', 0)
-        search_end = args.end if args.end is not None else cfg.get('end', 0xFFFFFFFF)
+    test_mode, search_start, search_end = common.resolve_search_range(args, cfg)
     
     print("=" * 60)
     print("Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
@@ -458,15 +381,7 @@ def main():
         use_gpu = False
 
     # Get process count: command-line > config > auto-detect
-    if args.processes is not None:
-        num_processes = args.processes
-        source = "command-line"
-    elif cfg.get('processes', None) is not None:
-        num_processes = cfg.get('processes')
-        source = "config file"
-    else:
-        num_processes = mp.cpu_count()
-        source = "auto-detect"
+    num_processes, source = common.resolve_process_count(args.processes, cfg)
 
     print(f"[*] Processes: {num_processes} ({source})")
 
@@ -475,17 +390,14 @@ def main():
     
     # Check library files
     if use_gpu:
-        lib_path = Path(__file__).parent / 'crack_low32_opencl.so'
-        if not lib_path.exists():
-            print(f"\n[!] Error: OpenCL library not found: {lib_path}")
+        if not OPENCL_LIB.exists():
+            print(f"\n[!] Error: OpenCL library not found: {OPENCL_LIB}")
             print("[!] Run 'gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL' first")
             return
-    else:
-        lib_path = Path(__file__).parent / 'crack_low32.so'
-        if not lib_path.exists():
-            print(f"\n[!] Error: CPU library not found: {lib_path}")
-            print("[!] Please run 'bash build.sh' first to compile the library.")
-            return
+    elif not CPU_LIB.exists():
+        print(f"\n[!] Error: CPU library not found: {CPU_LIB}")
+        print("[!] Please run 'bash build.sh' first to compile the library.")
+        return
     
     total_seeds = search_end - search_start + 1
     

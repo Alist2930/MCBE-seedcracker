@@ -9,12 +9,6 @@ from ui.utils.config_manager import ConfigManager
 multiprocessing.freeze_support()
 
 
-def get_base_path():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-
 def main():
     multiprocessing.set_start_method('spawn', force=True)
     

@@ -2,8 +2,7 @@
 """
 Biome Icon Loader - Solid color block icons
 """
-from PyQt5.QtGui import QPixmap, QIcon, QColor, QPainter
-from PyQt5.QtCore import QSize, Qt
+from .icon_loader import ColorIconLoader
 
 BIOME_COLORS = {
     "ocean": (0, 0, 170),
@@ -79,55 +78,10 @@ BIOME_COLORS = {
 }
 
 
-class BiomeIconLoader:
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-    
-    def __init__(self):
-        if self._initialized:
-            return
-        
-        self._initialized = True
-        self.icons = {}
-        self.icon_size = 13
-    
-    def _create_color_icon(self, color_rgb):
-        """Create a colored square icon"""
-        pixmap = QPixmap(self.icon_size, self.icon_size)
-        pixmap.fill(QColor(0, 0, 0, 0))
-        
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing, False)
-        
-        color = QColor(*color_rgb)
-        painter.setPen(color.darker(130))
-        painter.setBrush(color)
-        
-        painter.drawRect(0, 0, self.icon_size - 1, self.icon_size - 1)
-        
-        painter.end()
-        
-        return QIcon(pixmap)
-    
-    def get_icon(self, biome_type):
-        """Get icon for a specific biome type"""
-        if biome_type in self.icons:
-            return self.icons[biome_type]
-        
-        color_rgb = BIOME_COLORS.get(biome_type)
-        if not color_rgb:
-            return None
-        
-        icon = self._create_color_icon(color_rgb)
-        self.icons[biome_type] = icon
-        
-        return icon
-    
+class BiomeIconLoader(ColorIconLoader):
+    colors = BIOME_COLORS
+    icon_size = 13
+
     def has_icons(self):
         """Check if icons are available"""
         return len(BIOME_COLORS) > 0
