@@ -468,6 +468,22 @@ If significantly longer:
 
 ---
 
+## Running Tests
+
+Unit tests for the configuration, version-mapping and target-preparation logic live in `tests/`:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+
+# With a coverage report
+pytest --cov=MCBEseedcracker_linux --cov=MCBEseedcracker_win_ui --cov-report=term-missing
+```
+
+The tests are pure Python and need neither PyQt5 nor a GPU.
+
+---
+
 ## Related Links & References
 
 - [Windows GUI Version](MCBEseedcracker_win_ui/README.md)

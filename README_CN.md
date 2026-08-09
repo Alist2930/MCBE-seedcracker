@@ -469,6 +469,22 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ---
 
+## 运行测试
+
+配置加载、版本映射与目标预处理逻辑的单元测试位于 `tests/`：
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+
+# 生成覆盖率报告
+pytest --cov=MCBEseedcracker_linux --cov=MCBEseedcracker_win_ui --cov-report=term-missing
+```
+
+测试为纯 Python 实现，不依赖 PyQt5，也不需要 GPU。
+
+---
+
 ## 相关链接与参考资料
 
 - [Windows 图形界面版](MCBEseedcracker_win_ui/README_CN.md)

@@ -25,8 +25,9 @@ build/
 .DS_Store
 Thumbs.db
 
-# Test files
+# Test files (ad-hoc scripts; the pytest suite under tests/ is tracked)
 test_*.py
+!tests/test_*.py
 verify_*.py
 check_*.py
 biomes_zh.txt
@@ -38,6 +39,12 @@ UI_DEVELOPMENT_PLAN.md
 
 # Ignore Windows non-UI version (MCBEseedcracker/)
 MCBEseedcracker/
+
+# Test tooling
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
 
 # Session and config files
 session_data.json
