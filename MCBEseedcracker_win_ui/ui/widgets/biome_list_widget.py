@@ -26,30 +26,38 @@ class BiomeListWidget(QWidget):
             os.path.dirname(__file__), "..", "data", "biomes.json"
         )
         if os.path.exists(data_file):
-            with open(data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            return {
-                "plains": {"name_zh": "平原", "name_en": "Plains", "id": 1, "rarity": {"1.18": 0.10660260, "1.19": 0.10651130, "1.20.0-51": 0.10665340, "1.20.60-81": 0.10665340, "1.21-1.21.40": 0.10665340, "1.21.50": 0.10519710, "1.21.60-26.23": 0.10688, "26.30+": 0.10688}},
-                "forest": {"name_zh": "森林", "name_en": "Forest", "id": 4, "rarity": {"1.18": 0.12118830, "1.19": 0.12192850, "1.20.0-51": 0.12179220, "1.20.60-81": 0.12179220, "1.21-1.21.40": 0.12179220, "1.21.50": 0.12070520, "1.21.60-26.23": 0.12307, "26.30+": 0.12307}},
-                "desert": {"name_zh": "沙漠", "name_en": "Desert", "id": 2, "rarity": {"1.18": 0.02353480, "1.19": 0.02318180, "1.20.0-51": 0.02315620, "1.20.60-81": 0.02315620, "1.21-1.21.40": 0.02315620, "1.21.50": 0.02471080, "1.21.60-26.23": 0.02329, "26.30+": 0.02329}},
-                "cherry_grove": {"name_zh": "樱花树林", "name_en": "Cherry Grove", "id": 185, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 0.00278580, "1.20.60-81": 0.00278580, "1.21-1.21.40": 0.00278580, "1.21.50": 0.00280480, "1.21.60-26.23": 0.00295, "26.30+": 0.00295}},
-                "pale_garden": {"name_zh": "苍白之园", "name_en": "Pale Garden", "id": 186, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 0.00078550, "1.21.60-26.23": 0.00121, "26.30+": 0.00121}},
-                "sulfur_caves": {"name_zh": "硫磺洞穴", "name_en": "Sulfur Caves", "id": 187, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 1.00000000, "1.21.60-26.23": 1.00000000, "26.30+": 0.005}}
-            }
+            try:
+                with open(data_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+                print(f"[WARNING] Failed to load biome data {data_file}: {e}")
+                print("[WARNING] Falling back to the built-in minimal biome list")
+        return {
+            "plains": {"name_zh": "平原", "name_en": "Plains", "id": 1, "rarity": {"1.18": 0.10660260, "1.19": 0.10651130, "1.20.0-51": 0.10665340, "1.20.60-81": 0.10665340, "1.21-1.21.40": 0.10665340, "1.21.50": 0.10519710, "1.21.60-26.23": 0.10688, "26.30+": 0.10688}},
+            "forest": {"name_zh": "森林", "name_en": "Forest", "id": 4, "rarity": {"1.18": 0.12118830, "1.19": 0.12192850, "1.20.0-51": 0.12179220, "1.20.60-81": 0.12179220, "1.21-1.21.40": 0.12179220, "1.21.50": 0.12070520, "1.21.60-26.23": 0.12307, "26.30+": 0.12307}},
+            "desert": {"name_zh": "沙漠", "name_en": "Desert", "id": 2, "rarity": {"1.18": 0.02353480, "1.19": 0.02318180, "1.20.0-51": 0.02315620, "1.20.60-81": 0.02315620, "1.21-1.21.40": 0.02315620, "1.21.50": 0.02471080, "1.21.60-26.23": 0.02329, "26.30+": 0.02329}},
+            "cherry_grove": {"name_zh": "樱花树林", "name_en": "Cherry Grove", "id": 185, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 0.00278580, "1.20.60-81": 0.00278580, "1.21-1.21.40": 0.00278580, "1.21.50": 0.00280480, "1.21.60-26.23": 0.00295, "26.30+": 0.00295}},
+            "pale_garden": {"name_zh": "苍白之园", "name_en": "Pale Garden", "id": 186, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 0.00078550, "1.21.60-26.23": 0.00121, "26.30+": 0.00121}},
+            "sulfur_caves": {"name_zh": "硫磺洞穴", "name_en": "Sulfur Caves", "id": 187, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 1.00000000, "1.21.60-26.23": 1.00000000, "26.30+": 0.005}}
+        }
 
     def get_biome_rarity(self, biome_name, mc_version="26.30+"):
         """Get biome rarity for specific version"""
-        try:
-            if biome_name in self.biome_data:
-                biome_info = self.biome_data[biome_name]
-                if isinstance(biome_info, dict):
-                    rarity_dict = biome_info.get('rarity', {})
-                    if isinstance(rarity_dict, dict):
-                        return rarity_dict.get(mc_version, 1.0)
-        except Exception:
-            pass
-        return 1.0
+        biome_info = self.biome_data.get(biome_name)
+        if biome_info is None:
+            print(f"[WARNING] No rarity data for biome '{biome_name}', using 1.0")
+            return 1.0
+
+        if not isinstance(biome_info, dict):
+            print(f"[WARNING] Malformed biome entry '{biome_name}': expected object, got {type(biome_info).__name__}")
+            return 1.0
+
+        rarity_dict = biome_info.get('rarity', {})
+        if not isinstance(rarity_dict, dict):
+            print(f"[WARNING] Malformed rarity for biome '{biome_name}': expected object, got {type(rarity_dict).__name__}")
+            return 1.0
+
+        return rarity_dict.get(mc_version, 1.0)
     
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -223,8 +231,9 @@ class AddBiomeDialog(QDialog):
         try:
             sorted_biomes = sorted(self.biome_data.items(),
                                    key=lambda x: self.get_biome_rarity(x[0], self.mc_version))
-        except Exception:
-            # Fallback to ID sorting if rarity sorting fails
+        except TypeError as e:
+            # Fallback to ID sorting if rarity values are not comparable
+            print(f"[WARNING] Rarity sorting failed ({e}), falling back to biome ID order")
             sorted_biomes = sorted(self.biome_data.items(), key=lambda x: x[1].get('id', 999))
 
         for key, value in sorted_biomes:

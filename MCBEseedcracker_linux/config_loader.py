@@ -23,7 +23,7 @@ def load_config():
     if config_file.exists():
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f)
         except json.JSONDecodeError as e:
             print(f"\n{'=' * 60}")
             print(f"[ERROR] config.json has syntax errors!")
@@ -37,9 +37,15 @@ def load_config():
             print(f"  - Unquoted strings")
             print(f"{'=' * 60}")
             sys.exit(1)
-        except Exception as e:
-            print(f"\n[ERROR] Failed to load config.json: {e}")
+        except OSError as e:
+            print(f"\n[ERROR] Failed to read {config_file}: {e}")
             sys.exit(1)
+
+        if not isinstance(config, dict):
+            print(f"\n[ERROR] {config_file} must contain a JSON object, got {type(config).__name__}")
+            sys.exit(1)
+
+        return config
     
     # If config.json doesn't exist, create it with default values
     print(f"\n[INFO] config.json not found, creating default configuration...")
@@ -73,8 +79,13 @@ def load_config():
         }
     }
     
-    with open(config_file, 'w', encoding='utf-8') as f:
-        json.dump(default_config, f, indent=2)
+    try:
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(default_config, f, indent=2)
+    except OSError as e:
+        print(f"\n[ERROR] Failed to create {config_file}: {e}")
+        print("[ERROR] Check the directory permissions and try again.")
+        sys.exit(1)
     
     print(f"[INFO] Created: {config_file}")
     print(f"[INFO] Please edit config.json to configure your search parameters.\n")

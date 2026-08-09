@@ -195,6 +195,10 @@ class LanguageManager:
                 "low32_value_must_be_integer": "低32位值必须是整数！",
                 "add_biome_first": "请先添加至少一个群系！",
                 "cracking_error_msg": "破解出错：{}",
+                "cracking_warning_msg": "警告：{}",
+                "progress_load_failed_msg": "无法读取进度文件，将从起始值重新开始：{}",
+                "session_load_failed_msg": "无法读取上次的会话数据：{}",
+                "session_save_failed_msg": "无法保存会话数据：{}",
                 "results_exported_msg": "结果已导出到: {}",
                 "export_failed_msg": "导出失败: {}",
                 
@@ -390,6 +394,10 @@ class LanguageManager:
                 "low32_value_must_be_integer": "Low 32-bit value must be an integer!",
                 "add_biome_first": "Please add at least one biome first!",
                 "cracking_error_msg": "Cracking error: {}",
+                "cracking_warning_msg": "Warning: {}",
+                "progress_load_failed_msg": "Failed to read the progress file, starting from the configured start value: {}",
+                "session_load_failed_msg": "Failed to read the previous session data: {}",
+                "session_save_failed_msg": "Failed to save session data: {}",
                 "results_exported_msg": "Results exported to: {}",
                 "export_failed_msg": "Export failed: {}",
                 

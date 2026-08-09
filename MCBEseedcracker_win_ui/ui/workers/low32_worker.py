@@ -3,6 +3,7 @@ import time
 import json
 import os
 import sys
+import traceback
 import multiprocessing as mp
 import ctypes
 from ui.utils.language_manager import lang_manager
@@ -37,6 +38,9 @@ def get_config_path():
     return os.path.join(get_base_path(), "crack_config.json")
 
 
+MAX_CPU_RESULTS = 1000
+
+
 def load_config():
     """Load configuration from crack_config.json"""
     config_path = get_config_path()
@@ -51,12 +55,20 @@ def load_config():
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
-        except:
-            pass
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+            print(f"[WARNING] Failed to read {config_path}: {e}")
+            print("[WARNING] Falling back to default configuration")
+            return default_config
+
+        if not isinstance(config, dict):
+            print(f"[WARNING] {config_path} must contain a JSON object, got {type(config).__name__}")
+            print("[WARNING] Falling back to default configuration")
+            return default_config
+
+        for key, value in default_config.items():
+            if key not in config:
+                config[key] = value
+        return config
 
     return default_config
 
@@ -99,44 +111,56 @@ def has_opencl_gpu():
 
         return False, "No OpenCL GPU found"
     except Exception as e:
-        return False, str(e)
+        print(f"[WARNING] OpenCL GPU detection failed: {e!r}")
+        traceback.print_exc()
+        return False, f"{type(e).__name__}: {e}"
 
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing"""
+    """CPU worker for multiprocessing
+
+    Raises:
+        RuntimeError: If the native library is missing or the search fails.
+            Failures must not be swallowed: an empty result is
+            indistinguishable from "no seed in this range" and would silently
+            skip part of the search space.
+    """
+    start, end, r_base, ox, oz, offset_range, spread_type = args
+
+    dll_path = get_dll_path(opencl=False)
+
+    if not os.path.exists(dll_path):
+        raise RuntimeError(f"crack_low32 library not found: {dll_path}")
+
     try:
-        start, end, r_base, ox, oz, offset_range, spread_type = args
-
-        dll_path = get_dll_path(opencl=False)
-
-        if not os.path.exists(dll_path):
-            print(f"[ERROR] DLL not found: {dll_path}")
-            return []
-
         lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+    except OSError as e:
+        raise RuntimeError(f"Failed to load crack_low32 library {dll_path}: {e}") from e
 
-        lib.crack_low32.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-        ]
-        lib.crack_low32.restype = ctypes.c_int
+    lib.crack_low32.argtypes = [
+        ctypes.c_uint32, ctypes.c_uint32,
+        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+    ]
+    lib.crack_low32.restype = ctypes.c_int
 
-        num_targets = len(r_base)
-        r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-        ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-        oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-        offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-        spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-        results_arr = (ctypes.c_uint32 * 1000)()
+    num_targets = len(r_base)
+    r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
+    ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
+    oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
+    offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
+    spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
+    results_arr = (ctypes.c_uint32 * MAX_CPU_RESULTS)()
 
-        found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
-        return [results_arr[i] for i in range(found)]
-    except Exception as e:
-        print(f"[ERROR] crack_worker exception: {e}")
-        return []
+    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, MAX_CPU_RESULTS)
+    if found < 0:
+        raise RuntimeError(f"crack_low32 failed for range {start}-{end} (return code {found})")
+    if found >= MAX_CPU_RESULTS:
+        print(f"[WARNING] Result buffer full ({MAX_CPU_RESULTS}) for range {start}-{end}, extra candidates were discarded")
+
+    return [results_arr[i] for i in range(found)]
 
 
 class Low32Worker(QThread):
@@ -146,6 +170,7 @@ class Low32Worker(QThread):
     error_occurred = pyqtSignal(str)
     compute_device_info = pyqtSignal(str)  # Signal for GPU/CPU device info
     structure_info_updated = pyqtSignal(str)  # Signal for structure sorting info
+    warning_occurred = pyqtSignal(str)  # Non-fatal problem the user should know about
 
     def __init__(self, structures, start=0, end=4294967295, test_mode=False, force_gpu=None, process_count=None):
         super().__init__()
@@ -165,14 +190,23 @@ class Low32Worker(QThread):
 
         self.progress_file = os.path.join(get_base_path(), "progress_low32.json")
 
+        self.structure_data = None
+
+    def load_structure_data(self):
+        """Load structure definitions, reported through error_occurred on failure"""
         data_file = os.path.join(
             os.path.dirname(__file__), "..", "data", "structures.json"
         )
-        with open(data_file, 'r', encoding='utf-8') as f:
-            self.structure_data = json.load(f)
+        try:
+            with open(data_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise RuntimeError(f"Failed to load structure data {data_file}: {e}") from e
 
     def run(self):
         try:
+            self.structure_data = self.load_structure_data()
+
             r_base, ox, oz, offset_range, spread_type = self.prepare_structures()
 
             # Load configuration
@@ -250,9 +284,8 @@ class Low32Worker(QThread):
                 self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
 
         except Exception as e:
-            import traceback
             traceback.print_exc()
-            self.error_occurred.emit(str(e))
+            self.error_occurred.emit(f"{type(e).__name__}: {e}")
 
     def _run_cpu(self, r_base, ox, oz, offset_range, spread_type, num_processes):
         """Run crack using CPU multiprocessing"""
@@ -297,7 +330,8 @@ class Low32Worker(QThread):
 
                 except Exception as e:
                     print(f"[ERROR] Pool map exception: {e}")
-                    self.error_occurred.emit(str(e))
+                    traceback.print_exc()
+                    self.error_occurred.emit(f"{type(e).__name__}: {e}")
                     return
 
                 current = step_end + 1
@@ -421,6 +455,9 @@ class Low32Worker(QThread):
                     print(f"[ERROR] GPU crack failed at batch {processed:,}")
                     if config.get('auto_fallback', True):
                         print("[INFO] Falling back to CPU mode...")
+                        self.warning_occurred.emit(
+                            f"GPU crack failed at {processed:,} (return code {found}), falling back to CPU mode"
+                        )
                         # Use user-specified process count when falling back to CPU
                         max_processes = min(mp.cpu_count(), 16)
                         if self.user_process_count is not None:
@@ -433,6 +470,12 @@ class Low32Worker(QThread):
                     else:
                         self.error_occurred.emit(f"GPU crack failed: {found}")
                     return
+
+                if found == max_results:
+                    self.warning_occurred.emit(
+                        f"Result buffer full ({max_results} seeds) in batch starting at {batch_start:,}; "
+                        "some candidates were discarded. Increase 'max_results' in crack_config.json."
+                    )
 
                 for i in range(found):
                     seed = results_arr[i]
@@ -473,21 +516,28 @@ class Low32Worker(QThread):
 
         except Exception as e:
             print(f"[ERROR] GPU crack exception: {e}")
-            import traceback
             traceback.print_exc()
 
             if config.get('auto_fallback', True):
                 print("[INFO] Falling back to CPU mode...")
-                num_processes = mp.cpu_count()
+                self.warning_occurred.emit(f"GPU crack failed ({type(e).__name__}: {e}), falling back to CPU mode")
+                num_processes = min(mp.cpu_count(), 16)
                 self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
             else:
-                self.error_occurred.emit(str(e))
+                self.error_occurred.emit(f"GPU crack failed: {type(e).__name__}: {e}")
         finally:
             os.chdir(original_dir)
 
     def prepare_structures(self):
         CONST_A = 2570712328
         CONST_B = 4048968661
+
+        unknown_types = sorted({s["type"] for s in self.structures if s["type"] not in self.structure_data})
+        if unknown_types:
+            raise RuntimeError(
+                "Unknown structure type(s): " + ", ".join(unknown_types) +
+                ". Cracking with default generation parameters would produce wrong results."
+            )
 
         # First sort by spread_type (linear first)
         sorted_structures = sorted(self.structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)
@@ -580,14 +630,22 @@ class Low32Worker(QThread):
                     structure_info_lines.append(info_line)
                 else:
                     strictness_scores.append(0)
-                    warning_line = f"    {i+1}. [WARNING] DLL not found for strictness test"
+                    warning_line = f"    {i+1}. [WARNING] DLL not found for strictness test: {dll_path}"
                     print(warning_line)
                     structure_info_lines.append(warning_line)
+                    self.warning_occurred.emit(
+                        f"crack_low32 library not found ({dll_path}); sample ordering may be suboptimal."
+                    )
             except Exception as e:
                 strictness_scores.append(0)
-                error_line = f"    {i+1}. [WARNING] Failed to test strictness: {e}"
+                error_line = f"    {i+1}. [WARNING] Failed to test strictness: {type(e).__name__}: {e}"
                 print(error_line)
+                traceback.print_exc()
                 structure_info_lines.append(error_line)
+                self.warning_occurred.emit(
+                    f"Failed to measure sample strictness for structure {i + 1}: {e}. "
+                    "Sample ordering may be suboptimal."
+                )
 
         structure_info_lines.append("=" * 80)
 
@@ -649,7 +707,6 @@ class Low32Worker(QThread):
         print(structure_info_text)  # Keep console output for debugging
 
         # Send simplified order info as JSON string
-        import json
         self.structure_info_updated.emit(json.dumps(order_info))
 
         return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list
@@ -672,8 +729,13 @@ class Low32Worker(QThread):
             with open(self.progress_file, 'w', encoding='utf-8') as f:
                 json.dump(progress_data, f, indent=2)
             print(f"[SAVE SUCCESS] Progress saved to {self.progress_file}")
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"[SAVE ERROR] Failed to save progress: {e}")
+            traceback.print_exc()
+            self.warning_occurred.emit(
+                f"Failed to save progress to {self.progress_file}: {e}. "
+                "Cracking continues, but progress cannot be resumed."
+            )
 
     def pause(self):
         self.is_paused = True

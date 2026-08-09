@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import traceback
 
 
 def get_base_path():
@@ -21,15 +22,22 @@ class ConfigManager:
         self.config = self.load_config()
     
     def load_config(self):
-        if os.path.exists(self.config_file):
-            try:
-                with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"Failed to load config file: {e}")
-                return self.get_default_config()
-        else:
+        if not os.path.exists(self.config_file):
             return self.get_default_config()
+
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+            print(f"[WARNING] Failed to load config file {self.config_file}: {e}")
+            print("[WARNING] Using default configuration; the file will be overwritten on the next save")
+            return self.get_default_config()
+
+        if not isinstance(config, dict):
+            print(f"[WARNING] {self.config_file} must contain a JSON object, got {type(config).__name__}")
+            return self.get_default_config()
+
+        return config
     
     def get_default_config(self):
         return {
@@ -50,29 +58,37 @@ class ConfigManager:
         }
     
     def save_config(self):
+        """Persist the configuration
+
+        Returns:
+            True if the configuration was written, False otherwise.
+        """
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            print(f"Failed to save config file: {e}")
+            return True
+        except (OSError, TypeError, ValueError) as e:
+            print(f"[ERROR] Failed to save config file {self.config_file}: {e}")
+            traceback.print_exc()
+            return False
     
     def get(self, key, default=None):
         return self.config.get(key, default)
     
     def set(self, key, value):
         self.config[key] = value
-        self.save_config()
+        return self.save_config()
     
     def get_low32_config(self):
         return self.config.get("low32", {})
     
     def set_low32_config(self, config):
         self.config["low32"] = config
-        self.save_config()
+        return self.save_config()
     
     def get_high32_config(self):
         return self.config.get("high32", {})
     
     def set_high32_config(self, config):
         self.config["high32"] = config
-        self.save_config()
+        return self.save_config()

@@ -191,7 +191,24 @@ _cfg = config_loader.get_high32_config()
 # Biome samples (x, z, y, biome_id)
 # Load from config file
 _cfg_samples = _cfg.get('samples', [])
-SAMPLES = [(s['x'], s['z'], s['y'], s['biome_id']) for s in _cfg_samples] if _cfg_samples else [
+
+
+def _parse_samples(cfg_samples):
+    """Convert config samples to tuples, exiting with a clear message on bad input"""
+    parsed = []
+    for i, s in enumerate(cfg_samples):
+        missing = [key for key in ('x', 'z', 'y', 'biome_id') if key not in s]
+        if missing:
+            print(f"\n[ERROR] high32 sample #{i + 1} in config.json is missing: {', '.join(missing)}")
+            sys.exit(1)
+        if s['biome_id'] not in BIOME_NAMES:
+            print(f"\n[ERROR] high32 sample #{i + 1} in config.json uses unknown biome_id {s['biome_id']}")
+            sys.exit(1)
+        parsed.append((s['x'], s['z'], s['y'], s['biome_id']))
+    return parsed
+
+
+SAMPLES = _parse_samples(_cfg_samples) if _cfg_samples else [
     (-1922, 1231, 200, 185),   # cherry_grove
     (-4706, 3302, 200, 132),   # flower_forest
     (-935, 2592, 200, 5),      # taiga
@@ -240,7 +257,13 @@ class BiomeSample(ctypes.Structure):
     _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("y", ctypes.c_int), ("biome_id", ctypes.c_int)]
 
 def init_dll():
-    dll = ctypes.CDLL(str(dll_path))
+    if not dll_path.exists():
+        raise RuntimeError(f"crack_high32 library not found: {dll_path}. Run 'bash build.sh' first.")
+
+    try:
+        dll = ctypes.CDLL(str(dll_path))
+    except OSError as e:
+        raise RuntimeError(f"Failed to load {dll_path}: {e}") from e
     
     dll.crack_high32_soa.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
@@ -252,6 +275,12 @@ def init_dll():
     return dll
 
 def crack_batch_soa(args):
+    """Crack a single batch in a worker process
+
+    Raises:
+        Exception: Any failure propagates to the parent process instead of
+            being reported as "no seed in this range".
+    """
     start_high, end_high, low32, samples, y_coord, mc_version = args
     dll = init_dll()
     
@@ -276,18 +305,28 @@ def crack_batch_soa(args):
         results, MAX_RESULTS, mc_version
     )
     
+    if found < 0:
+        raise RuntimeError(f"crack_high32_soa failed for range {start_high}-{end_high} (return code {found})")
+    if found >= MAX_RESULTS:
+        print(f"[WARNING] Result buffer full ({MAX_RESULTS}) for batch {start_high}-{end_high}, extra candidates were discarded")
+
     return [results[i] for i in range(found)]
 
 def main():
     # Create/Clear found seeds file
     found_seeds_file = Path(__file__).parent / "found_seeds.txt"
     start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(found_seeds_file, 'w', encoding='utf-8') as f:
-        f.write("=" * 60 + "\n")
-        f.write("Minecraft Bedrock High 32-bit Seed Cracker - Found Seeds\n")
-        f.write("=" * 60 + "\n")
-        f.write(f"Start Time: {start_time_str}\n")
-        f.write("=" * 60 + "\n\n")
+    try:
+        with open(found_seeds_file, 'w', encoding='utf-8') as f:
+            f.write("=" * 60 + "\n")
+            f.write("Minecraft Bedrock High 32-bit Seed Cracker - Found Seeds\n")
+            f.write("=" * 60 + "\n")
+            f.write(f"Start Time: {start_time_str}\n")
+            f.write("=" * 60 + "\n\n")
+    except OSError as e:
+        print(f"\n[ERROR] Cannot write {found_seeds_file}: {e}")
+        print("[ERROR] Found seeds could not be recorded, aborting.")
+        sys.exit(1)
 
     parser = argparse.ArgumentParser(description='Minecraft Bedrock High 32-bit Seed Cracker')
     parser.add_argument('--start', type=int, default=None, help='Start high value (inclusive), overrides config')
@@ -342,6 +381,11 @@ def main():
         max_processes = min(cpu_count, 16, max(1, cpu_count // 4))
         source = "auto-detect"
 
+    if not dll_path.exists():
+        print(f"\n[!] Error: library not found: {dll_path}")
+        print("[!] Please run 'bash build.sh' first to compile the library.")
+        sys.exit(1)
+
     print(f"\n[*] Low 32-bit: {low32}")
     print(f"[*] MC Version: {MC_VERSION_STR}")
     print(f"[*] Processes: {max_processes} ({source}, limited to 16)")
@@ -386,82 +430,83 @@ def main():
     # This is CRITICAL for stability on high-core systems
     ctx = mp.get_context('spawn')
     print(f"\n[*] Initializing {max_processes} worker processes (using spawn)...")
-    pool = ctx.Pool(max_processes)
-    print("[*] Workers initialized! Starting crack...")
-    print("[*] Progress will be updated in real-time...")
-    print(f"[*] Found seeds will be saved to: {found_seeds_file}\n")
+    with ctx.Pool(max_processes) as pool:
+        print("[*] Workers initialized! Starting crack...")
+        print("[*] Progress will be updated in real-time...")
+        print(f"[*] Found seeds will be saved to: {found_seeds_file}\n")
 
-    # Progress heartbeat: output progress even if no seeds found
-    last_output_time = time.time()
-    output_interval = 2.0  # Output progress every 2 seconds
+        # Progress heartbeat: output progress even if no seeds found
+        last_output_time = time.time()
+        output_interval = 2.0  # Output progress every 2 seconds
 
-    for batch_start in range(search_start, search_end_exclusive, batch_size * max_processes):
-        batch_end = min(batch_start + batch_size * max_processes, search_end_exclusive)
+        for batch_start in range(search_start, search_end_exclusive, batch_size * max_processes):
+            batch_end = min(batch_start + batch_size * max_processes, search_end_exclusive)
 
-        tasks = []
-        chunk = batch_size
-        for i in range(max_processes):
-            start = batch_start + i * chunk
-            end = start + chunk
-            if start < batch_end:
-                actual_end = min(end, batch_end)
-                tasks.append((start, actual_end, low32, sorted_samples, 0, MC_VERSION))  # Y coord is now per-sample
+            tasks = []
+            chunk = batch_size
+            for i in range(max_processes):
+                start = batch_start + i * chunk
+                end = start + chunk
+                if start < batch_end:
+                    actual_end = min(end, batch_end)
+                    tasks.append((start, actual_end, low32, sorted_samples, 0, MC_VERSION))  # Y coord is now per-sample
         
-        if tasks:
-            for r in pool.imap_unordered(crack_batch_soa, tasks):
-                if r:
-                    for seed in r:
-                        all_results.append(seed)
-                        found_count += 1
+            if tasks:
+                for r in pool.imap_unordered(crack_batch_soa, tasks):
+                    if r:
+                        for seed in r:
+                            all_results.append(seed)
+                            found_count += 1
 
-                        # Format seed info
-                        seed_info = format_seed_output(seed, low32)
+                            # Format seed info
+                            seed_info = format_seed_output(seed, low32)
 
-                        # Clear current line before outputting seed info
-                        sys.stdout.write('\r\033[K')  # Clear entire line
+                            # Clear current line before outputting seed info
+                            sys.stdout.write('\r\033[K')  # Clear entire line
+                            sys.stdout.flush()
+
+                            # Print seed info to console
+                            sys.stdout.write(seed_info + '\n')
+                            sys.stdout.flush()
+
+                            # Write to found seeds file
+                            try:
+                                with open(found_seeds_file, 'a', encoding='utf-8') as f:
+                                    f.write(seed_info + '\n')
+                                    f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                                    f.write("-" * 60 + '\n')
+                            except OSError as e:
+                                print(f"[WARNING] Failed to append seed {seed} to {found_seeds_file}: {e}")
+
+                    # Progress heartbeat: output every 2 seconds even if batch is not complete
+                    current_time = time.time()
+                    if current_time - last_output_time >= output_interval:
+                        elapsed = current_time - start_time
+                        estimated_done = int(elapsed * speed) if 'speed' in dir() else total_done
+                        percent = estimated_done / total_search * 100
+                        bar_len = 30
+                        filled = int(bar_len * percent / 100)
+                        bar = '#' * filled + '-' * (bar_len - filled)
+                        sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | ~{estimated_done:,}/{total_search:,} | Working... | Found: {found_count}')
                         sys.stdout.flush()
-
-                        # Print seed info to console
-                        sys.stdout.write(seed_info + '\n')
-                        sys.stdout.flush()
-
-                        # Write to found seeds file
-                        with open(found_seeds_file, 'a', encoding='utf-8') as f:
-                            f.write(seed_info + '\n')
-                            f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                            f.write("-" * 60 + '\n')
-
-                # Progress heartbeat: output every 2 seconds even if batch is not complete
-                current_time = time.time()
-                if current_time - last_output_time >= output_interval:
-                    elapsed = current_time - start_time
-                    estimated_done = int(elapsed * speed) if 'speed' in dir() else total_done
-                    percent = estimated_done / total_search * 100
-                    bar_len = 30
-                    filled = int(bar_len * percent / 100)
-                    bar = '#' * filled + '-' * (bar_len - filled)
-                    sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | ~{estimated_done:,}/{total_search:,} | Working... | Found: {found_count}')
-                    sys.stdout.flush()
-                    last_output_time = current_time
+                        last_output_time = current_time
         
-        total_done = batch_end - search_start
-        elapsed = time.time() - start_time
-        speed = total_done / elapsed if elapsed > 0 else 0
-        eta = (total_search - total_done) / speed if speed > 0 else 0
-        percent = total_done / total_search * 100
+            total_done = batch_end - search_start
+            elapsed = time.time() - start_time
+            speed = total_done / elapsed if elapsed > 0 else 0
+            eta = (total_search - total_done) / speed if speed > 0 else 0
+            percent = total_done / total_search * 100
         
-        bar_len = 30
-        filled = int(bar_len * percent / 100)
-        bar = '#' * filled + '-' * (bar_len - filled)
+            bar_len = 30
+            filled = int(bar_len * percent / 100)
+            bar = '#' * filled + '-' * (bar_len - filled)
 
-        # Clear line before progress update to avoid artifacts
-        sys.stdout.write('\r\033[K')  # Clear entire line
-        sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {total_done:,}/{total_search:,} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}')
-        sys.stdout.flush()
-        last_output_time = time.time()  # Reset heartbeat timer
+            # Clear line before progress update to avoid artifacts
+            sys.stdout.write('\r\033[K')  # Clear entire line
+            sys.stdout.write(f'\r  [{bar}] {percent:.1f}% | {total_done:,}/{total_search:,} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}')
+            sys.stdout.flush()
+            last_output_time = time.time()  # Reset heartbeat timer
     
-    pool.close()
-    pool.join()
     
     total_elapsed = time.time() - start_time
     total_speed = total_search / total_elapsed if total_elapsed > 0 else 0

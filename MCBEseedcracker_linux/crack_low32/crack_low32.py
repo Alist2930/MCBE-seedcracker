@@ -20,6 +20,7 @@ import multiprocessing as mp
 import json
 import os
 import sys
+import traceback
 from pathlib import Path
 
 # Add parent directory to path to import config_loader
@@ -28,6 +29,8 @@ import config_loader
 
 CONST_A = 2570712328
 CONST_B = 4048968661
+
+MAX_CPU_RESULTS = 1000
 
 STRUCTURE_CONFIGS = {
     "village": {"name": "Village", "salt": 10387312, "spacing": 34, "separation": 8, "spread_type": "triangular"},
@@ -109,7 +112,9 @@ def has_opencl_gpu():
 
         return False, "No OpenCL GPU found"
     except Exception as e:
-        return False, str(e)
+        print(f"[WARNING] OpenCL GPU detection failed: {e!r}")
+        traceback.print_exc()
+        return False, f"{type(e).__name__}: {e}"
 
 def test_sample_strictness(config, x, z, num_test_seeds=100000):
     """
@@ -138,6 +143,11 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
 
     # Load C library for fast testing
     lib_path = Path(__file__).parent / 'crack_low32.so'
+    if not lib_path.exists():
+        print(f"[WARNING] {lib_path} not found, cannot measure sample strictness")
+        print("[WARNING] Sample ordering will not be optimized; run 'bash build.sh' to build it")
+        return 0
+
     try:
         lib = ctypes.CDLL(str(lib_path))
         lib.crack_low32.argtypes = [
@@ -166,13 +176,24 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
             1, results_arr, num_test_seeds
         )
 
+        if found < 0:
+            print(f"[WARNING] crack_low32 returned {found} while testing strictness for ({x}, {z})")
+            return 0
+
         return found
-    except Exception as e:
-        print(f"[WARNING] Failed to test strictness with C library: {e}")
+    except (OSError, ctypes.ArgumentError) as e:
+        print(f"[WARNING] Failed to test strictness with {lib_path}: {e}")
+        print("[WARNING] Sample ordering will not be optimized")
         return 0
 
 
 def prepare_targets(targets):
+    unknown = sorted({t["structure"] for t in targets if t["structure"] not in STRUCTURE_CONFIGS})
+    if unknown:
+        print(f"\n[ERROR] Unknown structure type(s) in config.json: {', '.join(unknown)}")
+        print(f"[ERROR] Supported structures: {', '.join(sorted(STRUCTURE_CONFIGS))}")
+        sys.exit(1)
+
     # First sort by spread_type (linear first)
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
 
@@ -241,7 +262,13 @@ def crack_worker_cpu(args):
     start, end, r_base, ox, oz, offset_range, spread_type = args
     
     lib_path = Path(__file__).parent / 'crack_low32.so'
-    lib = ctypes.CDLL(str(lib_path))
+    if not lib_path.exists():
+        raise RuntimeError(f"crack_low32 library not found: {lib_path}. Run 'bash build.sh' first.")
+
+    try:
+        lib = ctypes.CDLL(str(lib_path))
+    except OSError as e:
+        raise RuntimeError(f"Failed to load {lib_path}: {e}") from e
     
     lib.crack_low32.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,
@@ -258,9 +285,14 @@ def crack_worker_cpu(args):
     oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
     offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
     spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-    results_arr = (ctypes.c_uint32 * 1000)()
+    results_arr = (ctypes.c_uint32 * MAX_CPU_RESULTS)()
     
-    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
+    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, MAX_CPU_RESULTS)
+    if found < 0:
+        raise RuntimeError(f"crack_low32 failed for range {start}-{end} (return code {found})")
+    if found >= MAX_CPU_RESULTS:
+        print(f"[WARNING] Result buffer full ({MAX_CPU_RESULTS}) for range {start}-{end}, extra candidates were discarded")
+
     return [results_arr[i] for i in range(found)]
 
 def run_crack_cpu(search_start, search_end, num_processes, all_results):
@@ -271,38 +303,35 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
     search_end_exclusive = search_end + 1
     step_size = 200_000_000
     
-    pool = mp.Pool(num_processes)
-    
-    while processed <= search_end:
-        step_start = processed
-        step_end = min(processed + step_size, search_end_exclusive)
-        chunk_size = (step_end - step_start) // num_processes
-        
-        tasks = []
-        for i in range(num_processes):
-            start = step_start + i * chunk_size
-            end = step_start + (i + 1) * chunk_size if i < num_processes - 1 else step_end
-            if start < end:
-                tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE))
-        
-        results = pool.map(crack_worker_cpu, tasks)
-        
-        for r in results:
-            all_results.extend(r)
-            for seed in r:
-                print(f">>> [!] Found seed: {seed} (0x{seed:08X})")
-        
-        processed = step_end
-        elapsed = time.time() - global_start
-        speed = (processed - search_start) / elapsed if elapsed > 0 else 0
-        progress = (processed - search_start) / total_seeds * 100
-        eta = (search_end_exclusive - processed) / speed if speed > 0 else 0
-        
-        eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
-        print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
-    
-    pool.close()
-    pool.join()
+    with mp.Pool(num_processes) as pool:
+        while processed <= search_end:
+            step_start = processed
+            step_end = min(processed + step_size, search_end_exclusive)
+            chunk_size = (step_end - step_start) // num_processes
+            
+            tasks = []
+            for i in range(num_processes):
+                start = step_start + i * chunk_size
+                end = step_start + (i + 1) * chunk_size if i < num_processes - 1 else step_end
+                if start < end:
+                    tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE))
+            
+            # A worker failure propagates here instead of being reported as "no match"
+            results = pool.map(crack_worker_cpu, tasks)
+            
+            for r in results:
+                all_results.extend(r)
+                for seed in r:
+                    print(f">>> [!] Found seed: {seed} (0x{seed:08X})")
+            
+            processed = step_end
+            elapsed = time.time() - global_start
+            speed = (processed - search_start) / elapsed if elapsed > 0 else 0
+            progress = (processed - search_start) / total_seeds * 100
+            eta = (search_end_exclusive - processed) / speed if speed > 0 else 0
+            
+            eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
+            print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
     
     return time.time() - global_start
 
@@ -364,8 +393,12 @@ def run_crack_gpu(search_start, search_end, all_results, config):
             batch_elapsed = time.time() - batch_elapsed_start
 
             if found < 0:
-                print(f"[ERROR] GPU crack failed at batch {processed:,}")
+                print(f"[ERROR] GPU crack failed at batch {processed:,} (return code {found})")
                 return -1
+
+            if found >= max_results:
+                print(f"[WARNING] Result buffer full ({max_results}) in batch {batch_start:,}, extra candidates were discarded")
+                print("[WARNING] Increase 'max_results' in config.json")
 
             for i in range(found):
                 seed = results_arr[i]
@@ -392,7 +425,8 @@ def run_crack_gpu(search_start, search_end, all_results, config):
         return elapsed
 
     except Exception as e:
-        print(f"[ERROR] GPU crack exception: {e}")
+        print(f"[ERROR] GPU crack exception: {type(e).__name__}: {e}")
+        traceback.print_exc()
         return -1
     finally:
         os.chdir(original_dir)
@@ -452,7 +486,7 @@ def main():
                 use_gpu = False
             else:
                 print("[!] GPU not available and auto-fallback disabled")
-                return
+                sys.exit(1)
     else:
         print("\n[*] CPU mode (from config)")
         use_gpu = False
@@ -479,13 +513,13 @@ def main():
         if not lib_path.exists():
             print(f"\n[!] Error: OpenCL library not found: {lib_path}")
             print("[!] Run 'gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL' first")
-            return
+            sys.exit(1)
     else:
         lib_path = Path(__file__).parent / 'crack_low32.so'
         if not lib_path.exists():
             print(f"\n[!] Error: CPU library not found: {lib_path}")
             print("[!] Please run 'bash build.sh' first to compile the library.")
-            return
+            sys.exit(1)
     
     total_seeds = search_end - search_start + 1
     
@@ -503,8 +537,17 @@ def main():
 
     if use_gpu:
         elapsed = run_crack_gpu(search_start, search_end, all_results, config)
-        if elapsed < 0 and config.get('auto_fallback', True):
+        if elapsed < 0:
+            if not config.get('auto_fallback', True):
+                print("\n[!] GPU crack failed and auto-fallback is disabled")
+                sys.exit(1)
+
             print("\n[*] Falling back to CPU mode...")
+            cpu_lib_path = Path(__file__).parent / 'crack_low32.so'
+            if not cpu_lib_path.exists():
+                print(f"[!] Error: CPU library not found: {cpu_lib_path}")
+                print("[!] Please run 'bash build.sh' first to compile the library.")
+                sys.exit(1)
             elapsed = run_crack_cpu(search_start, search_end, num_processes, all_results)
     else:
         elapsed = run_crack_cpu(search_start, search_end, num_processes, all_results)

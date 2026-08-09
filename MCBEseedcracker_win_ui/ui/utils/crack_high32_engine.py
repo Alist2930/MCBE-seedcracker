@@ -41,7 +41,10 @@ def init_dll():
         raise FileNotFoundError(f"DLL not found: {dll_path}")
     
     os.add_dll_directory(str(dll_path.parent))
-    dll = ctypes.CDLL(str(dll_path), winmode=0x00000008)
+    try:
+        dll = ctypes.CDLL(str(dll_path), winmode=0x00000008)
+    except OSError as e:
+        raise RuntimeError(f"Failed to load crack_high32 library {dll_path}: {e}") from e
     
     dll.crack_high32_soa.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
@@ -53,29 +56,37 @@ def init_dll():
     return dll
 
 def crack_batch_soa(args):
+    """Crack a single batch in a worker process
+
+    Raises:
+        Exception: Any failure propagates to the parent process; returning an
+            empty list would be indistinguishable from "no seed in this range"
+            and would silently skip part of the search space.
+    """
     start_high, end_high, low32, samples, y_coord, mc_version = args
-    try:
-        dll = init_dll()
-        
-        num_samples = len(samples)
-        sample_array = (BiomeSample * num_samples)()
-        for i, (x, z, biome_id) in enumerate(samples):
-            sample_array[i].x = x
-            sample_array[i].z = z
-            sample_array[i].biome_id = biome_id
-        
-        results = (ctypes.c_uint64 * MAX_RESULTS)()
-        
-        found = dll.crack_high32_soa(
-            start_high, end_high, low32, y_coord,
-            sample_array, num_samples,
-            results, MAX_RESULTS, mc_version
-        )
-        
-        return [results[i] for i in range(found)]
-    except Exception as e:
-        print(f"[ERROR] crack_batch_soa failed: {e}")
-        return []
+    dll = init_dll()
+
+    num_samples = len(samples)
+    sample_array = (BiomeSample * num_samples)()
+    for i, (x, z, biome_id) in enumerate(samples):
+        sample_array[i].x = x
+        sample_array[i].z = z
+        sample_array[i].biome_id = biome_id
+
+    results = (ctypes.c_uint64 * MAX_RESULTS)()
+
+    found = dll.crack_high32_soa(
+        start_high, end_high, low32, y_coord,
+        sample_array, num_samples,
+        results, MAX_RESULTS, mc_version
+    )
+
+    if found < 0:
+        raise RuntimeError(f"crack_high32_soa failed for range {start_high}-{end_high} (return code {found})")
+    if found >= MAX_RESULTS:
+        print(f"[WARNING] Result buffer full ({MAX_RESULTS}) for batch {start_high}-{end_high}, extra candidates were discarded")
+
+    return [results[i] for i in range(found)]
 
 def crack_high32_parallel(low32, samples, start=0, end=0xFFFFFFFF, y_coord=200, mc_version="1.21.60-26.23", num_processes=None):
     if not samples:

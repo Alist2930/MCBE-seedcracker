@@ -3,6 +3,7 @@ import time
 import json
 import os
 import sys
+import traceback
 import multiprocessing as mp
 import ctypes
 from ui.utils.language_manager import lang_manager
@@ -26,50 +27,62 @@ class BiomeSample(ctypes.Structure):
     _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("y", ctypes.c_int), ("biome_id", ctypes.c_int)]
 
 
+MAX_RESULTS = 1000
+
+
 def crack_batch(args):
+    """Crack a single high 32-bit batch in a worker process
+
+    Raises:
+        RuntimeError: If the native library is missing or the search fails.
+            Failures must propagate: an empty result is indistinguishable from
+            "no seed in this range" and would silently skip search space.
+    """
+    start_high, end_high, low32, samples, y_coord, mc_version = args
+
+    dll_path = get_dll_path()
+
+    if not os.path.exists(dll_path):
+        raise RuntimeError(f"crack_high32 library not found: {dll_path}")
+
     try:
-        start_high, end_high, low32, samples, y_coord, mc_version = args
-        
-        dll_path = get_dll_path()
-        
-        if not os.path.exists(dll_path):
-            print(f"[ERROR] DLL not found: {dll_path}")
-            return []
-        
         dll = ctypes.CDLL(dll_path, winmode=0x00000008)
-        
-        dll.crack_high32_soa.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
-            ctypes.POINTER(BiomeSample), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
-        ]
-        dll.crack_high32_soa.restype = ctypes.c_int
-        
-        num_samples = len(samples)
-        sample_array = (BiomeSample * num_samples)()
-        for i, (x, z, y, biome_id) in enumerate(samples):
-            sample_array[i].x = x
-            sample_array[i].z = z
-            sample_array[i].y = y
-            sample_array[i].biome_id = biome_id
-        
-        MAX_RESULTS = 1000
-        results = (ctypes.c_uint64 * MAX_RESULTS)()
-        
-        found = dll.crack_high32_soa(
-            start_high, end_high, low32, y_coord,
-            sample_array, num_samples,
-            results, MAX_RESULTS, mc_version
-        )
-        
-        seeds = [results[i] for i in range(found)]
-        if seeds:
-            print(f"[DEBUG] Found {len(seeds)} seeds in batch {start_high}-{end_high}")
-        
-        return seeds
-    except Exception as e:
-        print(f"[ERROR] crack_batch exception: {e}")
-        return []
+    except OSError as e:
+        raise RuntimeError(f"Failed to load crack_high32 library {dll_path}: {e}") from e
+
+    dll.crack_high32_soa.argtypes = [
+        ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
+        ctypes.POINTER(BiomeSample), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
+    ]
+    dll.crack_high32_soa.restype = ctypes.c_int
+
+    num_samples = len(samples)
+    sample_array = (BiomeSample * num_samples)()
+    for i, (x, z, y, biome_id) in enumerate(samples):
+        sample_array[i].x = x
+        sample_array[i].z = z
+        sample_array[i].y = y
+        sample_array[i].biome_id = biome_id
+
+    results = (ctypes.c_uint64 * MAX_RESULTS)()
+
+    found = dll.crack_high32_soa(
+        start_high, end_high, low32, y_coord,
+        sample_array, num_samples,
+        results, MAX_RESULTS, mc_version
+    )
+
+    if found < 0:
+        raise RuntimeError(f"crack_high32_soa failed for range {start_high}-{end_high} (return code {found})")
+    if found >= MAX_RESULTS:
+        print(f"[WARNING] Result buffer full ({MAX_RESULTS}) for batch {start_high}-{end_high}, extra candidates were discarded")
+
+    seeds = [results[i] for i in range(found)]
+    if seeds:
+        print(f"[DEBUG] Found {len(seeds)} seeds in batch {start_high}-{end_high}")
+
+    return seeds
 
 
 class High32Worker(QThread):
@@ -78,6 +91,7 @@ class High32Worker(QThread):
     finished = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
     biome_info_updated = pyqtSignal(str)  # New signal for biome sorting info
+    warning_occurred = pyqtSignal(str)  # Non-fatal problem the user should know about
     
     VERSION_MAP = {
         # Bedrock version auto-mapping (based on ChunkBase)
@@ -114,16 +128,28 @@ class High32Worker(QThread):
     def run(self):
         try:
             biome_data_path = os.path.join(os.path.dirname(__file__), "..", "data", "biomes.json")
-            with open(biome_data_path, 'r', encoding='utf-8') as f:
-                biome_data = json.load(f)
+            try:
+                with open(biome_data_path, 'r', encoding='utf-8') as f:
+                    biome_data = json.load(f)
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+                raise RuntimeError(f"Failed to load biome data {biome_data_path}: {e}") from e
 
             biome_samples = []
+            unknown_biomes = []
             for b in self.biomes:
                 biome_name = b['type']
                 biome_id = biome_data.get(biome_name, {}).get('id')
                 y_coord = b.get('y', 200)  # Default to 200 if Y not provided
-                if biome_id is not None:
-                    biome_samples.append((b['x'], b['z'], y_coord, biome_id))
+                if biome_id is None:
+                    unknown_biomes.append(biome_name)
+                    continue
+                biome_samples.append((b['x'], b['z'], y_coord, biome_id))
+
+            if unknown_biomes:
+                # Dropping samples silently would weaken the search without the user noticing
+                raise RuntimeError(
+                    "Unknown biome type(s): " + ", ".join(sorted(set(unknown_biomes)))
+                )
 
             if not biome_samples:
                 self.error_occurred.emit("No valid biome data")
@@ -280,9 +306,8 @@ class High32Worker(QThread):
                 self.finished.emit(self.results)
             
         except Exception as e:
-            import traceback
             traceback.print_exc()
-            self.error_occurred.emit(str(e))
+            self.error_occurred.emit(f"{type(e).__name__}: {e}")
     
     def save_progress(self, current):
         progress_data = {
@@ -303,8 +328,13 @@ class High32Worker(QThread):
             with open(self.progress_file, 'w', encoding='utf-8') as f:
                 json.dump(progress_data, f, indent=2)
             print(f"[HIGH32 SAVE SUCCESS] Progress saved to {self.progress_file}")
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"[HIGH32 SAVE ERROR] Failed to save progress: {e}")
+            traceback.print_exc()
+            self.warning_occurred.emit(
+                f"Failed to save progress to {self.progress_file}: {e}. "
+                "Cracking continues, but progress cannot be resumed."
+            )
     
     def pause(self):
         self.is_paused = True

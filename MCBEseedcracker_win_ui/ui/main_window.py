@@ -18,6 +18,7 @@ from ui.workers.low32_worker import Low32Worker
 from ui.workers.high32_worker import High32Worker
 import json
 import os
+import traceback
 import multiprocessing as mp
 
 
@@ -363,6 +364,7 @@ class MainWindow(QMainWindow):
             return
         
         original_start = start
+        requested_start = start
         progress_file = os.path.join(get_base_path(), "progress_low32.json")
         if os.path.exists(progress_file):
             print(f"[UI] Found progress file: {progress_file}")
@@ -398,8 +400,16 @@ class MainWindow(QMainWindow):
                     print(f"[UI] Calculated progress: {progress:.2f}%")
                     self.low32_progress.update_progress(progress, 0, 0)
                     self.low32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
-                except Exception as e:
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as e:
                     print(f"[UI ERROR] Failed to load progress: {e}")
+                    traceback.print_exc()
+                    start = requested_start
+                    original_start = requested_start
+                    self.low32_progress.reset()
+                    QMessageBox.warning(
+                        self, lang_manager.get("warning"),
+                        lang_manager.get("progress_load_failed_msg").format(str(e))
+                    )
             else:
                 print(f"[UI] User chose to start from beginning, removing progress file")
                 if os.path.exists(progress_file):
@@ -426,6 +436,7 @@ class MainWindow(QMainWindow):
         self.low32_worker.error_occurred.connect(self.show_error)
         self.low32_worker.compute_device_info.connect(self.update_low32_compute_device)
         self.low32_worker.structure_info_updated.connect(self.update_low32_structure_info)
+        self.low32_worker.warning_occurred.connect(self.show_warning)
 
         self.low32_worker.start()
         self.low32_status_label.setText(lang_manager.get("start_low32_cracking"))
@@ -531,6 +542,7 @@ class MainWindow(QMainWindow):
         
         progress_file = os.path.join(get_base_path(), "progress_high32.json")
         original_start = start  # Default: use user input start value as original
+        requested_start = start
 
         if os.path.exists(progress_file):
             print(f"[UI] Found high32 progress file: {progress_file}")
@@ -565,8 +577,16 @@ class MainWindow(QMainWindow):
                     print(f"[UI] Calculated progress: {progress:.2f}%")
                     self.high32_progress.update_progress(progress, 0, 0)
                     self.high32_status_label.setText(lang_manager.get("resume_from_progress_percent").format(progress))
-                except Exception as e:
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as e:
                     print(f"[UI ERROR] Failed to load high32 progress: {e}")
+                    traceback.print_exc()
+                    start = requested_start
+                    original_start = requested_start
+                    self.high32_progress.reset()
+                    QMessageBox.warning(
+                        self, lang_manager.get("warning"),
+                        lang_manager.get("progress_load_failed_msg").format(str(e))
+                    )
             else:
                 print(f"[UI] User chose to start from beginning, removing high32 progress file")
                 if os.path.exists(progress_file):
@@ -593,6 +613,7 @@ class MainWindow(QMainWindow):
         self.high32_worker.finished.connect(self.high32_finished)
         self.high32_worker.error_occurred.connect(self.show_error)
         self.high32_worker.biome_info_updated.connect(self.update_high32_biome_info)  # Connect new signal
+        self.high32_worker.warning_occurred.connect(self.show_warning)
 
         self.high32_worker.start()
 
@@ -710,8 +731,9 @@ class MainWindow(QMainWindow):
                 new_text = current_text + order_text
 
             self.low32_status_label.setText(new_text)
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
             print(f"[ERROR] Failed to parse structure info: {e}")
+            traceback.print_exc()
 
     def low32_finished(self, results):
         self.start_low32_btn.setEnabled(True)
@@ -728,15 +750,7 @@ class MainWindow(QMainWindow):
         
         self.low32_status_label.setText(lang_manager.get("low32_finished_msg").format(len(results)))
         
-        try:
-            from PyQt5.QtMultimedia import QSound
-            sound_path = os.path.join(os.path.dirname(__file__), "..", "sounds", "complete.wav")
-            if os.path.exists(sound_path):
-                QSound.play(sound_path)
-            else:
-                QApplication.beep()
-        except:
-            QApplication.beep()
+        self.play_completion_sound()
     
     def high32_finished(self, results):
         self.start_high32_btn.setEnabled(True)
@@ -754,19 +768,28 @@ class MainWindow(QMainWindow):
         
         self.high32_status_label.setText(lang_manager.get("high32_finished_msg").format(len(results)))
         
+        self.play_completion_sound()
+    
+    def play_completion_sound(self):
+        """Play the completion sound, falling back to the system beep"""
+        sound_path = os.path.join(os.path.dirname(__file__), "..", "sounds", "complete.wav")
         try:
             from PyQt5.QtMultimedia import QSound
-            sound_path = os.path.join(os.path.dirname(__file__), "..", "sounds", "complete.wav")
             if os.path.exists(sound_path):
                 QSound.play(sound_path)
-            else:
-                QApplication.beep()
-        except:
-            QApplication.beep()
+                return
+        except ImportError as e:
+            print(f"[WARNING] QtMultimedia unavailable, using system beep: {e}")
+        QApplication.beep()
     
     def show_error(self, error_msg):
         QMessageBox.critical(self, lang_manager.get("error"), lang_manager.get("cracking_error_msg").format(error_msg))
         self.statusBar().showMessage(lang_manager.get("cracking_error"))
+    
+    def show_warning(self, warning_msg):
+        """Report a non-fatal problem without interrupting the running crack"""
+        print(f"[WARNING] {warning_msg}")
+        self.statusBar().showMessage(lang_manager.get("cracking_warning_msg").format(warning_msg), 15000)
     
     def enable_low32_test_mode(self):
         self.low32_start_input.setText("0")
@@ -1029,8 +1052,13 @@ class MainWindow(QMainWindow):
             session_file = os.path.join(get_base_path(), "session_data.json")
             with open(session_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2, ensure_ascii=False)
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"[ERROR] Failed to save session data: {e}")
+            traceback.print_exc()
+            QMessageBox.warning(
+                self, lang_manager.get("warning"),
+                lang_manager.get("session_save_failed_msg").format(str(e))
+            )
     
     def load_session_data(self):
         session_file = os.path.join(get_base_path(), "session_data.json")
@@ -1096,8 +1124,12 @@ class MainWindow(QMainWindow):
                 if os.path.exists(progress_high32_file):
                     self.restore_high32_progress_ui()
                 
-            except Exception as e:
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
                 print(f"[ERROR] Failed to load session data: {e}")
+                traceback.print_exc()
+                self.statusBar().showMessage(
+                    lang_manager.get("session_load_failed_msg").format(str(e)), 15000
+                )
     
     def restore_low32_progress_ui(self):
         try:
@@ -1131,8 +1163,12 @@ class MainWindow(QMainWindow):
             self.low32_status_label.setText(lang_manager.get("progress_restored"))
             print(f"[UI] Low32 progress UI restored successfully")
             
-        except Exception as e:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as e:
             print(f"[ERROR] Failed to restore low32 progress UI: {e}")
+            traceback.print_exc()
+            self.statusBar().showMessage(
+                lang_manager.get("progress_load_failed_msg").format(str(e)), 15000
+            )
     
     def restore_high32_progress_ui(self):
         try:
@@ -1155,5 +1191,9 @@ class MainWindow(QMainWindow):
             
             self.high32_status_label.setText(lang_manager.get("progress_restored"))
             
-        except Exception as e:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as e:
             print(f"[ERROR] Failed to restore high32 progress UI: {e}")
+            traceback.print_exc()
+            self.statusBar().showMessage(
+                lang_manager.get("progress_load_failed_msg").format(str(e)), 15000
+            )
