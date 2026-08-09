@@ -311,6 +311,19 @@ def main():
         search_end = args.end if args.end is not None else cfg.get('end', 0xFFFFFFFF)
     
     low32 = args.low32 if args.low32 is not None else cfg.get('low32', LOW32)
+
+    # start/end/low32 are passed to the native library as uint32, so reject
+    # out-of-range values instead of letting them wrap silently
+    for name, value in (('start', search_start), ('end', search_end), ('low32', low32)):
+        if not 0 <= value <= 0xFFFFFFFF:
+            print(f"\n[!] Error: {name} must be in 0 ~ 4294967295, got {value}")
+            return
+    if search_start > search_end:
+        print(f"\n[!] Error: start ({search_start}) must not exceed end ({search_end})")
+        return
+    if args.processes is not None and args.processes < 1:
+        print(f"\n[!] Error: --processes must be >= 1, got {args.processes}")
+        return
     
     print("=" * 60)
     print("Minecraft Bedrock High 32-bit Seed Cracker")

@@ -156,6 +156,17 @@ int crack_low32_opencl(
     uint32_t *results,
     int max_results)
 {
+    if (!r_base || !ox || !oz || !offset_range || !spread_type || !results)
+        return -1;
+    if (num_targets <= 0 || max_results <= 0)
+        return -1;
+
+    for (int i = 0; i < num_targets; i++)
+    {
+        if (offset_range[i] == 0)
+            return -1;
+    }
+
     cl_int err;
     cl_platform_id platform;
     cl_device_id device;
@@ -265,9 +276,24 @@ int crack_low32_opencl(
     fseek(fp, 0, SEEK_SET);
 
     char *kernel_source = (char *)malloc(kernel_size + 1);
-    fread(kernel_source, 1, kernel_size, fp);
-    kernel_source[kernel_size] = '\0';
+    if (!kernel_source)
+    {
+        fclose(fp);
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+        return -1;
+    }
+
+    size_t read_size = fread(kernel_source, 1, kernel_size, fp);
     fclose(fp);
+    if (read_size != kernel_size)
+    {
+        free(kernel_source);
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+        return -1;
+    }
+    kernel_source[kernel_size] = '\0';
 
     const char *source_ptr = kernel_source;
     program = clCreateProgramWithSource(context, 1, &source_ptr, &kernel_size, &err);

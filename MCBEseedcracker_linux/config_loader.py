@@ -10,6 +10,87 @@ import sys
 import shutil
 from pathlib import Path
 
+UINT32_MAX = 0xFFFFFFFF
+
+
+def _config_error(message):
+    print(f"\n[ERROR] Invalid config.json: {message}")
+    sys.exit(1)
+
+
+def _require_int(value, name, minimum=None, maximum=None):
+    """Validate that a config value is an integer within an optional range"""
+    if isinstance(value, bool) or not isinstance(value, int):
+        _config_error(f"'{name}' must be an integer, got {type(value).__name__}")
+    if minimum is not None and value < minimum:
+        _config_error(f"'{name}' must be >= {minimum}, got {value}")
+    if maximum is not None and value > maximum:
+        _config_error(f"'{name}' must be <= {maximum}, got {value}")
+    return value
+
+
+def _require_bool(value, name):
+    if not isinstance(value, bool):
+        _config_error(f"'{name}' must be true or false, got {type(value).__name__}")
+    return value
+
+
+def validate_low32_config(cfg):
+    """Validate low32 config values before they are passed to the native library"""
+    _require_bool(cfg['test_mode'], 'low32.test_mode')
+    _require_bool(cfg['use_gpu'], 'low32.use_gpu')
+    _require_bool(cfg['auto_fallback'], 'low32.auto_fallback')
+    _require_int(cfg['start'], 'low32.start', 0, UINT32_MAX)
+    _require_int(cfg['end'], 'low32.end', 0, UINT32_MAX + 1)
+    _require_int(cfg['seeds_per_thread'], 'low32.seeds_per_thread', 1, 1_000_000)
+    _require_int(cfg['max_results'], 'low32.max_results', 1, 1_000_000)
+
+    if cfg['start'] > cfg['end']:
+        _config_error(f"low32.start ({cfg['start']}) must not exceed low32.end ({cfg['end']})")
+
+    targets = cfg['targets']
+    if not isinstance(targets, list) or not targets:
+        _config_error("'low32.targets' must be a non-empty list")
+
+    for i, target in enumerate(targets):
+        if not isinstance(target, dict):
+            _config_error(f"low32.targets[{i}] must be an object")
+        if not isinstance(target.get('structure'), str):
+            _config_error(f"low32.targets[{i}].structure must be a string")
+        _require_int(target.get('x'), f"low32.targets[{i}].x", -30_000_000, 30_000_000)
+        _require_int(target.get('z'), f"low32.targets[{i}].z", -30_000_000, 30_000_000)
+
+    return cfg
+
+
+def validate_high32_config(cfg):
+    """Validate high32 config values before they are passed to the native library"""
+    _require_bool(cfg['test_mode'], 'high32.test_mode')
+    _require_int(cfg['start'], 'high32.start', 0, UINT32_MAX)
+    _require_int(cfg['end'], 'high32.end', 0, UINT32_MAX + 1)
+    _require_int(cfg['low32'], 'high32.low32', 0, UINT32_MAX)
+
+    if cfg['start'] > cfg['end']:
+        _config_error(f"high32.start ({cfg['start']}) must not exceed high32.end ({cfg['end']})")
+
+    if not isinstance(cfg['mc_version'], str):
+        _config_error("'high32.mc_version' must be a string")
+
+    samples = cfg['samples']
+    if not isinstance(samples, list) or not samples:
+        _config_error("'high32.samples' must be a non-empty list")
+
+    for i, sample in enumerate(samples):
+        if not isinstance(sample, dict):
+            _config_error(f"high32.samples[{i}] must be an object")
+        _require_int(sample.get('x'), f"high32.samples[{i}].x", -30_000_000, 30_000_000)
+        _require_int(sample.get('z'), f"high32.samples[{i}].z", -30_000_000, 30_000_000)
+        _require_int(sample.get('y'), f"high32.samples[{i}].y", -64, 512)
+        _require_int(sample.get('biome_id'), f"high32.samples[{i}].biome_id", 0, 1023)
+
+    return cfg
+
+
 def load_config():
     """Load configuration from config.json
     
@@ -23,7 +104,10 @@ def load_config():
     if config_file.exists():
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f)
+            if not isinstance(config, dict):
+                _config_error("top-level value must be a JSON object")
+            return config
         except json.JSONDecodeError as e:
             print(f"\n{'=' * 60}")
             print(f"[ERROR] config.json has syntax errors!")
@@ -107,11 +191,13 @@ def get_low32_config():
     }
 
     if config and 'low32' in config:
+        if not isinstance(config['low32'], dict):
+            _config_error("'low32' must be an object")
         # Merge with defaults
         for key, value in default.items():
             if key not in config['low32']:
                 config['low32'][key] = value
-        return config['low32']
+        return validate_low32_config(config['low32'])
 
     return default
 
@@ -135,11 +221,13 @@ def get_high32_config():
     }
     
     if config and 'high32' in config:
+        if not isinstance(config['high32'], dict):
+            _config_error("'high32' must be an object")
         # Merge with defaults
         for key, value in default.items():
             if key not in config['high32']:
                 config['high32'][key] = value
-        return config['high32']
+        return validate_high32_config(config['high32'])
     
     return default
 

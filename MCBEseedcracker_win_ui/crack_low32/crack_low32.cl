@@ -110,6 +110,9 @@ int check_mt_seed_triangular(uint r_seed, uint target_ox, uint target_oz, uint o
 // Check MT seed based on spread type
 int check_mt_seed(uint r_seed, uint target_ox, uint target_oz, uint offset_range, int spread_type)
 {
+    if (offset_range == 0)
+        return 0;
+
     if (spread_type == 1)
     {
         return check_mt_seed_triangular(r_seed, target_ox, target_oz, offset_range);

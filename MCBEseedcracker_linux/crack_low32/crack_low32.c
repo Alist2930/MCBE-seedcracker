@@ -106,6 +106,8 @@ static inline int check_mt_seed_triangular(uint32_t r_seed, uint32_t target_ox, 
 
 static inline int check_mt_seed(uint32_t r_seed, uint32_t target_ox, uint32_t target_oz, 
                                  uint32_t offset_range, int spread_type) {
+    if (offset_range == 0) return 0;
+
     if (spread_type == 1) {
         return check_mt_seed_triangular(r_seed, target_ox, target_oz, offset_range);
     } else {
@@ -125,6 +127,16 @@ EXPORT int crack_low32(
     uint32_t* results,
     int max_results
 ) {
+    if (!r_base || !ox || !oz || !offset_range || !spread_type || !results)
+        return -1;
+    if (num_targets <= 0 || max_results <= 0)
+        return -1;
+
+    for (int i = 0; i < num_targets; i++) {
+        if (offset_range[i] == 0)
+            return -1;
+    }
+
     int found_count = 0;
     
     for (uint64_t w_seed = start; w_seed < end && found_count < max_results; w_seed++) {

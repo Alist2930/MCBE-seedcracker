@@ -1,2 +1,2 @@
-PyQt5>=5.15.0
-pyinstaller>=5.0.0
+PyQt5>=5.15.11,<6
+pyinstaller>=6.11.1,<7

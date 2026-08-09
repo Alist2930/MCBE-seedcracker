@@ -20,6 +20,60 @@ import json
 import os
 import multiprocessing as mp
 
+UINT32_MAX = 4294967295
+
+
+def read_saved_progress(progress_file, default_start):
+    """Read a saved position from a progress file, ignoring unusable values.
+
+    The progress file lives next to the executable and is read back into the
+    search range that is handed to the native library, so every value is
+    range-checked here.
+    """
+    with open(progress_file, 'r', encoding='utf-8') as f:
+        progress_data = json.load(f)
+
+    if not isinstance(progress_data, dict):
+        raise ValueError("progress file is not a JSON object")
+
+    def read_position(key):
+        value = progress_data.get(key, default_start)
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= UINT32_MAX:
+            print(f"[UI WARNING] Ignoring invalid '{key}' in progress file: {value!r}")
+            return default_start
+        return value
+
+    return read_position("current_position"), read_position("original_start_value")
+
+
+COORD_LIMIT = 30_000_000
+
+
+def sanitize_entries(entries, required_keys):
+    """Keep only entries whose type is a string and whose coordinates are integers.
+
+    Session data is restored from disk and fed straight into the native library,
+    so malformed entries are dropped instead of being passed through.
+    """
+    if not isinstance(entries, list):
+        print(f"[UI WARNING] Ignoring session data entries: expected a list, got {type(entries).__name__}")
+        return []
+
+    sanitized = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("type"), str):
+            print(f"[UI WARNING] Ignoring malformed session data entry: {entry!r}")
+            continue
+
+        coords = [entry.get(key) for key in required_keys]
+        if any(isinstance(c, bool) or not isinstance(c, int) or abs(c) > COORD_LIMIT for c in coords):
+            print(f"[UI WARNING] Ignoring session data entry with invalid coordinates: {entry!r}")
+            continue
+
+        sanitized.append(entry)
+
+    return sanitized
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -373,13 +427,7 @@ class MainWindow(QMainWindow):
             )
             if reply == QMessageBox.Yes:
                 try:
-                    with open(progress_file, 'r', encoding='utf-8') as f:
-                        progress_data = json.load(f)
-                    
-                    print(f"[UI] Progress data loaded: {progress_data}")
-                    
-                    saved_start = progress_data.get("current_position", start)
-                    original_start = progress_data.get("original_start_value", start)
+                    saved_start, original_start = read_saved_progress(progress_file, start)
 
                     print(f"[UI] Saved start: {saved_start:,}")
                     print(f"[UI] Original start: {original_start:,}")
@@ -503,6 +551,10 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("low32_value_must_be_integer"))
             return
+
+        if low32_value < 0 or low32_value > UINT32_MAX:
+            QMessageBox.warning(self, lang_manager.get("warning"), lang_manager.get("start_value_range"))
+            return
         
         biomes = self.biome_list.get_biomes()
         if not biomes:
@@ -541,13 +593,7 @@ class MainWindow(QMainWindow):
             )
             if reply == QMessageBox.Yes:
                 try:
-                    with open(progress_file, 'r', encoding='utf-8') as f:
-                        progress_data = json.load(f)
-                    
-                    print(f"[UI] High32 progress data loaded: {progress_data}")
-                    
-                    saved_start = progress_data.get("current_position", 0)
-                    original_start = progress_data.get("original_start_value", start)
+                    saved_start, original_start = read_saved_progress(progress_file, start)
 
                     print(f"[UI] Saved start: {saved_start:,}")
                     print(f"[UI] Original start: {original_start:,}")
@@ -1040,11 +1086,11 @@ class MainWindow(QMainWindow):
                     data = json.load(f)
                 
                 if "structures" in data:
-                    self.structure_list.structures = data["structures"]
+                    self.structure_list.structures = sanitize_entries(data["structures"], ("x", "z"))
                     self.structure_list.update_table()
                 
                 if "biomes" in data:
-                    self.biome_list.biomes = data["biomes"]
+                    self.biome_list.biomes = sanitize_entries(data["biomes"], ("x", "z", "y"))
                     self.biome_list.update_table()
                 
                 if "low32_results" in data:

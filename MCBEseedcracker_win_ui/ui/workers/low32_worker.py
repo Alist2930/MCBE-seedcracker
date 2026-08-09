@@ -51,14 +51,38 @@ def load_config():
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
-        except:
-            pass
+        except (OSError, ValueError) as e:
+            print(f"[WARNING] Failed to read {config_path}: {e}, using defaults")
+            return default_config
+
+        if not isinstance(config, dict):
+            print(f"[WARNING] {config_path} is not a JSON object, using defaults")
+            return default_config
+
+        for key, value in default_config.items():
+            if key not in config:
+                config[key] = value
+
+        return validate_config(config, default_config)
 
     return default_config
+
+
+def validate_config(config, default_config):
+    """Replace config values that are unusable by the native library with defaults"""
+    for key in ("use_gpu", "auto_fallback"):
+        if not isinstance(config[key], bool):
+            print(f"[WARNING] Config '{key}' must be true or false, using default")
+            config[key] = default_config[key]
+
+    # max_results also sizes the results buffer handed to the native library
+    for key, maximum in (("seeds_per_thread", 1_000_000), ("max_results", 1_000_000)):
+        value = config[key]
+        if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= maximum:
+            print(f"[WARNING] Config '{key}' must be an integer in 1 ~ {maximum}, using default")
+            config[key] = default_config[key]
+
+    return config
 
 
 def has_opencl_gpu():
@@ -504,6 +528,16 @@ class Low32Worker(QThread):
             separation = config.get("separation", 8)
             salt = config.get("salt", 14357617)
             spread_type_str = config.get("spread_type", "linear")
+
+            # spacing/separation come from structures.json and are turned into the
+            # modulus used by the native library, so a zero/negative range there
+            # would crash it
+            if not isinstance(spacing, int) or not isinstance(separation, int) \
+                    or spacing <= 0 or separation < 0 or separation >= spacing:
+                raise ValueError(
+                    f"Invalid spacing/separation for structure '{structure_type}': "
+                    f"spacing={spacing}, separation={separation}"
+                )
 
             cx, cz = x >> 4, z >> 4
             rx, rz = cx // spacing, cz // spacing

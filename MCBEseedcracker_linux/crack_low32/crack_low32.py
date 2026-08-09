@@ -172,7 +172,26 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
         return 0
 
 
+def validate_targets(targets):
+    """Reject target definitions that the native library cannot process safely"""
+    for i, t in enumerate(targets):
+        structure = t.get("structure")
+        if structure not in STRUCTURE_CONFIGS:
+            known = ", ".join(sorted(STRUCTURE_CONFIGS))
+            print(f"\n[ERROR] targets[{i}]: unknown structure '{structure}'")
+            print(f"[ERROR] Supported structures: {known}")
+            sys.exit(1)
+
+        config = STRUCTURE_CONFIGS[structure]
+        spacing, separation = config["spacing"], config["separation"]
+        if spacing <= 0 or separation < 0 or separation >= spacing:
+            print(f"\n[ERROR] targets[{i}]: invalid spacing/separation for '{structure}'")
+            sys.exit(1)
+
+
 def prepare_targets(targets):
+    validate_targets(targets)
+
     # First sort by spread_type (linear first)
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
 
@@ -419,6 +438,21 @@ def main():
         test_mode = args.test if args.test is not None else cfg.get('test_mode', False)
         search_start = args.start if args.start is not None else cfg.get('start', 0)
         search_end = args.end if args.end is not None else cfg.get('end', 0xFFFFFFFF)
+
+    # The search range is passed to the native library as uint32, so reject
+    # out-of-range values instead of letting them wrap silently
+    if not 0 <= search_start <= 0xFFFFFFFF:
+        print(f"\n[!] Error: start must be in 0 ~ 4294967295, got {search_start}")
+        return
+    if not 0 <= search_end <= 0xFFFFFFFF:
+        print(f"\n[!] Error: end must be in 0 ~ 4294967295, got {search_end}")
+        return
+    if search_start > search_end:
+        print(f"\n[!] Error: start ({search_start}) must not exceed end ({search_end})")
+        return
+    if args.processes is not None and args.processes < 1:
+        print(f"\n[!] Error: --processes must be >= 1, got {args.processes}")
+        return
     
     print("=" * 60)
     print("Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")

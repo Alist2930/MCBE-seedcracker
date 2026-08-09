@@ -113,6 +113,13 @@ class High32Worker(QThread):
     
     def run(self):
         try:
+            # low32_value and the search range are passed to the native library as
+            # uint32, so reject out-of-range values instead of letting them wrap
+            for name, value in (("low32", self.low32_value), ("start", self.start_value), ("end", self.end_value)):
+                if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 0xFFFFFFFF:
+                    self.error_occurred.emit(f"{name} must be an integer in 0 ~ 4294967295, got {value!r}")
+                    return
+
             biome_data_path = os.path.join(os.path.dirname(__file__), "..", "data", "biomes.json")
             with open(biome_data_path, 'r', encoding='utf-8') as f:
                 biome_data = json.load(f)
@@ -122,6 +129,10 @@ class High32Worker(QThread):
                 biome_name = b['type']
                 biome_id = biome_data.get(biome_name, {}).get('id')
                 y_coord = b.get('y', 200)  # Default to 200 if Y not provided
+                coords = (b.get('x'), b.get('z'), y_coord)
+                if any(isinstance(c, bool) or not isinstance(c, int) for c in coords):
+                    print(f"[WARNING] Skipping biome sample with non-integer coordinates: {b!r}")
+                    continue
                 if biome_id is not None:
                     biome_samples.append((b['x'], b['z'], y_coord, biome_id))
 

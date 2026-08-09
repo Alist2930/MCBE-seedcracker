@@ -543,7 +543,9 @@ EXPORT int crack_high32_soa(
     int max_results,
     int mc_version)
 {
-    if (start_high >= end_high || num_samples == 0)
+    if (!samples || !results || num_samples <= 0 || max_results <= 0)
+        return -1;
+    if (start_high >= end_high)
         return 0;
 
     // OPTIMIZATION: Initialize global BiomeNoise cache once for this MC version
@@ -553,8 +555,15 @@ EXPORT int crack_high32_soa(
     int found_count = 0;
 
     BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)malloc(sizeof(BiomeNoiseSOA));
+    if (!bn_soa)
+        return -1;
     memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
     bn_soa->oct = (PerlinNoiseSOA *)malloc(256 * sizeof(PerlinNoiseSOA));
+    if (!bn_soa->oct)
+    {
+        free(bn_soa);
+        return -1;
+    }
     memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
 
     uint64_t seeds[4];
