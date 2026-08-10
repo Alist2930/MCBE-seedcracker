@@ -125,6 +125,22 @@ EXPORT int crack_low32(
     uint32_t* results,
     int max_results
 ) {
+    /* Security hardening: validate all inputs before use */
+    if (!r_base || !ox || !oz || !offset_range || !spread_type || !results) {
+        return -1;  /* Reject NULL pointers */
+    }
+
+    if (num_targets <= 0 || max_results <= 0) {
+        return -1;  /* Reject invalid counts */
+    }
+
+    /* Validate offset_range for all targets to prevent SIGFPE (divide by zero) */
+    for (int i = 0; i < num_targets; i++) {
+        if (offset_range[i] == 0) {
+            return -1;  /* Reject offset_range=0 (spacing == separation) */
+        }
+    }
+
     int found_count = 0;
 
     for (uint64_t w_seed = start; w_seed < end && found_count < max_results; w_seed++) {

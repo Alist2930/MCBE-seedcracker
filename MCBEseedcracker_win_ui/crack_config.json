@@ -1,5 +1,5 @@
 {
-    "use_gpu": false,
+    "use_gpu": true,
     "auto_fallback": true,
     "gpu_preferred_device": "auto",
     "seeds_per_thread": 256,

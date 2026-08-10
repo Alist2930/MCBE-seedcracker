@@ -254,7 +254,11 @@ def init_dll():
 def crack_batch_soa(args):
     start_high, end_high, low32, samples, y_coord, mc_version = args
     dll = init_dll()
-    
+
+    # Check if DLL loaded successfully
+    if dll is None:
+        raise RuntimeError(f"crack_high32 library not found or failed to load")
+
     num_samples = len(samples)
     sample_array = (BiomeSample * num_samples)()
     for i, sample in enumerate(samples):
@@ -267,15 +271,19 @@ def crack_batch_soa(args):
         sample_array[i].z = z
         sample_array[i].y = y
         sample_array[i].biome_id = biome_id
-    
+
     results = (ctypes.c_uint64 * MAX_RESULTS)()
-    
+
     found = dll.crack_high32_soa(
         start_high, end_high, low32, y_coord,
         sample_array, num_samples,
         results, MAX_RESULTS, mc_version
     )
-    
+
+    # Check for native function errors
+    if found < 0:
+        raise RuntimeError(f"crack_high32_soa failed for range {start_high}-{end_high} (return code {found})")
+
     return [results[i] for i in range(found)]
 
 def main():

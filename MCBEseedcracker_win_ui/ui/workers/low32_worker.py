@@ -51,12 +51,23 @@ def load_config():
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
+
+                # Validate config is a dictionary
+                if not isinstance(config, dict):
+                    raise ValueError("crack_config.json must contain a JSON object")
+
                 for key, value in default_config.items():
                     if key not in config:
                         config[key] = value
                 return config
-        except:
-            pass
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+            # Log the error but don't crash - use defaults
+            print(f"[WARNING] Failed to load config file: {e}")
+            print(f"[WARNING] Using default configuration")
+        except Exception as e:
+            # Catch any other unexpected errors
+            print(f"[WARNING] Unexpected error loading config: {e}")
+            print(f"[WARNING] Using default configuration")
 
     return default_config
 
@@ -104,39 +115,40 @@ def has_opencl_gpu():
 
 def crack_worker_cpu(args):
     """CPU worker for multiprocessing"""
-    try:
-        start, end, r_base, ox, oz, offset_range, spread_type = args
+    start, end, r_base, ox, oz, offset_range, spread_type = args
 
-        dll_path = get_dll_path(opencl=False)
+    dll_path = get_dll_path(opencl=False)
 
-        if not os.path.exists(dll_path):
-            print(f"[ERROR] DLL not found: {dll_path}")
-            return []
+    # Check if DLL exists before loading
+    if not os.path.exists(dll_path):
+        raise RuntimeError(f"crack_low32 DLL not found: {dll_path}")
 
-        lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+    lib = ctypes.CDLL(dll_path, winmode=0x00000008)
 
-        lib.crack_low32.argtypes = [
-            ctypes.c_uint32, ctypes.c_uint32,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
-        ]
-        lib.crack_low32.restype = ctypes.c_int
+    lib.crack_low32.argtypes = [
+        ctypes.c_uint32, ctypes.c_uint32,
+        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+        ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+    ]
+    lib.crack_low32.restype = ctypes.c_int
 
-        num_targets = len(r_base)
-        r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-        ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-        oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-        offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-        spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
-        results_arr = (ctypes.c_uint32 * 1000)()
+    num_targets = len(r_base)
+    r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
+    ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
+    oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
+    offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
+    spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
+    results_arr = (ctypes.c_uint32 * 1000)()
 
-        found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
-        return [results_arr[i] for i in range(found)]
-    except Exception as e:
-        print(f"[ERROR] crack_worker exception: {e}")
-        return []
+    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
+
+    # Check for native function errors
+    if found < 0:
+        raise RuntimeError(f"crack_low32 failed for range {start}-{end} (return code {found})")
+
+    return [results_arr[i] for i in range(found)]
 
 
 class Low32Worker(QThread):
@@ -488,6 +500,26 @@ class Low32Worker(QThread):
     def prepare_structures(self):
         CONST_A = 2570712328
         CONST_B = 4048968661
+
+        # Validate all structure types first
+        invalid_structures = []
+        for i, structure in enumerate(self.structures):
+            structure_type = structure.get("type")
+            if not structure_type:
+                self.error_occurred.emit(f"Structure {i} missing 'type' field")
+                return [], [], [], [], []
+
+            if structure_type not in self.structure_data:
+                invalid_structures.append(structure_type)
+
+        if invalid_structures:
+            valid_structures = ", ".join(sorted(self.structure_data.keys()))
+            error_msg = (
+                f"Invalid structure type(s): {', '.join(invalid_structures)}\n"
+                f"Valid structures are: {valid_structures}"
+            )
+            self.error_occurred.emit(error_msg)
+            return [], [], [], [], []
 
         # First sort by spread_type (linear first)
         sorted_structures = sorted(self.structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)

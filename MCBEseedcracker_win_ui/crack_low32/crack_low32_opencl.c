@@ -172,13 +172,11 @@ EXPORT int get_opencl_device_info(char *buffer, int buffer_size)
 EXPORT int crack_low32_opencl(
     uint32_t start,
     uint32_t end,
-    uint64_t *r_base_bedrock,
-    uint64_t *r_base_java,
+    uint32_t *r_base,
     uint32_t *ox,
     uint32_t *oz,
     uint32_t *offset_range,
     int *spread_type,
-    int *rng_type,
     int num_targets,
     uint32_t *results,
     int max_results)
@@ -327,11 +325,8 @@ EXPORT int crack_low32_opencl(
     cl_mem count_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(uint32_t), NULL, &err);
     CL_CHECK(err, "clCreateBuffer count");
 
-    cl_mem r_base_bedrock_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(uint64_t) * num_targets, NULL, &err);
-    CL_CHECK(err, "clCreateBuffer r_base_bedrock");
-
-    cl_mem r_base_java_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(uint64_t) * num_targets, NULL, &err);
-    CL_CHECK(err, "clCreateBuffer r_base_java");
+    cl_mem r_base_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(uint32_t) * num_targets, NULL, &err);
+    CL_CHECK(err, "clCreateBuffer r_base");
 
     cl_mem ox_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(uint32_t) * num_targets, NULL, &err);
     CL_CHECK(err, "clCreateBuffer ox");
@@ -345,20 +340,14 @@ EXPORT int crack_low32_opencl(
     cl_mem spread_type_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int) * num_targets, NULL, &err);
     CL_CHECK(err, "clCreateBuffer spread_type");
 
-    cl_mem rng_type_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int) * num_targets, NULL, &err);
-    CL_CHECK(err, "clCreateBuffer rng_type");
-
     // Initialize result count to 0
     uint32_t zero = 0;
     err = clEnqueueWriteBuffer(queue, count_buffer, CL_TRUE, 0, sizeof(uint32_t), &zero, 0, NULL, NULL);
     CL_CHECK(err, "clEnqueueWriteBuffer count init");
 
     // Write input data
-    err = clEnqueueWriteBuffer(queue, r_base_bedrock_buffer, CL_TRUE, 0, sizeof(uint64_t) * num_targets, r_base_bedrock, 0, NULL, NULL);
-    CL_CHECK(err, "clEnqueueWriteBuffer r_base_bedrock");
-
-    err = clEnqueueWriteBuffer(queue, r_base_java_buffer, CL_TRUE, 0, sizeof(uint64_t) * num_targets, r_base_java, 0, NULL, NULL);
-    CL_CHECK(err, "clEnqueueWriteBuffer r_base_java");
+    err = clEnqueueWriteBuffer(queue, r_base_buffer, CL_TRUE, 0, sizeof(uint32_t) * num_targets, r_base, 0, NULL, NULL);
+    CL_CHECK(err, "clEnqueueWriteBuffer r_base");
 
     err = clEnqueueWriteBuffer(queue, ox_buffer, CL_TRUE, 0, sizeof(uint32_t) * num_targets, ox, 0, NULL, NULL);
     CL_CHECK(err, "clEnqueueWriteBuffer ox");
@@ -372,25 +361,19 @@ EXPORT int crack_low32_opencl(
     err = clEnqueueWriteBuffer(queue, spread_type_buffer, CL_TRUE, 0, sizeof(int) * num_targets, spread_type, 0, NULL, NULL);
     CL_CHECK(err, "clEnqueueWriteBuffer spread_type");
 
-    err = clEnqueueWriteBuffer(queue, rng_type_buffer, CL_TRUE, 0, sizeof(int) * num_targets, rng_type, 0, NULL, NULL);
-    CL_CHECK(err, "clEnqueueWriteBuffer rng_type");
-
     // Set kernel arguments
-    // Note: parameter order changed - now using end_seed instead of total_seeds to avoid overflow
     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &results_buffer);
     err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &count_buffer);
     err |= clSetKernelArg(kernel, 2, sizeof(uint32_t), &start);
-    err |= clSetKernelArg(kernel, 3, sizeof(uint32_t), &end); // Pass end directly instead of total_seeds
+    err |= clSetKernelArg(kernel, 3, sizeof(uint32_t), &end);
     err |= clSetKernelArg(kernel, 4, sizeof(uint32_t), &seeds_per_thread);
-    err |= clSetKernelArg(kernel, 5, sizeof(cl_mem), &r_base_bedrock_buffer);
-    err |= clSetKernelArg(kernel, 6, sizeof(cl_mem), &r_base_java_buffer);
-    err |= clSetKernelArg(kernel, 7, sizeof(cl_mem), &ox_buffer);
-    err |= clSetKernelArg(kernel, 8, sizeof(cl_mem), &oz_buffer);
-    err |= clSetKernelArg(kernel, 9, sizeof(cl_mem), &offset_range_buffer);
-    err |= clSetKernelArg(kernel, 10, sizeof(cl_mem), &spread_type_buffer);
-    err |= clSetKernelArg(kernel, 11, sizeof(cl_mem), &rng_type_buffer);
-    err |= clSetKernelArg(kernel, 12, sizeof(uint32_t), &num_targets);
-    err |= clSetKernelArg(kernel, 13, sizeof(uint32_t), &max_results);
+    err |= clSetKernelArg(kernel, 5, sizeof(cl_mem), &r_base_buffer);
+    err |= clSetKernelArg(kernel, 6, sizeof(cl_mem), &ox_buffer);
+    err |= clSetKernelArg(kernel, 7, sizeof(cl_mem), &oz_buffer);
+    err |= clSetKernelArg(kernel, 8, sizeof(cl_mem), &offset_range_buffer);
+    err |= clSetKernelArg(kernel, 9, sizeof(cl_mem), &spread_type_buffer);
+    err |= clSetKernelArg(kernel, 10, sizeof(uint32_t), &num_targets);
+    err |= clSetKernelArg(kernel, 11, sizeof(uint32_t), &max_results);
     CL_CHECK(err, "clSetKernelArg");
 
     // Execute kernel
@@ -415,13 +398,11 @@ EXPORT int crack_low32_opencl(
     // Cleanup
     clReleaseMemObject(results_buffer);
     clReleaseMemObject(count_buffer);
-    clReleaseMemObject(r_base_bedrock_buffer);
-    clReleaseMemObject(r_base_java_buffer);
+    clReleaseMemObject(r_base_buffer);
     clReleaseMemObject(ox_buffer);
     clReleaseMemObject(oz_buffer);
     clReleaseMemObject(offset_range_buffer);
     clReleaseMemObject(spread_type_buffer);
-    clReleaseMemObject(rng_type_buffer);
     clReleaseKernel(kernel);
     clReleaseProgram(program);
     clReleaseCommandQueue(queue);

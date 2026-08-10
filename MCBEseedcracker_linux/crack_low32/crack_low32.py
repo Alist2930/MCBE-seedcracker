@@ -173,6 +173,22 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
 
 
 def prepare_targets(targets):
+    # Validate all structure names first
+    invalid_structures = []
+    for i, t in enumerate(targets):
+        structure_name = t.get("structure")
+        if not structure_name:
+            raise ValueError(f"Target {i} missing 'structure' field")
+        if structure_name not in STRUCTURE_CONFIGS:
+            invalid_structures.append(structure_name)
+
+    if invalid_structures:
+        valid_structures = ", ".join(sorted(STRUCTURE_CONFIGS.keys()))
+        raise ValueError(
+            f"Invalid structure name(s): {', '.join(invalid_structures)}\n"
+            f"Valid structures are: {valid_structures}"
+        )
+
     # First sort by spread_type (linear first)
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
 
@@ -239,10 +255,15 @@ R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = prepare_targets(TARG
 def crack_worker_cpu(args):
     """CPU worker for multiprocessing"""
     start, end, r_base, ox, oz, offset_range, spread_type = args
-    
+
     lib_path = Path(__file__).parent / 'crack_low32.so'
+
+    # Check if library exists before loading
+    if not lib_path.exists():
+        raise RuntimeError(f"crack_low32 library not found: {lib_path}")
+
     lib = ctypes.CDLL(str(lib_path))
-    
+
     lib.crack_low32.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
@@ -251,7 +272,7 @@ def crack_worker_cpu(args):
         ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
     ]
     lib.crack_low32.restype = ctypes.c_int
-    
+
     num_targets = len(r_base)
     r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
     ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
@@ -259,8 +280,13 @@ def crack_worker_cpu(args):
     offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
     spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
     results_arr = (ctypes.c_uint32 * 1000)()
-    
+
     found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
+
+    # Check for native function errors
+    if found < 0:
+        raise RuntimeError(f"crack_low32 failed for range {start}-{end} (return code {found})")
+
     return [results_arr[i] for i in range(found)]
 
 def run_crack_cpu(search_start, search_end, num_processes, all_results):

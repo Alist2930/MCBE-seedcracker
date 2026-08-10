@@ -81,11 +81,71 @@ def load_config():
     
     return default_config
 
+def validate_low32_config(config):
+    """Validate low32 configuration parameters
+
+    Args:
+        config: Configuration dictionary
+
+    Raises:
+        ValueError: If validation fails
+    """
+    UINT32_MAX = 4294967295
+
+    # Validate targets
+    targets = config.get('targets', [])
+    if not targets or len(targets) == 0:
+        raise ValueError("Configuration error: 'targets' list is empty. At least one target structure is required.")
+
+    # Validate each target
+    for i, target in enumerate(targets):
+        if not isinstance(target, dict):
+            raise ValueError(f"Configuration error: target {i} is not a dictionary")
+
+        # Check required fields
+        if 'structure' not in target:
+            raise ValueError(f"Configuration error: target {i} missing 'structure' field")
+
+        if 'x' not in target or 'z' not in target:
+            raise ValueError(f"Configuration error: target {i} missing coordinates")
+
+        # Check structure name is string
+        if not isinstance(target['structure'], str):
+            raise ValueError(f"Configuration error: target {i} 'structure' must be a string")
+
+        # Check coordinates are integers
+        if not isinstance(target['x'], int) or not isinstance(target['z'], int):
+            raise ValueError(f"Configuration error: target {i} coordinates must be integers")
+
+    # Validate range parameters
+    start = config.get('start', 0)
+    end = config.get('end', UINT32_MAX)
+
+    if not isinstance(start, int) or not isinstance(end, int):
+        raise ValueError("Configuration error: 'start' and 'end' must be integers")
+
+    if start < 0 or start > UINT32_MAX:
+        raise ValueError(f"Configuration error: 'start' must be in range [0, {UINT32_MAX}]")
+
+    if end < 0 or end > UINT32_MAX:
+        raise ValueError(f"Configuration error: 'end' must be in range [0, {UINT32_MAX}]")
+
+    if start > end:
+        raise ValueError("Configuration error: 'start' must be <= 'end'")
+
+    # Validate max_results
+    max_results = config.get('max_results', 10000)
+    if not isinstance(max_results, int) or max_results <= 0:
+        raise ValueError("Configuration error: 'max_results' must be a positive integer")
+
 def get_low32_config():
     """Get low32-bit cracker configuration
 
     Returns:
         dict with keys: test_mode, start, end, use_gpu, auto_fallback, seeds_per_thread, max_results, targets
+
+    Raises:
+        SystemExit: If config.json has syntax errors or validation fails
     """
     config = load_config()
 
@@ -111,14 +171,83 @@ def get_low32_config():
         for key, value in default.items():
             if key not in config['low32']:
                 config['low32'][key] = value
+
+        # Validate configuration
+        try:
+            validate_low32_config(config['low32'])
+        except ValueError as e:
+            print(f"\n[ERROR] Configuration validation failed!")
+            print(f"[ERROR] {e}")
+            print(f"\nPlease fix the error in config.json and try again.")
+            sys.exit(1)
+
         return config['low32']
 
     return default
 
+def validate_high32_config(config):
+    """Validate high32 configuration parameters
+
+    Args:
+        config: Configuration dictionary
+
+    Raises:
+        ValueError: If validation fails
+    """
+    UINT32_MAX = 4294967295
+
+    # Validate samples
+    samples = config.get('samples', [])
+    if not samples or len(samples) == 0:
+        raise ValueError("Configuration error: 'samples' list is empty. At least one biome sample is required.")
+
+    # Validate each sample
+    for i, sample in enumerate(samples):
+        if not isinstance(sample, dict):
+            raise ValueError(f"Configuration error: sample {i} is not a dictionary")
+
+        # Check required fields
+        for field in ['x', 'z', 'y', 'biome_id']:
+            if field not in sample:
+                raise ValueError(f"Configuration error: sample {i} missing '{field}' field")
+
+        # Check coordinates are integers
+        if not isinstance(sample['x'], int) or not isinstance(sample['z'], int) or not isinstance(sample['y'], int):
+            raise ValueError(f"Configuration error: sample {i} coordinates must be integers")
+
+        # Check biome_id is integer
+        if not isinstance(sample['biome_id'], int):
+            raise ValueError(f"Configuration error: sample {i} 'biome_id' must be an integer")
+
+    # Validate range parameters
+    start = config.get('start', 0)
+    end = config.get('end', 100000000)
+
+    if not isinstance(start, int) or not isinstance(end, int):
+        raise ValueError("Configuration error: 'start' and 'end' must be integers")
+
+    if start < 0 or start > UINT32_MAX:
+        raise ValueError(f"Configuration error: 'start' must be in range [0, {UINT32_MAX}]")
+
+    if end < 0 or end > UINT32_MAX:
+        raise ValueError(f"Configuration error: 'end' must be in range [0, {UINT32_MAX}]")
+
+    if start > end:
+        raise ValueError("Configuration error: 'start' must be <= 'end'")
+
+    # Validate low32
+    low32 = config.get('low32', 1818588773)
+    if not isinstance(low32, int) or low32 < 0 or low32 > UINT32_MAX:
+        raise ValueError(f"Configuration error: 'low32' must be in range [0, {UINT32_MAX}]")
+
 def get_high32_config():
-    """Get high32-bit cracker configuration"""
+    """Get high32-bit cracker configuration
+
+    Raises:
+        SystemExit: If config.json has syntax errors or validation fails
+    """
     config = load_config()
-    
+
     default = {
         'test_mode': False,
         'start': 0,
@@ -133,14 +262,24 @@ def get_high32_config():
             {"x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest"}
         ]
     }
-    
+
     if config and 'high32' in config:
         # Merge with defaults
         for key, value in default.items():
             if key not in config['high32']:
                 config['high32'][key] = value
+
+        # Validate configuration
+        try:
+            validate_high32_config(config['high32'])
+        except ValueError as e:
+            print(f"\n[ERROR] Configuration validation failed!")
+            print(f"[ERROR] {e}")
+            print(f"\nPlease fix the error in config.json and try again.")
+            sys.exit(1)
+
         return config['high32']
-    
+
     return default
 
 def mc_version_to_cubiomes(mc_version):
