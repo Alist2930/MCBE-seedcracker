@@ -72,7 +72,23 @@ cd ..
 echo ""
 echo "[3/3] Building crack_high32.so..."
 cd crack_high32
-gcc -O3 -fPIC -shared -o crack_high32.so crack_high32.c \
+
+# Performance optimization flags
+# -march=native -mtune=native: Optimize for current CPU architecture
+# -flto: Link-time optimization for better inlining
+# -fomit-frame-pointer: Free up a register for better performance
+# -ffast-math -fno-math-errno: Faster floating-point operations (safe for biome noise)
+# -funroll-loops: Unroll small loops for better instruction-level parallelism
+# -fno-semantic-interposition: Better function inlining (GCC 10+)
+# -fno-plt: Avoid PLT indirection for library calls
+
+echo "    [INFO] Building with aggressive optimization flags..."
+gcc -O3 -march=native -mtune=native \
+    -flto -fomit-frame-pointer \
+    -ffast-math -fno-math-errno \
+    -funroll-loops \
+    -fno-semantic-interposition -fno-plt \
+    -fPIC -shared -o crack_high32.so crack_high32.c \
     cubiomes/biomes.c \
     cubiomes/biomenoise.c \
     cubiomes/layers.c \

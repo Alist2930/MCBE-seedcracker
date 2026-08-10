@@ -48,11 +48,22 @@ if not "%CUDA_PATH%"=="" (
 
 echo.
 echo [3/4] Compiling crack_high32.dll...
-gcc -O3 -shared -fPIC -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes -lgomp
+echo [INFO] Building with performance optimizations...
+
+REM Try aggressive optimizations first
+gcc -O3 -march=native -mtune=native -flto -fomit-frame-pointer -ffast-math -fno-math-errno -funroll-loops -shared -fPIC -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes -lgomp 2>nul
 if errorlevel 1 (
-    echo [ERROR] Failed
-    pause
-    exit /b 1
+    echo [INFO] Aggressive optimizations failed, trying standard optimizations...
+    gcc -O3 -march=native -mtune=native -shared -fPIC -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes -lgomp 2>nul
+    if errorlevel 1 (
+        echo [INFO] Standard optimizations failed, using basic -O3...
+        gcc -O3 -shared -fPIC -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes -lgomp
+        if errorlevel 1 (
+            echo [ERROR] Compilation failed
+            pause
+            exit /b 1
+        )
+    )
 )
 echo [OK] crack_high32.dll
 
