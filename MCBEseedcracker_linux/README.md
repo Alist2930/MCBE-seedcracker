@@ -261,6 +261,7 @@ Each sample contains the following fields:
 
 | Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
 | ------------------- | -------------------------- | ----------------------------------------------- |
+| **26.50**           | Java 26.3 (MC_26_3)        | ✅ Dappled Forest (new biome)                   |
 | **26.30-26.40**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
 | **1.21.60-26.23**   | Java 1.21.5-26.1           | ✅ Pale Garden (expanded range)                 |
 | **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
@@ -372,7 +373,7 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 | ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
 | forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
 | lush_caves               | 175 | -      | deep_dark             | 183 | -      |
-| sulfur_caves             | 187 | -      |                       |     |        |
+| sulfur_caves             | 187 | -      | dappled_forest        | 188 | 0.45%  |
 
 > **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
 

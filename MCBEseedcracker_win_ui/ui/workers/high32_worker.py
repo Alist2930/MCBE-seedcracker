@@ -137,7 +137,8 @@ class High32Worker(QThread):
     
     VERSION_MAP = {
         # Bedrock version auto-mapping (based on ChunkBase)
-        "26.30-26.40": 38,  # MC_26_2 (Java 26.2, Sulfur Caves)
+        "26.50": 35,  # MC_26_3 (Java 26.3, Dappled Forest)
+        "26.30-26.40": 34,  # MC_26_2 (Java 26.2, Sulfur Caves)
         "1.21.60-26.23": 29,  # MC_1_21_5 (1.21.5-1.21.11, Pale Garden expanded range)
         "1.21.50": 28,  # MC_1_21_WD (Pale Garden supported with narrow range)
         "1.21-1.21.40": 27,  # MC_1_21_3 (Pale Garden not supported)
@@ -156,7 +157,7 @@ class High32Worker(QThread):
         self.end_value = end
         self.test_mode = test_mode
         self.mc_version_str = mc_version
-        self.mc_version = self.VERSION_MAP.get(mc_version, 38)  # Default to 26.30-26.40
+        self.mc_version = self.VERSION_MAP.get(mc_version, 35)  # Default to 26.50
         self.user_process_count = process_count  # User-specified process count
         self.is_paused = False
         self.is_stopped = False

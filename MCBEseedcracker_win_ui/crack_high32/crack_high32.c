@@ -117,6 +117,41 @@ EXPORT void initGlobalBiomeNoise(int mc_version)
     g_bn_cache_initialized = 1;
 }
 
+/**
+ * Query the biome ID at a specific (x, y, z) coordinate for a given full 64-bit seed.
+ * Used by measure_biome_rarity.py and get_biome.py for rarity measurement.
+ *
+ * @param seed Full 64-bit world seed
+ * @param x X coordinate (block)
+ * @param y Y coordinate (block)
+ * @param z Z coordinate (block)
+ * @param mc_version Minecraft version constant (e.g., MC_26_3=35)
+ * @return Biome ID at the specified location
+ */
+EXPORT int getBiomeAtSeed(uint64_t seed, int x, int y, int z, int mc_version)
+{
+    static BiomeNoise bn;
+    static int bn_mc_version = -1;
+
+    if (bn_mc_version != mc_version)
+    {
+        memset(&bn, 0, sizeof(BiomeNoise));
+        initBiomeNoise(&bn, mc_version);
+        bn_mc_version = mc_version;
+    }
+
+    setBiomeSeed(&bn, seed, 0);
+
+    uint64_t sha = getVoronoiSHA(seed);
+    int qx, qy, qz;
+    voronoiAccess3D(sha, x, y, z, &qx, &qy, &qz);
+
+    int64_t np[6];
+    sampleBiomeNoise(&bn, np, qx, qy, qz, NULL, 0);
+
+    return climateToBiome(mc_version, (const uint64_t *)np, NULL);
+}
+
 typedef struct
 {
     int x;

@@ -31,21 +31,26 @@ VERSION_BIOMES = {
     '26.30-26.40': [
         187  # Sulfur Caves (Added in Bedrock 26.30-26.40, corresponds to Java 26.2 Chaos Cubed Drop)
     ],
+    '26.50': [
+        188  # Dappled Forest (Added in Bedrock 26.50, corresponds to Java 26.3 Goes Wild update)
+    ],
 }
 
-VERSION_ORDER = ['1.18', '1.19', '1.20.0-51', '1.20.60-81', '1.21-1.21.40', '1.21.50', '1.21.60-26.23', '26.30-26.40']
+VERSION_ORDER = ['1.18', '1.19', '1.20.0-51', '1.20.60-81', '1.21-1.21.40', '1.21.50', '1.21.60-26.23', '26.30-26.40', '26.50']
 
 
 def normalize_version(version_key):
     """Map user-selected version string to VERSION_ORDER
 
     Bedrock version to cubiomes version mapping:
+    - 26.50 = Java 26.3 (MC_26_3) - Dappled Forest
     - 26.30-26.40 = Java 26.2 (MC_26_2) - Sulfur Caves
     - 1.21.60-26.23 = Java 1.21.5-26.1 (MC_1_21_5) - Pale Garden expanded range
     - 1.21.50 = Java 1.21.4 Winter Drop (MC_1_21_WD) - Supports Pale Garden
     - 1.21-1.21.40 = Java 1.21.3 (MC_1_21_3) - Does not support Pale Garden
 
     Examples:
+        "26.50" → "26.50" (Dappled Forest)
         "26.30-26.40" → "26.30-26.40" (Sulfur Caves)
         "1.21.60-26.23" → "1.21.60-26.23" (Pale Garden expanded range)
         "1.21.50" → "1.21.50" (supports Pale Garden)
@@ -55,6 +60,9 @@ def normalize_version(version_key):
     """
     # Version mapping (based on biome generation characteristics)
     VERSION_MAPPING = {
+        # 26.50: Supports Dappled Forest (corresponds to cubiomes MC_26_3)
+        "26.50": "26.50",
+
         # 26.30-26.40: Supports Sulfur Caves (corresponds to cubiomes MC_26_2)
         "26.30-26.40": "26.30-26.40",
 
@@ -78,7 +86,7 @@ def normalize_version(version_key):
         "1.18": "1.18",
     }
 
-    return VERSION_MAPPING.get(version_key, "26.30-26.40")
+    return VERSION_MAPPING.get(version_key, "26.50")
 
 
 def get_biome_version(biome_id):

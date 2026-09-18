@@ -1,12 +1,5 @@
 #include <inttypes.h>
 
-// This is a patch for 1.21.5 25w04a, when Pale gardens generate more frequently and are overall larger.
-
-// The guy who patched this was doing SHCTF where there is a MineCraft OSINT challenge,
-// and realized that the current Cubiomes is not enough.
-// He had no idea how to dump BTree from IntelliJ IDEA, so he just obtained the newest climate data from
-// the official data exporter to compare and modify the btree21wd.h nodes one by one.
-
 enum { btree215_order = 6 };
 
 static const uint32_t btree215_steps[] = { 1555, 259, 43, 7, 1, 0 };

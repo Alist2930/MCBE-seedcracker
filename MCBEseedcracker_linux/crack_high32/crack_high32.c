@@ -6,16 +6,18 @@
  *
  * Build Commands:
  *   Windows (MinGW-w64):
- *     gcc -O3 -shared -o crack_high32.dll crack_high32.c ^
- *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c ^
- *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c ^
- *         cubiomes/util.c cubiomes/finders.c -lm
+ *     gcc -O3 -march=native -mtune=native -flto -fomit-frame-pointer ^
+ *         -ffast-math -fno-math-errno -funroll-loops ^
+ *         -shared -o crack_high32.dll crack_high32.c ^
+ *         cubiomes/biomes.c cubiomes/biomenoise.c ^
+ *         cubiomes/layers.c cubiomes/noise.c -lm
  *
  *   Linux:
- *     gcc -O3 -shared -fPIC -o crack_high32.so crack_high32.c \
- *         cubiomes/biomes.c cubiomes/biomenoise.c cubiomes/generator.c \
- *         cubiomes/layers.c cubiomes/noise.c cubiomes/quadbase.c \
- *         cubiomes/util.c cubiomes/finders.c -lm
+ *     gcc -O3 -march=native -mtune=native -flto -fomit-frame-pointer \
+ *         -ffast-math -fno-math-errno -funroll-loops \
+ *         -shared -fPIC -o crack_high32.so crack_high32.c \
+ *         cubiomes/biomes.c cubiomes/biomenoise.c \
+ *         cubiomes/layers.c cubiomes/noise.c -lm
  *
  * Bug Fixes (2024):
  *   1. Fixed SHIFT noise parameter order in sampleBiomeNoiseSOA():
@@ -108,6 +110,41 @@ EXPORT void initGlobalBiomeNoise(int mc_version)
 
     g_bn_cache_mc_version = mc_version;
     g_bn_cache_initialized = 1;
+}
+
+/**
+ * Query the biome ID at a specific (x, y, z) coordinate for a given full 64-bit seed.
+ * Used by measure_biome_rarity.py and get_biome.py for rarity measurement.
+ *
+ * @param seed Full 64-bit world seed
+ * @param x X coordinate (block)
+ * @param y Y coordinate (block)
+ * @param z Z coordinate (block)
+ * @param mc_version Minecraft version constant (e.g., MC_26_3=35)
+ * @return Biome ID at the specified location
+ */
+EXPORT int getBiomeAtSeed(uint64_t seed, int x, int y, int z, int mc_version)
+{
+    static BiomeNoise bn;
+    static int bn_mc_version = -1;
+
+    if (bn_mc_version != mc_version)
+    {
+        memset(&bn, 0, sizeof(BiomeNoise));
+        initBiomeNoise(&bn, mc_version);
+        bn_mc_version = mc_version;
+    }
+
+    setBiomeSeed(&bn, seed, 0);
+
+    uint64_t sha = getVoronoiSHA(seed);
+    int qx, qy, qz;
+    voronoiAccess3D(sha, x, y, z, &qx, &qy, &qz);
+
+    int64_t np[6];
+    sampleBiomeNoise(&bn, np, qx, qy, qz, NULL, 0);
+
+    return climateToBiome(mc_version, (const uint64_t *)np, NULL);
 }
 
 typedef struct
@@ -591,13 +628,13 @@ EXPORT int crack_high32_soa(
     // Cache-aligned allocations for better memory performance
     BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)ALIGNED_ALLOC(sizeof(BiomeNoiseSOA), 64);
     if (!bn_soa)
-        return 0;  // Allocation failed
+        return 0; // Allocation failed
     memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
     bn_soa->oct = (PerlinNoiseSOA *)ALIGNED_ALLOC(256 * sizeof(PerlinNoiseSOA), 64);
     if (!bn_soa->oct)
     {
         ALIGNED_FREE(bn_soa);
-        return 0;  // Allocation failed
+        return 0; // Allocation failed
     }
     memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
 

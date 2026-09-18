@@ -261,6 +261,7 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 
 | 基岩版版本          | 对应 Java 版本            | 支持的群系                  |
 | ------------------- | ------------------------- | --------------------------- |
+| **26.50**           | Java 26.3 (MC_26_3)       | ✅ 斑驳森林（新群系）       |
 | **26.30-26.40**          | Java 26.2 (Chaos Cubed)   | ✅ 硫磺洞穴（新地下群系）   |
 | **1.21.60-26.23**   | Java 1.21.5-26.1          | ✅ 苍白之园（扩大范围）     |
 | **1.21.50**         | Java 1.21.4 (Winter Drop) | ✅ 苍白之园（较小范围）     |
@@ -372,7 +373,7 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 | ocean（海洋）                         | 0   | 6.87%  | plains（平原）                          | 1   | 10.69% |
 | forest（森林）                        | 4   | 12.31% | dripstone_caves（溶洞）                 | 174 | -      |
 | lush_caves（繁茂洞穴）                | 175 | -      | deep_dark（深暗之域）                   | 183 | -      |
-| sulfur_caves（硫磺洞穴）              | 187 | -      |                                         |     |        |
+| sulfur_caves（硫磺洞穴）              | 187 | -      | dappled_forest（斑驳森林）             | 188 | 0.45%  |
 
 > **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
 

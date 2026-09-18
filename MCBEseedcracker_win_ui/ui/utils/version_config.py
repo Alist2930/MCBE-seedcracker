@@ -8,9 +8,15 @@ For WinUI and Linux version selection
 
 # Bedrock version -> cubiomes code mapping (based on ChunkBase version correspondence)
 BEDROCK_VERSION_MAP = {
+    # Bedrock 26.50 (Java 26.3 Goes Wild update, Dappled Forest)
+    "26.50": {
+        "cubiomes_code": 35,  # MC_26_3
+        "warning": None
+    },
+
     # Bedrock 26.30-26.40 (Java 26.2 Chaos Cubed Drop, Sulfur Caves)
     "26.30-26.40": {
-        "cubiomes_code": 38,  # MC_26_2
+        "cubiomes_code": 34,  # MC_26_2
         "warning": None
     },
 
@@ -60,6 +66,7 @@ BEDROCK_VERSION_MAP = {
 # WinUI version selector display options (only show Bedrock versions)
 WINUI_VERSION_OPTIONS = [
     # Bedrock options
+    {"text_zh": "26.50", "text_en": "26.50", "data": "26.50", "type": "bedrock"},
     {"text_zh": "26.30-26.40", "text_en": "26.30-26.40", "data": "26.30-26.40", "type": "bedrock"},
     {"text_zh": "1.21.60-26.23", "text_en": "1.21.60-26.23", "data": "1.21.60-26.23", "type": "bedrock"},
     {"text_zh": "1.21.50", "text_en": "1.21.50", "data": "1.21.50", "type": "bedrock"},
@@ -74,8 +81,8 @@ def get_cubiomes_version(bedrock_version_key):
     """Get cubiomes version code"""
     mapping = BEDROCK_VERSION_MAP.get(bedrock_version_key)
     if mapping:
-        return mapping.get("cubiomes_code", 38)
-    return 38  # Default to latest version (26.30-26.40)
+        return mapping.get("cubiomes_code", 35)
+    return 35  # Default to latest version (26.50)
 
 def get_version_warning(version_key):
     """Get version warning message"""

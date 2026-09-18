@@ -60,6 +60,7 @@ VERSION_BIOMES = {
     '1.21.50': [186],  # Pale Garden
     '1.21.60-26.23': [186],  # Pale Garden (expanded range)
     '26.30-26.40': [187],  # Sulfur Caves
+    '26.50': [188],  # Dappled Forest
 }
 
 SIGNED64_MAX = 9223372036854775807
@@ -92,7 +93,7 @@ def test_sample_strictness(sample, low32, mc_version, num_test_seeds=100000):
     Args:
         sample: (x, z, y, biome_id) tuple
         low32: Known low 32-bit value
-        mc_version: cubiomes version constant (e.g., MC_26_2=38)
+        mc_version: cubiomes version constant (e.g., MC_26_3=35)
         num_test_seeds: Number of high32 candidates to test (default 100000)
 
     Returns:
@@ -170,7 +171,7 @@ def check_biome_version(samples, mc_version):
     Sample format: (x, z, y, biome_id)
     """
     # Version order for comparison (use small versions)
-    version_order = ['1.18', '1.19', '1.20.0-51', '1.20.60-81', '1.21-1.21.40', '1.21.50', '1.21.60-26.23', '26.30-26.40']
+    version_order = ['1.18', '1.19', '1.20.0-51', '1.20.60-81', '1.21-1.21.40', '1.21.50', '1.21.60-26.23', '26.30-26.40', '26.50']
     mc_idx = version_order.index(mc_version) if mc_version in version_order else len(version_order) - 1
     warnings = []
     
@@ -209,7 +210,7 @@ SAMPLES = [(s['x'], s['z'], s['y'], s['biome_id']) for s in _cfg_samples] if _cf
 LOW32 = _cfg.get('low32', 1818588773)
 
 # MC Version (string like '1.21.60', '1.21.50', etc.)
-MC_VERSION_STR = _cfg.get('mc_version', '26.30-26.40')
+MC_VERSION_STR = _cfg.get('mc_version', '26.50')
 
 # MC version validation and normalization happens after VERSION_MAP is defined below
 
@@ -219,10 +220,12 @@ MC_1_20 = 25
 MC_1_21_3 = 27  # Java 1.21-1.21.3
 MC_1_21_WD = 28  # Java 1.21.4 (Winter Drop, Bedrock 1.21.50)
 MC_1_21_5 = 29  # Java 1.21.5-26.1 (Pale Garden expanded range, Bedrock 1.21.60-26.23)
-MC_26_2 = 38  # Java 26.2 (Chaos Cubed Drop, Bedrock 26.30-26.40)
+MC_26_2 = 34  # Java 26.2 (Chaos Cubed Drop, Bedrock 26.30-26.40)
+MC_26_3 = 35  # Java 26.3 (Goes Wild, Bedrock 26.50)
 
 VERSION_MAP = {
     # Bedrock version auto-mapping (based on ChunkBase)
+    "26.50": MC_26_3,  # Java 26.3 (Dappled Forest)
     "26.30-26.40": MC_26_2,  # Java 26.2 (Sulfur Caves)
     "1.21.60-26.23": MC_1_21_5,  # Java 1.21.5-26.1 (Pale Garden expanded range)
     "1.21.50": MC_1_21_WD,  # Java 1.21.4 (Pale Garden supported)
@@ -248,8 +251,8 @@ if MC_VERSION_STR not in VERSION_MAP:
         print(f"[INFO] MC version '{MC_VERSION_STR}' matched to '{matched}'")
         MC_VERSION_STR = matched
     else:
-        print(f"[WARNING] Unknown MC version '{MC_VERSION_STR}', defaulting to '26.30-26.40'")
-        MC_VERSION_STR = "26.30-26.40"
+        print(f"[WARNING] Unknown MC version '{MC_VERSION_STR}', defaulting to '26.50'")
+        MC_VERSION_STR = "26.50"
 MC_VERSION = VERSION_MAP[MC_VERSION_STR]
 
 # Batch size for multiprocessing

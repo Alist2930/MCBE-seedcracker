@@ -18,7 +18,7 @@ class BiomeListWidget(QWidget):
         super().__init__()
         self.biomes = []
         self.biome_data = self.load_biome_data()
-        self.mc_version = "26.30-26.40"  # Default to latest version (Sulfur Caves)
+        self.mc_version = "26.50"  # Default to latest version (Dappled Forest)
         self.init_ui()
     
     def load_biome_data(self):
@@ -35,10 +35,11 @@ class BiomeListWidget(QWidget):
                 "desert": {"name_zh": "沙漠", "name_en": "Desert", "id": 2, "rarity": {"1.18": 0.02353480, "1.19": 0.02318180, "1.20.0-51": 0.02315620, "1.20.60-81": 0.02315620, "1.21-1.21.40": 0.02315620, "1.21.50": 0.02471080, "1.21.60-26.23": 0.02329, "26.30-26.40": 0.02329}},
                 "cherry_grove": {"name_zh": "樱花树林", "name_en": "Cherry Grove", "id": 185, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 0.00278580, "1.20.60-81": 0.00278580, "1.21-1.21.40": 0.00278580, "1.21.50": 0.00280480, "1.21.60-26.23": 0.00295, "26.30-26.40": 0.00295}},
                 "pale_garden": {"name_zh": "苍白之园", "name_en": "Pale Garden", "id": 186, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 0.00078550, "1.21.60-26.23": 0.00121, "26.30-26.40": 0.00121}},
-                "sulfur_caves": {"name_zh": "硫磺洞穴", "name_en": "Sulfur Caves", "id": 187, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 1.00000000, "1.21.60-26.23": 1.00000000, "26.30-26.40": 0.005}}
+                "sulfur_caves": {"name_zh": "硫磺洞穴", "name_en": "Sulfur Caves", "id": 187, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 1.00000000, "1.21.60-26.23": 1.00000000, "26.30-26.40": 0.005}},
+                "dappled_forest": {"name_zh": "斑驳森林", "name_en": "Dappled Forest", "id": 188, "rarity": {"1.18": 1.00000000, "1.19": 1.00000000, "1.20.0-51": 1.00000000, "1.20.60-81": 1.00000000, "1.21-1.21.40": 1.00000000, "1.21.50": 1.00000000, "1.21.60-26.23": 1.00000000, "26.30-26.40": 1.00000000, "26.50": 1.00000000}}
             }
 
-    def get_biome_rarity(self, biome_name, mc_version="26.30-26.40"):
+    def get_biome_rarity(self, biome_name, mc_version="26.50"):
         """Get biome rarity for specific version"""
         try:
             if biome_name in self.biome_data:
@@ -197,7 +198,7 @@ class BiomeListWidget(QWidget):
 
 
 class AddBiomeDialog(QDialog):
-    def __init__(self, biome_data, mc_version="26.30-26.40", parent=None, edit_mode=False):
+    def __init__(self, biome_data, mc_version="26.50", parent=None, edit_mode=False):
         super().__init__(parent)
         self.biome_data = biome_data
         self.mc_version = mc_version
