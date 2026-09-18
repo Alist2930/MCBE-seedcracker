@@ -62,7 +62,7 @@ def load_config():
             "start": 0,
             "end": 100000000,
             "low32": 1818588773,
-            "mc_version": "26.30+",
+            "mc_version": "26.30-26.40",
             "samples": [
                 {"x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden"},
                 {"x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove"},
@@ -286,7 +286,7 @@ def mc_version_to_cubiomes(mc_version):
     """Convert MC version string to cubiomes version constant
     
     Supported versions:
-    - "26.30+" (Sulfur Caves, latest)
+    - "26.30-26.40" (Sulfur Caves, latest)
     - "1.21.60-26.23" (Pale Garden expanded range)
     - "1.21.50" (Pale Garden supported)
     - "1.21-1.21.40" (No Pale Garden)
@@ -296,14 +296,14 @@ def mc_version_to_cubiomes(mc_version):
     - "1.18" (Lush Caves, Dripstone Caves)
     
     Args:
-        mc_version: String like '1.21.60', '1.21.50', '1.21-1.21.40', '26.30+', etc.
+        mc_version: String like '1.21.60', '1.21.50', '1.21-1.21.40', '26.30-26.40', etc.
     
     Returns:
         Integer version constant for cubiomes
     """
     # Version mapping (only supported versions)
     version_map = {
-        '26.30+': 38,  # MC_26_2
+        '26.30-26.40': 38,  # MC_26_2
         '1.21.60-26.23': 29,  # MC_1_21_5
         '1.21.50': 28,  # MC_1_21_WD
         '1.21-1.21.40': 27,  # MC_1_21_3
@@ -327,5 +327,5 @@ def mc_version_to_cubiomes(mc_version):
                 return version_map[ver_key]
     
     # Default to latest version
-    print(f"[WARNING] Unknown MC version '{mc_version}', using latest (26.30+)")
+    print(f"[WARNING] Unknown MC version '{mc_version}', using latest (26.30-26.40)")
     return 38  # MC_26_2

@@ -204,7 +204,7 @@ Edit `crack_config.json` in the application directory:
 
 | Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
 | ------------------- | -------------------------- | ----------------------------------------------- |
-| **26.30+**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
+| **26.30-26.40**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
 | **1.21.60-26.23**   | Java 1.21.5-26.1           | ✅ Pale Garden (expanded range)                 |
 | **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
 | **1.21-1.21.40**    | Java 1.21.3                | ❌ No Pale Garden                               |
@@ -223,7 +223,7 @@ Edit `crack_config.json` in the application directory:
 | **1.21.50**       | ⚠️ Exists but smaller range               |
 | **1.21.60-26.23** | ✅ Expanded generation range              |
 
-**Latest version (Bedrock 26.30+)**:
+**Latest version (Bedrock 26.30-26.40)**:
 
 - Corresponds to Java 26.2 (Chaos Cubed Drop)
 - New biome: Sulfur Caves (ID: 187)
@@ -264,13 +264,13 @@ Even with same version number, Java and Bedrock have biome generation difference
 | -------------- | ------------------------------------------ |
 | Latest Version | 4.1.2 (fork with MC 26.2 support)          |
 | Last Update    | July 2026 (integrated SeedMapper btree262) |
-| Max Supported  | Java 26.2 (Bedrock 26.30+)                 |
+| Max Supported  | Java 26.2 (Bedrock 26.30-26.40)                 |
 
 **cubiomes Update Status:**
 
 - Official cubiomes stopped updating after November 2024
 - Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
-- Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30+)
+- Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30-26.40)
 
 ### Automatic Rarity Sorting
 

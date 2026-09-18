@@ -483,18 +483,34 @@ def main():
         print("\n[*] CPU mode (from config)")
         use_gpu = False
 
-    # Get process count: command-line > config > auto-detect
+    # CRITICAL: Limit processes to prevent resource exhaustion
+    # On high-core systems (>16 cores), using all cores causes:
+    # - SO loading conflicts (multiple processes loading same .so)
+    # - Memory exhaustion
+    # - Lock contention
+    # Solution: Use max 16 processes regardless of core count
+
+    # Priority: command-line args > config file > auto-detect
     if args.processes is not None:
-        num_processes = args.processes
+        num_processes = min(args.processes, 16)  # Never exceed 16
+        if args.processes > 16:
+            print(f"[WARNING] Limiting processes from {args.processes} to 16 (to prevent resource exhaustion)")
         source = "command-line"
     elif cfg.get('processes', None) is not None:
-        num_processes = cfg.get('processes')
+        cfg_processes = cfg.get('processes')
+        num_processes = min(cfg_processes, 16)  # Never exceed 16
+        if cfg_processes > 16:
+            print(f"[WARNING] Limiting processes from {cfg_processes} to 16 (to prevent resource exhaustion)")
         source = "config file"
     else:
-        num_processes = mp.cpu_count()
+        # Auto-limit: use min(cpu_count, 16)
+        num_processes = min(mp.cpu_count(), 16)
         source = "auto-detect"
 
-    print(f"[*] Processes: {num_processes} ({source})")
+    if mp.cpu_count() > 16:
+        print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes} (to prevent resource exhaustion)")
+
+    print(f"[*] Processes: {num_processes} ({source}, limited to 16)")
 
     compute_device = f"GPU ({gpu_device})" if use_gpu else f"CPU ({num_processes} cores)"
     print(f"[*] Compute device: {compute_device}")

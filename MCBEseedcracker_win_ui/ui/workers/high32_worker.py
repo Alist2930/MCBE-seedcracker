@@ -65,11 +65,67 @@ def crack_batch(args):
         seeds = [results[i] for i in range(found)]
         if seeds:
             print(f"[DEBUG] Found {len(seeds)} seeds in batch {start_high}-{end_high}")
-        
+
         return seeds
     except Exception as e:
         print(f"[ERROR] crack_batch exception: {e}")
         return []
+
+
+def test_biome_strictness(sample, low32, mc_version, num_test_seeds=100000):
+    """
+    Test the strictness (matching probability) of a biome sample.
+    Tests num_test_seeds high32 candidates and counts how many produce the target biome.
+    Returns the match count (lower = stricter = rarer = higher priority).
+
+    Args:
+        sample: (x, z, y, biome_id) tuple
+        low32: Known low 32-bit value
+        mc_version: cubiomes version constant (integer)
+        num_test_seeds: Number of high32 candidates to test (default 100000)
+
+    Returns:
+        Number of matches (lower = stricter)
+    """
+    if len(sample) == 4:
+        x, z, y, biome_id = sample
+    else:
+        x, z, biome_id = sample
+        y = 200
+
+    dll_path = get_dll_path()
+    if not os.path.exists(dll_path):
+        print(f"[ERROR] DLL not found: {dll_path}")
+        return 0
+
+    dll = ctypes.CDLL(dll_path, winmode=0x00000008)
+
+    dll.crack_high32_soa.argtypes = [
+        ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
+        ctypes.POINTER(BiomeSample), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
+    ]
+    dll.crack_high32_soa.restype = ctypes.c_int
+
+    sample_array = (BiomeSample * 1)()
+    sample_array[0].x = x
+    sample_array[0].z = z
+    sample_array[0].y = y
+    sample_array[0].biome_id = biome_id
+
+    results = (ctypes.c_uint64 * num_test_seeds)()
+
+    found = dll.crack_high32_soa(
+        0, num_test_seeds, low32, 0,
+        sample_array, 1,
+        results, num_test_seeds, mc_version
+    )
+
+    if found < 0:
+        print(f"[ERROR] crack_high32_soa failed during strictness test (return code {found})")
+        return 0
+
+    return found
 
 
 class High32Worker(QThread):
@@ -81,7 +137,7 @@ class High32Worker(QThread):
     
     VERSION_MAP = {
         # Bedrock version auto-mapping (based on ChunkBase)
-        "26.30+": 38,  # MC_26_2 (Java 26.2, Sulfur Caves)
+        "26.30-26.40": 38,  # MC_26_2 (Java 26.2, Sulfur Caves)
         "1.21.60-26.23": 29,  # MC_1_21_5 (1.21.5-1.21.11, Pale Garden expanded range)
         "1.21.50": 28,  # MC_1_21_WD (Pale Garden supported with narrow range)
         "1.21-1.21.40": 27,  # MC_1_21_3 (Pale Garden not supported)
@@ -100,7 +156,7 @@ class High32Worker(QThread):
         self.end_value = end
         self.test_mode = test_mode
         self.mc_version_str = mc_version
-        self.mc_version = self.VERSION_MAP.get(mc_version, 38)  # Default to 26.30+
+        self.mc_version = self.VERSION_MAP.get(mc_version, 38)  # Default to 26.30-26.40
         self.user_process_count = process_count  # User-specified process count
         self.is_paused = False
         self.is_stopped = False
@@ -129,40 +185,38 @@ class High32Worker(QThread):
                 self.error_occurred.emit("No valid biome data")
                 return
 
-            # Sort by rarity (lower rarity = more rare = higher priority)
-            def get_rarity(biome_id):
-                biome_name = None
-                for name, data in biome_data.items():
-                    if data.get('id') == biome_id:
-                        biome_name = name
-                        break
-                if biome_name and biome_name in biome_data:
-                    rarity_dict = biome_data[biome_name].get('rarity', {})
-                    # Use mc_version_str (e.g., "1.21.50") instead of mc_version (integer code)
-                    return rarity_dict.get(self.mc_version_str, 1.0)
-                return 1.0
+            # Sort by empirical strictness (fewest matches = rarest = first)
+            print(f"\n[HIGH32 INFO] Testing biome sample strictness (0-100000 high32 seeds)...")
+            strictness_scores = []
+            for sample in biome_samples:
+                matches = test_biome_strictness(sample, self.low32_value, self.mc_version, num_test_seeds=100000)
+                strictness_scores.append(matches)
 
-            biome_samples_sorted = sorted(biome_samples, key=lambda s: get_rarity(s[3]))  # s[3] is biome_id
+            # Sort ascending (fewer matches = stricter = first)
+            paired = list(zip(strictness_scores, biome_samples))
+            paired.sort(key=lambda p: p[0])
+            biome_samples_sorted = [s for _, s in paired]
+            sorted_scores = [sc for sc, _ in paired]
 
-            # Print sorted biome info (temporary verification)
+            # Print sorted biome info
             biome_info_lines = []
             biome_info_lines.append("="*60)
-            biome_info_lines.append("Biome samples (sorted by rarity, rarest first):")
+            biome_info_lines.append("Biome samples (sorted by strictness, rarest first):")
             biome_info_lines.append("="*60)
-            for i, (x, z, y, biome_id) in enumerate(biome_samples_sorted, 1):
+            for i, ((x, z, y, biome_id), score) in enumerate(zip(biome_samples_sorted, sorted_scores), 1):
                 biome_name = None
                 for name, data in biome_data.items():
                     if data.get('id') == biome_id:
                         biome_name = name
                         break
-                rarity = get_rarity(biome_id)
+                match_pct = score / 100000 * 100
                 if biome_name:
                     # Use appropriate language for biome name
                     if lang_manager.language == "zh_CN":
                         biome_display_name = biome_data[biome_name].get('name_zh', biome_name)
                     else:
                         biome_display_name = biome_data[biome_name].get('name_en', biome_name)
-                    biome_info_lines.append(f"    {i}. ({x}, {z}, Y={y}) -> {biome_display_name} (ID: {biome_id}, {rarity*100:.4f}%)")
+                    biome_info_lines.append(f"    {i}. ({x}, {z}, Y={y}) -> {biome_display_name} (ID: {biome_id}) - {score}/100000 matches ({match_pct:.4f}%)")
             biome_info_lines.append("="*60)
 
             # Send biome info to UI
