@@ -273,7 +273,7 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 | 基岩版版本          | 对应 Java 版本            | 支持的群系                  |
 | ------------------- | ------------------------- | --------------------------- |
-| **26.50**           | Java 26.3 (MC_26_3)       | ✅ 斑驳森林（新群系）       |
+| **26.50**           | Java 26.3 (Wilderness Bound)       | ✅ 斑驳森林（新群系）       |
 | **26.30-26.40**          | Java 26.2 (Chaos Cubed)   | ✅ 硫磺洞穴（新地下群系）   |
 | **1.21.60-26.23**   | Java 1.21.5-26.1          | ✅ 苍白之园（扩大范围）     |
 | **1.21.50**         | Java 1.21.4 (Winter Drop) | ✅ 苍白之园（较小范围）     |
@@ -293,12 +293,12 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 | **1.21.50**       | ⚠️ 存在但范围较小         |
 | **1.21.60-26.23** | ✅ 扩大的生成范围         |
 
-**最新版本（基岩版 26.30-26.40）**：
+**最新版本（基岩版 26.50）**：
 
-- 对应 Java 26.2（混沌立方更新）
-- 新增群系：硫磺洞穴（ID: 187）
-- 洞穴群系破解需使用低 Y 坐标（Y≤60）
-- 推荐：使用地表群系进行破解（有稀有度数据）
+- 对应 Java 26.3（奔赴荒野）
+- 新增群系：斑驳森林（ID: 188）
+- 斑驳森林为地表群系（稀有度约0.45%）
+- 同时支持硫磺洞穴（ID: 187），需使用低 Y 坐标（Y≤60）
 
 **版本 1.21.60-26.23**：
 
@@ -328,52 +328,53 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 #### 重要限制
 
-**高32位破解功能基于 cubiomes 库，支持到 Java 版 1.21.11（通过社区 fork 版本）。**
+**高32位破解功能基于 cubiomes 库，已集成 SeedMapper 的 MC 26.3 支持。**
 
-| cubiomes 信息  | 详情                                          |
-| -------------- | --------------------------------------------- |
-| 最新版本       | 4.1.2 (fork 版本)                             |
-| 最后更新       | 2025年1月 (fork 版本)                         |
-| 支持的最高版本 | Java 版 1.21.5-1.21.11 (基岩版 1.21.60-26.23) |
+| cubiomes 信息  | 详情                                              |
+| -------------- | ------------------------------------------------- |
+| 最新版本       | 4.1.2 (集成 MC 26.3 支持的 fork 版本)             |
+| 最后更新       | 2026年9月 (集成 SeedMapper btree263)              |
+| 支持的最高版本 | Java 26.3 (基岩版 26.50)                          |
 
 **cubiomes 更新状态：**
 
 - 官方 cubiomes 在 2024年11月后停止更新
-- 集成 SeedMapper 的 cubiomes fork 版本支持 1.21.5+ 和 26.2+
-- 支持苍白之园（1.21.50+）和硫磺洞穴（26.30-26.40）
+- 集成 SeedMapper 的 cubiomes fork 版本支持 1.21.5+ 和 26.2+/26.3+
+- 支持苍白之园（1.21.50+）、硫磺洞穴（26.30-26.40）和斑驳森林（26.50）
 
-#### 主世界群系ID参考（1.21.60-26.23）
+#### 主世界群系ID参考（26.50）
 
 | 群系                                  | ID  | 稀有度 | 群系                                    | ID  | 稀有度 |
 | ------------------------------------- | --- | ------ | --------------------------------------- | --- | ------ |
-| extreme_hills_mutated（风袭沙砾丘陵） | 131 | 0.10%  | stony_peaks（裸岩山峰）                 | 182 | 0.10%  |
-| pale_garden（苍白之园）               | 186 | 0.12%  | mushroom_island（蘑菇岛）               | 14  | 0.14%  |
-| frozen_peaks（冰封山峰）              | 181 | 0.16%  | jagged_peaks（尖峭山峰）                | 180 | 0.18%  |
-| extreme_hills_plus_trees（风袭森林）  | 34  | 0.19%  | savanna_mutated（风袭热带草原）         | 163 | 0.21%  |
-| ice_spikes（冰刺之地）                | 140 | 0.24%  | extreme_hills（风袭丘陵）               | 3   | 0.26%  |
-| cherry_grove（樱花树林）              | 185 | 0.29%  | mesa_bryce（风蚀恶地）                  | 165 | 0.33%  |
-| cold_beach（积雪沙滩）                | 26  | 0.36%  | snowy_slopes（积雪山坡）                | 179 | 0.39%  |
-| savanna_plateau（热带高原）           | 36  | 0.40%  | mangrove_swamp（红树林沼泽）            | 184 | 0.51%  |
-| mesa_plateau_stone（繁茂的恶地高原）  | 38  | 0.62%  | bamboo_jungle（竹林）                   | 168 | 0.64%  |
-| sunflower_plains（向日葵平原）        | 129 | 0.67%  | mega_taiga（原始松木针叶林）            | 32  | 0.69%  |
-| flower_forest（繁花森林）             | 132 | 0.69%  | redwood_taiga_mutated（原始云杉针叶林） | 160 | 0.71%  |
-| grove（雪林）                         | 178 | 0.72%  | frozen_river（冻河）                    | 11  | 0.83%  |
-| mesa（恶地）                          | 37  | 0.89%  | swamp（沼泽）                           | 6   | 0.98%  |
-| meadow（草甸）                        | 177 | 1.16%  | stone_beach（石岸）                     | 25  | 1.17%  |
-| deep_frozen_ocean（冰冻深海）         | 50  | 1.25%  | jungle_edge（稀疏丛林）                 | 23  | 1.38%  |
-| roofed_forest（黑森林）               | 29  | 1.84%  | jungle（丛林）                          | 21  | 2.04%  |
-| warm_ocean（暖水海洋）                | 44  | 2.13%  | birch_forest_mutated（原始桦木森林）    | 155 | 2.15%  |
-| frozen_ocean（冻洋）                  | 10  | 2.26%  | birch_forest（桦木森林）                | 27  | 2.29%  |
-| desert（沙漠）                        | 2   | 2.33%  | deep_lukewarm_ocean（温水深海）         | 48  | 2.37%  |
-| cold_taiga（积雪针叶林）              | 30  | 2.40%  | deep_cold_ocean（冷水深海）             | 49  | 2.42%  |
-| beach（沙滩）                         | 16  | 2.45%  | ice_plains（雪原）                      | 12  | 2.78%  |
-| taiga（针叶林）                       | 5   | 3.40%  | deep_ocean（深海）                      | 24  | 3.60%  |
-| savanna（热带草原）                   | 35  | 3.91%  | lukewarm_ocean（温水海洋）              | 45  | 4.55%  |
-| cold_ocean（冷水海洋）                | 46  | 4.59%  | river（河流）                           | 7   | 6.22%  |
-| ocean（海洋）                         | 0   | 6.87%  | plains（平原）                          | 1   | 10.69% |
-| forest（森林）                        | 4   | 12.31% | dripstone_caves（溶洞）                 | 174 | -      |
-| lush_caves（繁茂洞穴）                | 175 | -      | deep_dark（深暗之域）                   | 183 | -      |
-| sulfur_caves（硫磺洞穴）              | 187 | -      | dappled_forest（斑驳森林）             | 188 | 0.45%  |
+| extreme_hills_mutated（风袭沙砾丘陵）         | 131 | 0.10%  | deep_frozen_ocean（冰冻深海）                 | 50  | 1.16%  |
+| stony_peaks（裸岩山峰）                     | 182 | 0.12%  | stone_beach（石岸）                         | 25  | 1.25%  |
+| mushroom_island（蘑菇岛）                  | 14  | 0.14%  | jungle_edge（稀疏丛林）                       | 23  | 1.35%  |
+| pale_garden（苍白之园）                     | 186 | 0.14%  | warm_ocean（暖水海洋）                        | 44  | 1.97%  |
+| frozen_peaks（冰封山峰）                    | 181 | 0.14%  | roofed_forest（黑森林）                      | 29  | 2.02%  |
+| jagged_peaks（尖峭山峰）                    | 180 | 0.17%  | jungle（丛林）                              | 21  | 2.08%  |
+| extreme_hills_plus_trees（风袭森林）        | 34  | 0.19%  | birch_forest_mutated（原始桦木森林）            | 155 | 2.20%  |
+| ice_spikes（冰刺之地）                      | 140 | 0.19%  | birch_forest（桦木森林）                      | 27  | 2.21%  |
+| savanna_mutated（风袭热带草原）               | 163 | 0.20%  | frozen_ocean（冻洋）                        | 10  | 2.25%  |
+| cherry_grove（樱花树林）                    | 185 | 0.28%  | desert（沙漠）                              | 2   | 2.35%  |
+| mesa_bryce（风蚀恶地）                      | 165 | 0.29%  | cold_taiga（积雪针叶林）                       | 30  | 2.36%  |
+| extreme_hills（风袭丘陵）                   | 3   | 0.29%  | beach（沙滩）                               | 16  | 2.39%  |
+| cold_beach（积雪沙滩）                      | 26  | 0.34%  | deep_cold_ocean（冷水深海）                   | 49  | 2.39%  |
+| snowy_slopes（积雪山坡）                    | 179 | 0.41%  | deep_lukewarm_ocean（温水深海）               | 48  | 2.39%  |
+| savanna_plateau（热带高原）                 | 36  | 0.41%  | ice_plains（雪原）                          | 12  | 2.76%  |
+| dappled_forest（斑驳森林）                  | 188 | 0.45%  | taiga（针叶林）                              | 5   | 3.38%  |
+| mangrove_swamp（红树林沼泽）                 | 184 | 0.50%  | deep_ocean（深海）                          | 24  | 3.70%  |
+| mesa_plateau_stone（繁茂的恶地高原）           | 38  | 0.59%  | savanna（热带草原）                           | 35  | 4.04%  |
+| sunflower_plains（向日葵平原）               | 129 | 0.66%  | lukewarm_ocean（温水海洋）                    | 45  | 4.47%  |
+| flower_forest（繁花森林）                   | 132 | 0.66%  | cold_ocean（冷水海洋）                        | 46  | 4.52%  |
+| bamboo_jungle（竹林）                     | 168 | 0.67%  | river（河流）                               | 7   | 6.31%  |
+| redwood_taiga_mutated（原始云杉针叶林）        | 160 | 0.67%  | ocean（海洋）                               | 0   | 6.87%  |
+| mega_taiga（原始松木针叶林）                   | 32  | 0.71%  | plains（平原）                              | 1   | 10.33% |
+| grove（雪林）                             | 178 | 0.75%  | forest（森林）                              | 4   | 12.22% |
+| frozen_river（冻河）                      | 11  | 0.83%  | dripstone_caves（溶洞）                     | 174 | -      |
+| mesa（恶地）                              | 37  | 0.88%  | lush_caves（繁茂洞穴）                        | 175 | -      |
+| swamp（沼泽）                             | 6   | 0.95%  | deep_dark（深暗之域）                         | 183 | -      |
+| meadow（草甸）                            | 177 | 1.16%  | sulfur_caves（硫磺洞穴）                      | 187 | -      |
+
 
 > **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
 

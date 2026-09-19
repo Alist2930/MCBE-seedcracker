@@ -261,7 +261,7 @@ Each sample contains the following fields:
 
 | Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
 | ------------------- | -------------------------- | ----------------------------------------------- |
-| **26.50**           | Java 26.3 (MC_26_3)        | ✅ Dappled Forest (new biome)                   |
+| **26.50**           | Java 26.3 (Wilderness Bound)        | ✅ Dappled Forest (new biome)                   |
 | **26.30-26.40**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
 | **1.21.60-26.23**   | Java 1.21.5-26.1           | ✅ Pale Garden (expanded range)                 |
 | **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
@@ -281,12 +281,12 @@ Each sample contains the following fields:
 | **1.21.50**       | ⚠️ Exists but smaller range               |
 | **1.21.60-26.23** | ✅ Expanded generation range              |
 
-**Latest version (Bedrock 26.30-26.40)**:
+**Latest version (Bedrock 26.50)**:
 
-- Corresponds to Java 26.2 (Chaos Cubed Drop)
-- New biome: Sulfur Caves (ID: 187)
-- Requires low Y coordinate (Y≤60) for cave biome cracking
-- Recommended: Use surface biomes for cracking (rarity data available)
+- Corresponds to Java 26.3 (Wilderness Bound)
+- New biome: Dappled Forest (ID: 188)
+- Dappled Forest is a surface biome (rarity ~0.45%)
+- Also supports Sulfur Caves (ID: 187), requires low Y coordinate (Y≤60)
 
 **Version 1.21.60-26.23**:
 
@@ -316,19 +316,19 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 #### Important Limitation
 
-**High 32-bit cracking is based on cubiomes library, integrated with MC 26.2 support from SeedMapper.**
+**High 32-bit cracking is based on cubiomes library, integrated with MC 26.3 support from SeedMapper.**
 
-| cubiomes Info  | Details                                    |
-| -------------- | ------------------------------------------ |
-| Latest Version | 4.1.2 (fork with MC 26.2 support)          |
-| Last Update    | July 2026 (integrated SeedMapper btree262) |
-| Max Supported  | Java 26.2 (Bedrock 26.30-26.40)                 |
+| cubiomes Info  | Details                                         |
+| -------------- | ----------------------------------------------- |
+| Latest Version | 4.1.2 (fork with MC 26.3 support)               |
+| Last Update    | September 2026 (integrated SeedMapper btree263) |
+| Max Supported  | Java 26.3 (Bedrock 26.50)                       |
 
 **cubiomes Update Status:**
 
 - Official cubiomes stopped updating after November 2024
-- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
-- Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30-26.40)
+- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+/26.3+ support
+- Supports Pale Garden (1.21.50+), Sulfur Caves (26.30-26.40), and Dappled Forest (26.50)
 
 ### Automatic Rarity Sorting
 
@@ -336,44 +336,45 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ```
 [*] Biome samples (sorted by rarity, rarest first):
-    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
-    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
-    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
+    1. (-270, 470, Y=200) -> extreme_hills_mutated (ID: 131, 0.1050%)
+    2. (-1922, 1231, Y=200) -> stony_peaks (ID: 182, 0.1160%)
+    3. (-4706, 3302, Y=200) -> pale_garden (ID: 186, 0.1390%)
     ...
 ```
 
-#### Overworld Biome ID Reference (1.21.60-26.23)
+#### Overworld Biome ID Reference (26.50)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
-| extreme_hills_mutated    | 131 | 0.10%  | stony_peaks           | 182 | 0.10%  |
-| pale_garden              | 186 | 0.12%  | mushroom_island       | 14  | 0.14%  |
-| frozen_peaks             | 181 | 0.16%  | jagged_peaks          | 180 | 0.18%  |
-| extreme_hills_plus_trees | 34  | 0.19%  | savanna_mutated       | 163 | 0.21%  |
-| ice_spikes               | 140 | 0.24%  | extreme_hills         | 3   | 0.26%  |
-| cherry_grove             | 185 | 0.29%  | mesa_bryce            | 165 | 0.33%  |
-| cold_beach               | 26  | 0.36%  | snowy_slopes          | 179 | 0.39%  |
-| savanna_plateau          | 36  | 0.40%  | mangrove_swamp        | 184 | 0.51%  |
-| mesa_plateau_stone       | 38  | 0.62%  | bamboo_jungle         | 168 | 0.64%  |
-| sunflower_plains         | 129 | 0.67%  | mega_taiga            | 32  | 0.69%  |
-| flower_forest            | 132 | 0.69%  | redwood_taiga_mutated | 160 | 0.71%  |
-| grove                    | 178 | 0.72%  | frozen_river          | 11  | 0.83%  |
-| mesa                     | 37  | 0.89%  | swamp                 | 6   | 0.98%  |
-| meadow                   | 177 | 1.16%  | stone_beach           | 25  | 1.17%  |
-| deep_frozen_ocean        | 50  | 1.25%  | jungle_edge           | 23  | 1.38%  |
-| roofed_forest            | 29  | 1.84%  | jungle                | 21  | 2.04%  |
-| warm_ocean               | 44  | 2.13%  | birch_forest_mutated  | 155 | 2.15%  |
-| frozen_ocean             | 10  | 2.26%  | birch_forest          | 27  | 2.29%  |
-| desert                   | 2   | 2.33%  | deep_lukewarm_ocean   | 48  | 2.37%  |
-| cold_taiga               | 30  | 2.40%  | deep_cold_ocean       | 49  | 2.42%  |
-| beach                    | 16  | 2.45%  | ice_plains            | 12  | 2.78%  |
-| taiga                    | 5   | 3.40%  | deep_ocean            | 24  | 3.60%  |
-| savanna                  | 35  | 3.91%  | lukewarm_ocean        | 45  | 4.55%  |
-| cold_ocean               | 46  | 4.59%  | river                 | 7   | 6.22%  |
-| ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
-| forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
-| lush_caves               | 175 | -      | deep_dark             | 183 | -      |
-| sulfur_caves             | 187 | -      | dappled_forest        | 188 | 0.45%  |
+| extreme_hills_mutated    | 131 | 0.10%  | deep_frozen_ocean     | 50  | 1.16%  |
+| stony_peaks              | 182 | 0.12%  | stone_beach           | 25  | 1.25%  |
+| mushroom_island          | 14  | 0.14%  | jungle_edge           | 23  | 1.35%  |
+| pale_garden              | 186 | 0.14%  | warm_ocean            | 44  | 1.97%  |
+| frozen_peaks             | 181 | 0.14%  | roofed_forest         | 29  | 2.02%  |
+| jagged_peaks             | 180 | 0.17%  | jungle                | 21  | 2.08%  |
+| extreme_hills_plus_trees | 34  | 0.19%  | birch_forest_mutated  | 155 | 2.20%  |
+| ice_spikes               | 140 | 0.19%  | birch_forest          | 27  | 2.21%  |
+| savanna_mutated          | 163 | 0.20%  | frozen_ocean          | 10  | 2.25%  |
+| cherry_grove             | 185 | 0.28%  | desert                | 2   | 2.35%  |
+| mesa_bryce               | 165 | 0.29%  | cold_taiga            | 30  | 2.36%  |
+| extreme_hills            | 3   | 0.29%  | beach                 | 16  | 2.39%  |
+| cold_beach               | 26  | 0.34%  | deep_cold_ocean       | 49  | 2.39%  |
+| snowy_slopes             | 179 | 0.41%  | deep_lukewarm_ocean   | 48  | 2.39%  |
+| savanna_plateau          | 36  | 0.41%  | ice_plains            | 12  | 2.76%  |
+| dappled_forest           | 188 | 0.45%  | taiga                 | 5   | 3.38%  |
+| mangrove_swamp           | 184 | 0.50%  | deep_ocean            | 24  | 3.70%  |
+| mesa_plateau_stone       | 38  | 0.59%  | savanna               | 35  | 4.04%  |
+| sunflower_plains         | 129 | 0.66%  | lukewarm_ocean        | 45  | 4.47%  |
+| flower_forest            | 132 | 0.66%  | cold_ocean            | 46  | 4.52%  |
+| bamboo_jungle            | 168 | 0.67%  | river                 | 7   | 6.31%  |
+| redwood_taiga_mutated    | 160 | 0.67%  | ocean                 | 0   | 6.87%  |
+| mega_taiga               | 32  | 0.71%  | plains                | 1   | 10.33% |
+| grove                    | 178 | 0.75%  | forest                | 4   | 12.22% |
+| frozen_river             | 11  | 0.83%  | dripstone_caves       | 174 | -      |
+| mesa                     | 37  | 0.88%  | lush_caves            | 175 | -      |
+| swamp                    | 6   | 0.95%  | deep_dark             | 183 | -      |
+| meadow                   | 177 | 1.16%  | sulfur_caves          | 187 | -      |
+
 
 > **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
 
@@ -513,8 +514,8 @@ After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/se
 
 ## Related Links & References
 
-- [Windows GUI Version](MCBEseedcracker_win_ui/README.md)
-- [Linux Command Line Version](MCBEseedcracker_linux/README.md)
+- [Windows GUI Version](../MCBEseedcracker_win_ui/README.md)
+- [Linux Command Line Version](README.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 

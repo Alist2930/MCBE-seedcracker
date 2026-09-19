@@ -76,6 +76,7 @@ BIOME_COLORS = {
     "cherry_grove": (255, 160, 192),
     "pale_garden": (160, 160, 176),
     "sulfur_caves": (200, 210, 50),
+    "dappled_forest": (140, 58, 4),
 }
 
 

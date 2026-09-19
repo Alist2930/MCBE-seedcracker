@@ -628,13 +628,13 @@ EXPORT int crack_high32_soa(
     // Cache-aligned allocations for better memory performance
     BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)ALIGNED_ALLOC(sizeof(BiomeNoiseSOA), 64);
     if (!bn_soa)
-        return 0; // Allocation failed
+        return 0;  // Allocation failed
     memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
     bn_soa->oct = (PerlinNoiseSOA *)ALIGNED_ALLOC(256 * sizeof(PerlinNoiseSOA), 64);
     if (!bn_soa->oct)
     {
         ALIGNED_FREE(bn_soa);
-        return 0; // Allocation failed
+        return 0;  // Allocation failed
     }
     memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
 

@@ -899,7 +899,7 @@ class MainWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(
             self, lang_manager.get("about_title"),
-            f"MCBE Seed Cracker v1.3.3\n\n{lang_manager.get('about_text')}"
+            f"MCBE Seed Cracker v1.3.4\n\n{lang_manager.get('about_text')}"
         )
     
     def copy_low32_seed(self, item):
