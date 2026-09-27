@@ -21,6 +21,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from datetime import datetime
 
 # Add parent directory to path to import config_loader
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -28,6 +29,13 @@ import config_loader
 
 CONST_A = 2570712328
 CONST_B = 4048968661
+
+# 4-chunk grid: a player-reported coordinate may correspond to one of 4 origin chunks:
+# (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1). We test all 4 to find the matching seed.
+NUM_OFFSETS = 4
+
+# Found seeds output file (set in main(), used by run_crack_cpu/gpu)
+FOUND_SEEDS_FILE = None
 
 STRUCTURE_CONFIGS = {
     "village": {"name": "Village", "salt": 10387312, "spacing": 34, "separation": 8, "spread_type": "triangular"},
@@ -113,8 +121,10 @@ def has_opencl_gpu():
 
 def test_sample_strictness(config, x, z, num_test_seeds=100000):
     """
-    Test the strictness (matching probability) of a structure sample.
+    Test the strictness (matching probability) of a structure sample using 4-chunk grid.
     Returns the number of matches in num_test_seeds attempts.
+
+    A seed matches if ANY of the 4 origin chunks produces the target (ox, oz).
 
     Args:
         config: Structure configuration dict
@@ -128,42 +138,47 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
     spacing = config["spacing"]
     separation = config["separation"]
 
-    # Calculate target parameters
     cx, cz = x >> 4, z >> 4
-    rx, rz = cx // spacing, cz // spacing
-    target_ox, target_oz = cx % spacing, cz % spacing
+    offset_range = spacing - separation
+    spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
 
-    # Calculate r_base
-    r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
+    # Build 4 origin chunks: (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+    r_base_vals, ox_vals, oz_vals = [], [], []
+    for dx in [0, 1]:
+        for dz in [0, 1]:
+            origin_cx = cx + dx
+            origin_cz = cz + dz
+            rx = origin_cx // spacing
+            rz = origin_cz // spacing
+            ox_vals.append(origin_cx % spacing)
+            oz_vals.append(origin_cz % spacing)
+            r_base_vals.append((rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF)
 
     # Load C library for fast testing
     lib_path = Path(__file__).parent / 'crack_low32.so'
     try:
         lib = ctypes.CDLL(str(lib_path))
-        lib.crack_low32.argtypes = [
+        lib.crack_low32_grid.argtypes = [
             ctypes.c_uint32, ctypes.c_uint32,
             ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
             ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
             ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
         ]
-        lib.crack_low32.restype = ctypes.c_int
+        lib.crack_low32_grid.restype = ctypes.c_int
 
-        # Test using C library
-        offset_range = spacing - separation
-        spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
-
-        r_base_arr = (ctypes.c_uint32 * 1)(r_base)
-        ox_arr = (ctypes.c_uint32 * 1)(target_ox)
-        oz_arr = (ctypes.c_uint32 * 1)(target_oz)
+        r_base_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*r_base_vals)
+        ox_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*ox_vals)
+        oz_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*oz_vals)
         offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
         spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
         results_arr = (ctypes.c_uint32 * num_test_seeds)()
 
-        found = lib.crack_low32(
+        found = lib.crack_low32_grid(
             0, num_test_seeds,
             r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-            1, results_arr, num_test_seeds
+            1, NUM_OFFSETS,  # num_structures=1, num_offsets=4
+            results_arr, num_test_seeds
         )
 
         return found
@@ -172,7 +187,7 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
         return 0
 
 
-def prepare_targets(targets):
+def prepare_targets(targets, skip_strictness=False):
     # Validate all structure names first
     invalid_structures = []
     for i, t in enumerate(targets):
@@ -193,6 +208,8 @@ def prepare_targets(targets):
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
 
     # Calculate parameters for all targets
+    # r_base_list/ox_list/oz_list are flattened: [num_targets * NUM_OFFSETS]
+    # offset_range_list/spread_type_list/structure_info are per-target: [num_targets]
     r_base_list, ox_list, oz_list = [], [], []
     offset_range_list, spread_type_list, structure_info = [], [], []
 
@@ -202,28 +219,44 @@ def prepare_targets(targets):
         spacing, separation = config["spacing"], config["separation"]
 
         cx, cz = x >> 4, z >> 4
-        rx, rz = cx // spacing, cz // spacing
-        ox, oz = cx % spacing, cz % spacing
-
-        r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
         spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
 
-        r_base_list.append(r_base)
-        ox_list.append(ox)
-        oz_list.append(oz)
+        # 4 origin chunks: (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+        first_rx = first_rz = None
+        for dx in [0, 1]:
+            for dz in [0, 1]:
+                origin_cx = cx + dx
+                origin_cz = cz + dz
+                rx = origin_cx // spacing
+                rz = origin_cz // spacing
+                ox = origin_cx % spacing
+                oz = origin_cz % spacing
+                r_base = (rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF
+                r_base_list.append(r_base)
+                ox_list.append(ox)
+                oz_list.append(oz)
+                if first_rx is None:
+                    first_rx, first_rz = rx, rz
+
         offset_range_list.append(spacing - separation)
         spread_type_list.append(spread_type_int)
-        structure_info.append({"name": config["name"], "x": x, "z": z, "rx": rx, "rz": rz, "spread_type": config.get("spread_type", "linear")})
+        structure_info.append({"name": config["name"], "x": x, "z": z, "rx": first_rx, "rz": first_rz, "spread_type": config.get("spread_type", "linear")})
 
     # Test strictness and sort (strictest first)
+    # Skip if requested (when search range size < 100000)
     strictness_scores = []
 
-    for i, t in enumerate(sorted_targets):
-        config = STRUCTURE_CONFIGS[t["structure"]]
-        x, z = t["x"], t["z"]
+    if skip_strictness:
+        print("\n[*] Search range size < 100000, skipping strictness test")
+        for i, t in enumerate(sorted_targets):
+            strictness_scores.append(0)
+    else:
+        for i, t in enumerate(sorted_targets):
+            config = STRUCTURE_CONFIGS[t["structure"]]
+            x, z = t["x"], t["z"]
 
-        matches = test_sample_strictness(config, x, z, num_test_seeds=100000)
-        strictness_scores.append(matches)
+            matches = test_sample_strictness(config, x, z, num_test_seeds=100000)
+            strictness_scores.append(matches)
 
     # Sort by strictness (fewer matches = stricter = higher priority)
     # But maintain linear-first ordering
@@ -234,26 +267,28 @@ def prepare_targets(targets):
     triangular_indices = [i for i in indices if spread_type_list[i] == 1]
 
     # Sort each group by strictness (ascending = stricter first)
+    # When skip_strictness, all scores are 0 so sort is a no-op (stable sort preserves order)
     linear_indices.sort(key=lambda i: strictness_scores[i])
     triangular_indices.sort(key=lambda i: strictness_scores[i])
 
     # Combine: linear first, then triangular
     sorted_indices = linear_indices + triangular_indices
 
-    # Reorder all lists
-    r_base_list = [r_base_list[i] for i in sorted_indices]
-    ox_list = [ox_list[i] for i in sorted_indices]
-    oz_list = [oz_list[i] for i in sorted_indices]
+    # Reorder all lists (r_base/ox/oz are flattened with NUM_OFFSETS entries per target)
+    r_base_list = [v for i in sorted_indices for v in r_base_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
+    ox_list = [v for i in sorted_indices for v in ox_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
+    oz_list = [v for i in sorted_indices for v in oz_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
     offset_range_list = [offset_range_list[i] for i in sorted_indices]
     spread_type_list = [spread_type_list[i] for i in sorted_indices]
     structure_info = [structure_info[i] for i in sorted_indices]
 
     return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info
 
-R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = prepare_targets(TARGETS)
+# Global variables (initialized in main() after search range is determined)
+R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = [], [], [], [], [], []
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing"""
+    """CPU worker for multiprocessing (uses 4-chunk grid)"""
     start, end, r_base, ox, oz, offset_range, spread_type = args
 
     lib_path = Path(__file__).parent / 'crack_low32.so'
@@ -264,28 +299,30 @@ def crack_worker_cpu(args):
 
     lib = ctypes.CDLL(str(lib_path))
 
-    lib.crack_low32.argtypes = [
+    lib.crack_low32_grid.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
         ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
     ]
-    lib.crack_low32.restype = ctypes.c_int
+    lib.crack_low32_grid.restype = ctypes.c_int
 
-    num_targets = len(r_base)
-    r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-    ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-    oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-    offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-    spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
+    num_structures = len(offset_range)
+    num_offsets = NUM_OFFSETS
+    grid_count = num_structures * num_offsets
+    r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
+    ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
+    oz_arr = (ctypes.c_uint32 * grid_count)(*oz)
+    offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range)
+    spread_type_arr = (ctypes.c_int * num_structures)(*spread_type)
     results_arr = (ctypes.c_uint32 * 1000)()
 
-    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
+    found = lib.crack_low32_grid(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_structures, num_offsets, results_arr, 1000)
 
     # Check for native function errors
     if found < 0:
-        raise RuntimeError(f"crack_low32 failed for range {start}-{end} (return code {found})")
+        raise RuntimeError(f"crack_low32_grid failed for range {start}-{end} (return code {found})")
 
     return [results_arr[i] for i in range(found)]
 
@@ -316,7 +353,13 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
         for r in results:
             all_results.extend(r)
             for seed in r:
-                print(f">>> [!] Found seed: {seed} (0x{seed:08X})")
+                seed_info = f">>> [!] Found seed: {seed} (0x{seed:08X})"
+                print(seed_info)
+                if FOUND_SEEDS_FILE:
+                    with open(FOUND_SEEDS_FILE, 'a', encoding='utf-8') as f:
+                        f.write(seed_info + '\n')
+                        f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                        f.write("-" * 60 + '\n')
         
         processed = step_end
         elapsed = time.time() - global_start
@@ -343,21 +386,23 @@ def run_crack_gpu(search_start, search_end, all_results, config):
     try:
         lib = ctypes.CDLL(str(lib_path))
 
-        lib.crack_low32_opencl.argtypes = [
+        lib.crack_low32_grid_opencl.argtypes = [
             ctypes.c_uint32, ctypes.c_uint32,
             ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
             ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
             ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
         ]
-        lib.crack_low32_opencl.restype = ctypes.c_int
+        lib.crack_low32_grid_opencl.restype = ctypes.c_int
 
-        num_targets = len(R_BASE)
-        r_base_arr = (ctypes.c_uint32 * num_targets)(*R_BASE)
-        ox_arr = (ctypes.c_uint32 * num_targets)(*OX)
-        oz_arr = (ctypes.c_uint32 * num_targets)(*OZ)
-        offset_range_arr = (ctypes.c_uint32 * num_targets)(*OFFSET_RANGE)
-        spread_type_arr = (ctypes.c_int * num_targets)(*SPREAD_TYPE)
+        num_structures = len(OFFSET_RANGE)
+        num_offsets = NUM_OFFSETS
+        grid_count = num_structures * num_offsets
+        r_base_arr = (ctypes.c_uint32 * grid_count)(*R_BASE)
+        ox_arr = (ctypes.c_uint32 * grid_count)(*OX)
+        oz_arr = (ctypes.c_uint32 * grid_count)(*OZ)
+        offset_range_arr = (ctypes.c_uint32 * num_structures)(*OFFSET_RANGE)
+        spread_type_arr = (ctypes.c_int * num_structures)(*SPREAD_TYPE)
 
         max_results = config.get('max_results', 10000)
         results_arr = (ctypes.c_uint32 * max_results)()
@@ -371,6 +416,7 @@ def run_crack_gpu(search_start, search_end, all_results, config):
 
         print(f"[GPU] Running GPU crack: {search_start:,} ~ {search_end:,}")
         print(f"[GPU] Batch mode: {total_batches} batches of {batch_size:,} seeds")
+        print(f"[GPU] num_structures={num_structures}, num_offsets={num_offsets}, grid_count={grid_count}")
 
         global_start = time.time()
         processed = search_start
@@ -381,10 +427,10 @@ def run_crack_gpu(search_start, search_end, all_results, config):
 
             batch_elapsed_start = time.time()
 
-            found = lib.crack_low32_opencl(
+            found = lib.crack_low32_grid_opencl(
                 batch_start, batch_end,
                 r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                num_targets, results_arr, max_results
+                num_structures, num_offsets, results_arr, max_results
             )
 
             batch_elapsed = time.time() - batch_elapsed_start
@@ -396,7 +442,13 @@ def run_crack_gpu(search_start, search_end, all_results, config):
             for i in range(found):
                 seed = results_arr[i]
                 all_results.append(seed)
-                print(f">>> [!] Found seed: {seed} (0x{seed:08X})")
+                seed_info = f">>> [!] Found seed: {seed} (0x{seed:08X})"
+                print(seed_info)
+                if FOUND_SEEDS_FILE:
+                    with open(FOUND_SEEDS_FILE, 'a', encoding='utf-8') as f:
+                        f.write(seed_info + '\n')
+                        f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                        f.write("-" * 60 + '\n')
 
             processed = batch_end + 1
 
@@ -449,7 +501,25 @@ def main():
     print("=" * 60)
     print("Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
     print("=" * 60)
-    
+
+    # Create/Clear found seeds file
+    global FOUND_SEEDS_FILE
+    FOUND_SEEDS_FILE = Path(__file__).parent / "found_seeds.txt"
+    start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(FOUND_SEEDS_FILE, 'w', encoding='utf-8') as f:
+        f.write("=" * 60 + "\n")
+        f.write("Minecraft Bedrock Low 32-bit Seed Cracker - Found Seeds\n")
+        f.write("=" * 60 + "\n")
+        f.write(f"Start Time: {start_time_str}\n")
+        f.write(f"Search Range: {search_start:,} ~ {search_end:,}\n")
+        f.write("=" * 60 + "\n\n")
+    print(f"[*] Found seeds will be saved to: {FOUND_SEEDS_FILE}")
+
+    # Initialize global targets (skip strictness test if search range size < 100000)
+    global R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO
+    skip_strictness = (search_end - search_start < 100000)
+    R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = prepare_targets(TARGETS, skip_strictness=skip_strictness)
+
     print(f"\n[*] Target structures ({len(TARGETS)}) [sorted: linear first]:")
     for i, info in enumerate(STRUCTURE_INFO):
         spread_type_str = f" [{info['spread_type']}]"
@@ -554,7 +624,8 @@ def main():
     print(f"\n[*] Done! Time: {elapsed:.1f}s ({elapsed/60:.1f}min)")
     print(f"[*] Speed: {total_seeds/elapsed:,.0f} seeds/s")
     print(f"[*] Found {len(all_results)} matching seeds")
-    
+    print(f"[*] Results saved to: {FOUND_SEEDS_FILE}")
+
     for seed in all_results:
         print(f"    Low 32-bit: {seed} (0x{seed:08X})")
 

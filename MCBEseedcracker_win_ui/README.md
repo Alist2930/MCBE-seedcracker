@@ -72,6 +72,8 @@ See [MCBEseedcracker_win_ui/README.md](README.md) for details.
 - **CPU Mode**: Process count can be manually set (default: use all cores, max 16 processes)
 - **Recommendation**: Use default auto-setting, 16 processes is already optimal
 
+**4-Chunk Grid Tolerance:** The chunk where you stand in-game may differ by ±1 chunk from the actual structure origin chunk (a structure's bounding box can span multiple chunks). The cracker automatically tests 4 adjacent origin chunk candidates (a 2x2 grid) for each structure, so coordinate deviation within ±1 chunk is handled automatically — there is no need to precisely locate the origin chunk.
+
 ---
 
 ### GPU Acceleration (Low 32-bit)
@@ -131,8 +133,13 @@ Edit `crack_config.json` in the application directory:
 | jungle_temple           | Jungle Temple             | **linear**  |
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
+| trail_ruins             | Trail Ruins (Java LCG)    | **linear**  |
+| trial_chamber           | Trial Chamber (Java LCG)  | **linear**  |
+| abandoned_camp          | Abandoned Camp (Java LCG) | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Avoid using Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether structures due to complex generation rules that may cause one-chunk offset in-game.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether complexes) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
+>
+> **Note**: The last three structures (Trail Ruins, Trial Chamber, Abandoned Camp) use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. See the Java LCG Structures section for details.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -180,6 +187,8 @@ Edit `crack_config.json` in the application directory:
 
   ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
 
+> **Note**: The cracker automatically checks the 4 possible origin chunks (4-chunk grid) around the input coordinate, so chunk selection within ±1 chunk is tolerated.
+
 ---
 
 ### 2. High 32-bit Cracking (Biomes)
@@ -200,11 +209,40 @@ Edit `crack_config.json` in the application directory:
 - **Default 16 processes**: This is the tested optimal value (avoids memory bandwidth saturation)
 - **Recommendation**: Keep default 16 processes, more processes won't improve performance
 
+**Optional: Java LCG Structure Mode (Recommended):** You can also add Java LCG structures (Trail Ruins / Trial Chamber / Abandoned Camp) in this tab. With 2-3 such structures, the cracker switches to a two-stage mode: bits 32-47 are derived directly from the structures, and only bits 48-63 are brute-forced with biome samples — dramatically faster than pure brute force. See [Java LCG Structures](#java-lcg-structures-optional-acceleration). Added structures are saved to `session_data.json` and restored on next launch.
+
+## Java LCG Structures (Optional Acceleration)
+
+Three structures use a Java LCG random number generator instead of the standard MT19937: **Trail Ruins**, **Trial Chamber**, and **Abandoned Camp**.
+
+When added in the high 32-bit cracking stage, these structures enable a two-stage mode:
+
+1. **Stage 1 (bits 32-47)**: Java LCG structure positions directly constrain the seed's bits 32-47. Each structure reduces the candidates by a factor of ~65536; with 2-3 structures, a unique candidate for bits 32-47 is usually derived directly (no brute force needed).
+2. **Stage 2 (bits 48-63)**: For each surviving candidate, the cracker iterates bits 48-63 (at most 65536 candidates) and verifies biome samples within your search range.
+
+This is dramatically faster than the default full brute force over bits 32-47.
+
+**Structure Parameters:**
+
+| Structure | Salt | Spacing | Separation | Spread | RNG |
+| --------- | ---- | ------- | ---------- | ------ | --- |
+| Trail Ruins (古迹废墟) | 83469867 | 34 | 8 | Linear | Java LCG |
+| Trial Chamber (试炼密室) | 94251327 | 34 | 12 | Linear | Java LCG |
+| Abandoned Camp (废弃营地) | 91231127 | 37 | 8 | Linear | Java LCG |
+
+**Usage Tips:**
+
+- 2-3 Java LCG structures are sufficient to uniquely determine bits 32-47
+- Structure coordinates can be entered as chunk coordinates in-game (same as regular structures)
+- Supported on both the Windows UI and Linux (via the `--lcg-structure` argument or the `lcg_structures` config field)
+
+---
+
 #### Version Mapping
 
 | Bedrock Version     | Corresponding Java Version | Supported Biomes                                |
 | ------------------- | -------------------------- | ----------------------------------------------- |
-| **26.50**           | Java 26.3 (Wilderness Bound)        | ✅ Dappled Forest (new biome)                   |
+| **26.50**           | Java 26.3 (MC_26_3)        | ✅ Dappled Forest (new biome)                   |
 | **26.30-26.40**          | Java 26.2 (Chaos Cubed)    | ✅ Sulfur Caves (new cave biome)                |
 | **1.21.60-26.23**   | Java 1.21.5-26.1           | ✅ Pale Garden (expanded range)                 |
 | **1.21.50**         | Java 1.21.4 (Winter Drop)  | ✅ Pale Garden (smaller range)                  |
@@ -224,12 +262,12 @@ Edit `crack_config.json` in the application directory:
 | **1.21.50**       | ⚠️ Exists but smaller range               |
 | **1.21.60-26.23** | ✅ Expanded generation range              |
 
-**Latest version (Bedrock 26.50)**:
+**Latest version (Bedrock 26.30-26.40)**:
 
-- Corresponds to Java 26.3 (Wilderness Bound)
-- New biome: Dappled Forest (ID: 188)
-- Dappled Forest is a surface biome (rarity ~0.45%)
-- Also supports Sulfur Caves (ID: 187), requires low Y coordinate (Y≤60)
+- Corresponds to Java 26.2 (Chaos Cubed Drop)
+- New biome: Sulfur Caves (ID: 187)
+- Requires low Y coordinate (Y≤60) for cave biome cracking
+- Recommended: Use surface biomes for cracking (rarity data available)
 
 **Version 1.21.60-26.23**:
 
@@ -259,19 +297,19 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 #### Important Limitation
 
-**High 32-bit cracking is based on cubiomes library, integrated with MC 26.3 support from SeedMapper.**
+**High 32-bit cracking is based on cubiomes library, integrated with MC 26.2 support from SeedMapper.**
 
-| cubiomes Info  | Details                                         |
-| -------------- | ----------------------------------------------- |
-| Latest Version | 4.1.2 (fork with MC 26.3 support)               |
-| Last Update    | September 2026 (integrated SeedMapper btree263) |
-| Max Supported  | Java 26.3 (Bedrock 26.50)                       |
+| cubiomes Info  | Details                                    |
+| -------------- | ------------------------------------------ |
+| Latest Version | 4.1.2 (fork with MC 26.2 support)          |
+| Last Update    | July 2026 (integrated SeedMapper btree262) |
+| Max Supported  | Java 26.2 (Bedrock 26.30-26.40)                 |
 
 **cubiomes Update Status:**
 
 - Official cubiomes stopped updating after November 2024
-- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+/26.3+ support
-- Supports Pale Garden (1.21.50+), Sulfur Caves (26.30-26.40), and Dappled Forest (26.50)
+- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
+- Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30-26.40)
 
 ### Automatic Rarity Sorting
 
@@ -279,45 +317,46 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ```
 [*] Biome samples (sorted by rarity, rarest first):
-    1. (-270, 470, Y=200) -> extreme_hills_mutated (ID: 131, 0.1050%)
-    2. (-1922, 1231, Y=200) -> stony_peaks (ID: 182, 0.1160%)
-    3. (-4706, 3302, Y=200) -> pale_garden (ID: 186, 0.1390%)
+    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
+    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
+    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
     ...
 ```
 
-#### Overworld Biome ID Reference (26.50)
+**Note**: When the search range size (`end - start`) is less than 100,000, strictness testing is skipped automatically and biome samples are checked in their original order.
+
+#### Overworld Biome ID Reference (1.21.60-26.23)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
-| extreme_hills_mutated    | 131 | 0.10%  | deep_frozen_ocean     | 50  | 1.16%  |
-| stony_peaks              | 182 | 0.12%  | stone_beach           | 25  | 1.25%  |
-| mushroom_island          | 14  | 0.14%  | jungle_edge           | 23  | 1.35%  |
-| pale_garden              | 186 | 0.14%  | warm_ocean            | 44  | 1.97%  |
-| frozen_peaks             | 181 | 0.14%  | roofed_forest         | 29  | 2.02%  |
-| jagged_peaks             | 180 | 0.17%  | jungle                | 21  | 2.08%  |
-| extreme_hills_plus_trees | 34  | 0.19%  | birch_forest_mutated  | 155 | 2.20%  |
-| ice_spikes               | 140 | 0.19%  | birch_forest          | 27  | 2.21%  |
-| savanna_mutated          | 163 | 0.20%  | frozen_ocean          | 10  | 2.25%  |
-| cherry_grove             | 185 | 0.28%  | desert                | 2   | 2.35%  |
-| mesa_bryce               | 165 | 0.29%  | cold_taiga            | 30  | 2.36%  |
-| extreme_hills            | 3   | 0.29%  | beach                 | 16  | 2.39%  |
-| cold_beach               | 26  | 0.34%  | deep_cold_ocean       | 49  | 2.39%  |
-| snowy_slopes             | 179 | 0.41%  | deep_lukewarm_ocean   | 48  | 2.39%  |
-| savanna_plateau          | 36  | 0.41%  | ice_plains            | 12  | 2.76%  |
-| dappled_forest           | 188 | 0.45%  | taiga                 | 5   | 3.38%  |
-| mangrove_swamp           | 184 | 0.50%  | deep_ocean            | 24  | 3.70%  |
-| mesa_plateau_stone       | 38  | 0.59%  | savanna               | 35  | 4.04%  |
-| sunflower_plains         | 129 | 0.66%  | lukewarm_ocean        | 45  | 4.47%  |
-| flower_forest            | 132 | 0.66%  | cold_ocean            | 46  | 4.52%  |
-| bamboo_jungle            | 168 | 0.67%  | river                 | 7   | 6.31%  |
-| redwood_taiga_mutated    | 160 | 0.67%  | ocean                 | 0   | 6.87%  |
-| mega_taiga               | 32  | 0.71%  | plains                | 1   | 10.33% |
-| grove                    | 178 | 0.75%  | forest                | 4   | 12.22% |
-| frozen_river             | 11  | 0.83%  | dripstone_caves       | 174 | -      |
-| mesa                     | 37  | 0.88%  | lush_caves            | 175 | -      |
-| swamp                    | 6   | 0.95%  | deep_dark             | 183 | -      |
-| meadow                   | 177 | 1.16%  | sulfur_caves          | 187 | -      |
-
+| extreme_hills_mutated    | 131 | 0.10%  | stony_peaks           | 182 | 0.10%  |
+| pale_garden              | 186 | 0.12%  | mushroom_island       | 14  | 0.14%  |
+| frozen_peaks             | 181 | 0.16%  | jagged_peaks          | 180 | 0.18%  |
+| extreme_hills_plus_trees | 34  | 0.19%  | savanna_mutated       | 163 | 0.21%  |
+| ice_spikes               | 140 | 0.24%  | extreme_hills         | 3   | 0.26%  |
+| cherry_grove             | 185 | 0.29%  | mesa_bryce            | 165 | 0.33%  |
+| cold_beach               | 26  | 0.36%  | snowy_slopes          | 179 | 0.39%  |
+| savanna_plateau          | 36  | 0.40%  | mangrove_swamp        | 184 | 0.51%  |
+| mesa_plateau_stone       | 38  | 0.62%  | bamboo_jungle         | 168 | 0.64%  |
+| sunflower_plains         | 129 | 0.67%  | mega_taiga            | 32  | 0.69%  |
+| flower_forest            | 132 | 0.69%  | redwood_taiga_mutated | 160 | 0.71%  |
+| grove                    | 178 | 0.72%  | frozen_river          | 11  | 0.83%  |
+| mesa                     | 37  | 0.89%  | swamp                 | 6   | 0.98%  |
+| meadow                   | 177 | 1.16%  | stone_beach           | 25  | 1.17%  |
+| deep_frozen_ocean        | 50  | 1.25%  | jungle_edge           | 23  | 1.38%  |
+| roofed_forest            | 29  | 1.84%  | jungle                | 21  | 2.04%  |
+| warm_ocean               | 44  | 2.13%  | birch_forest_mutated  | 155 | 2.15%  |
+| frozen_ocean             | 10  | 2.26%  | birch_forest          | 27  | 2.29%  |
+| desert                   | 2   | 2.33%  | deep_lukewarm_ocean   | 48  | 2.37%  |
+| cold_taiga               | 30  | 2.40%  | deep_cold_ocean       | 49  | 2.42%  |
+| beach                    | 16  | 2.45%  | ice_plains            | 12  | 2.78%  |
+| taiga                    | 5   | 3.40%  | deep_ocean            | 24  | 3.60%  |
+| savanna                  | 35  | 3.91%  | lukewarm_ocean        | 45  | 4.55%  |
+| cold_ocean               | 46  | 4.59%  | river                 | 7   | 6.22%  |
+| ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
+| forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
+| lush_caves               | 175 | -      | deep_dark             | 183 | -      |
+| sulfur_caves             | 187 | -      | dappled_forest        | 188 | 0.45%  |
 
 > **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
 
@@ -418,6 +457,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 - Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
 - Old GPUs (compute units < 10) automatically use CPU mode for stability
 - High 32-bit cracker does not support GPU acceleration due to algorithm complexity
+- High 32-bit cracking can be dramatically accelerated by the optional Java LCG structure mode: 2-3 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
 
 ---
 
@@ -429,9 +469,9 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 1. **Incorrect structure coordinates** - Coordinates are wrong, or chunk location method is incorrect
 2. **Insufficient structures** - Too few structures will result in too many candidate seeds, recommend at least 5 different structure types
-3. **Poor structure type selection** - Some structures (like villages) have complex generation rules. Recommended:
-   - Desert Temple, Witch Hut, Jungle Temple (simple and stable generation rules)
-   - Ocean Monument, End City
+3. **Poor structure type selection** - Linear structures are faster (less computation):
+   - Recommended: Desert Temple, Witch Hut, Jungle Temple, Shipwreck, Ocean Monument, End City
+   - Complex structures (Village, Mansion, etc.) also work — the 4-chunk grid handles their one-chunk offset
 4. **Version incompatibility** - If the target world was generated in an older version (pre-1.18), structure positions may differ from current version
 
 **Solutions:**
@@ -451,6 +491,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 5. **Insufficient biome samples** - Recommend at least 5 samples
 6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
+7. **Java LCG mode issues** - When using Java LCG structures: coordinates must be the structure's actual block position; structure names must be `trail_ruins` / `trial_chamber` / `abandoned_camp` (invalid names are skipped with a warning)
 
 **Solutions:**
 
@@ -463,7 +504,9 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 **Low 32-bit cracking:** Normally about 20-30 minutes (4-core CPU)
 
-**High 32-bit cracking:** Normally about 10-20 hours (4-core CPU)
+**High 32-bit cracking (biome-only mode):** Normally about 10-20 hours (4-core CPU)
+
+**High 32-bit cracking (Java LCG mode):** Phase 2 (bits 32-47) takes seconds; Phase 3 biome verification only runs on surviving candidates, usually finishing within minutes
 
 If significantly longer:
 

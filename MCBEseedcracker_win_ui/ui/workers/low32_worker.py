@@ -7,6 +7,10 @@ import multiprocessing as mp
 import ctypes
 from ui.utils.language_manager import lang_manager
 
+# 4-chunk grid: a player-reported coordinate may correspond to one of 4 origin chunks:
+# (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1). We test all 4 to find the matching seed.
+NUM_OFFSETS = 4
+
 
 def get_dll_path(opencl=False):
     """Get DLL path for CPU or GPU version"""
@@ -114,7 +118,7 @@ def has_opencl_gpu():
 
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing"""
+    """CPU worker for multiprocessing (uses 4-chunk grid)"""
     start, end, r_base, ox, oz, offset_range, spread_type = args
 
     dll_path = get_dll_path(opencl=False)
@@ -125,28 +129,30 @@ def crack_worker_cpu(args):
 
     lib = ctypes.CDLL(dll_path, winmode=0x00000008)
 
-    lib.crack_low32.argtypes = [
+    lib.crack_low32_grid.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
         ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
     ]
-    lib.crack_low32.restype = ctypes.c_int
+    lib.crack_low32_grid.restype = ctypes.c_int
 
-    num_targets = len(r_base)
-    r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-    ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-    oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-    offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-    spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
+    num_structures = len(offset_range)
+    num_offsets = NUM_OFFSETS
+    grid_count = num_structures * num_offsets
+    r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
+    ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
+    oz_arr = (ctypes.c_uint32 * grid_count)(*oz)
+    offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range)
+    spread_type_arr = (ctypes.c_int * num_structures)(*spread_type)
     results_arr = (ctypes.c_uint32 * 1000)()
 
-    found = lib.crack_low32(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_targets, results_arr, 1000)
+    found = lib.crack_low32_grid(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_structures, num_offsets, results_arr, 1000)
 
     # Check for native function errors
     if found < 0:
-        raise RuntimeError(f"crack_low32 failed for range {start}-{end} (return code {found})")
+        raise RuntimeError(f"crack_low32_grid failed for range {start}-{end} (return code {found})")
 
     return [results_arr[i] for i in range(found)]
 
@@ -370,21 +376,23 @@ class Low32Worker(QThread):
             print(f"[GPU] Loading DLL from: {abs_dll_path}")
             lib = ctypes.CDLL(abs_dll_path, winmode=0x00000008)
 
-            lib.crack_low32_opencl.argtypes = [
+            lib.crack_low32_grid_opencl.argtypes = [
                 ctypes.c_uint32, ctypes.c_uint32,
                 ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
                 ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-                ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+                ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
                 ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
             ]
-            lib.crack_low32_opencl.restype = ctypes.c_int
+            lib.crack_low32_grid_opencl.restype = ctypes.c_int
 
-            num_targets = len(r_base)
-            r_base_arr = (ctypes.c_uint32 * num_targets)(*r_base)
-            ox_arr = (ctypes.c_uint32 * num_targets)(*ox)
-            oz_arr = (ctypes.c_uint32 * num_targets)(*oz)
-            offset_range_arr = (ctypes.c_uint32 * num_targets)(*offset_range)
-            spread_type_arr = (ctypes.c_int * num_targets)(*spread_type)
+            num_structures = len(offset_range)
+            num_offsets = NUM_OFFSETS
+            grid_count = num_structures * num_offsets
+            r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
+            ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
+            oz_arr = (ctypes.c_uint32 * grid_count)(*oz)
+            offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range)
+            spread_type_arr = (ctypes.c_int * num_structures)(*spread_type)
 
             max_results = config.get('max_results', 10000)
             results_arr = (ctypes.c_uint32 * max_results)()
@@ -392,9 +400,12 @@ class Low32Worker(QThread):
             total_range = self.end_value - self.start_value + 1
 
             # Debug: print structure parameters (only once)
-            print(f"[GPU DEBUG] num_targets: {num_targets}")
-            for i in range(num_targets):
-                print(f"[GPU DEBUG] Structure {i}: r_base={r_base[i]:,}, ox={ox[i]}, oz={oz[i]}, offset_range={offset_range[i]}, spread_type={spread_type[i]}")
+            print(f"[GPU DEBUG] num_structures: {num_structures}, num_offsets: {num_offsets}, grid_count: {grid_count}")
+            for s in range(num_structures):
+                print(f"[GPU DEBUG] Structure {s}: offset_range={offset_range[s]}, spread_type={spread_type[s]}")
+                for g in range(num_offsets):
+                    idx = s * num_offsets + g
+                    print(f"[GPU DEBUG]   offset {g}: r_base={r_base[idx]:,}, ox={ox[idx]}, oz={oz[idx]}")
 
             # Batch processing for large ranges
             batch_size = 1_000_000_000  # 1B seeds per batch
@@ -423,10 +434,10 @@ class Low32Worker(QThread):
                 eta = (self.end_value - processed) / speed if speed > 0 else 0
                 self.progress_updated.emit(progress_pct, int(speed), int(eta))
 
-                found = lib.crack_low32_opencl(
+                found = lib.crack_low32_grid_opencl(
                     batch_start, batch_end,
                     r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                    num_targets, results_arr, max_results
+                    num_structures, num_offsets, results_arr, max_results
                 )
 
                 if found < 0:
@@ -525,7 +536,11 @@ class Low32Worker(QThread):
         sorted_structures = sorted(self.structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)
 
         # Calculate parameters for all structures
+        # r_base_list/ox_list/oz_list are flattened: [num_structures * NUM_OFFSETS]
+        # offset_range_list/spread_type_list are per-structure: [num_structures]
         r_base_list, ox_list, oz_list, offset_range_list, spread_type_list = [], [], [], [], []
+        # per_structure_offsets[i] = [(r_base, ox, oz), ...4 tuples] for strictness test
+        per_structure_offsets = []
 
         for structure in sorted_structures:
             structure_type = structure["type"]
@@ -538,25 +553,43 @@ class Low32Worker(QThread):
             spread_type_str = config.get("spread_type", "linear")
 
             cx, cz = x >> 4, z >> 4
-            rx, rz = cx // spacing, cz // spacing
-            ox, oz = cx % spacing, cz % spacing
-
-            r_base = (rx * CONST_A + rz * CONST_B + salt) & 0xFFFFFFFF
             spread_type_int = 1 if spread_type_str == "triangular" else 0
 
-            r_base_list.append(r_base)
-            ox_list.append(ox)
-            oz_list.append(oz)
+            # 4 origin chunks: (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+            offsets_for_structure = []
+            for dx in [0, 1]:
+                for dz in [0, 1]:
+                    origin_cx = cx + dx
+                    origin_cz = cz + dz
+                    rx = origin_cx // spacing
+                    rz = origin_cz // spacing
+                    ox = origin_cx % spacing
+                    oz = origin_cz % spacing
+                    r_base = (rx * CONST_A + rz * CONST_B + salt) & 0xFFFFFFFF
+                    r_base_list.append(r_base)
+                    ox_list.append(ox)
+                    oz_list.append(oz)
+                    offsets_for_structure.append((r_base, ox, oz))
+
             offset_range_list.append(spacing - separation)
             spread_type_list.append(spread_type_int)
+            per_structure_offsets.append(offsets_for_structure)
 
-        # Test strictness and sort (strictest first)
-        print("\n[INFO] Testing sample strictness (0-100000 seeds)...")
+        # Skip strictness test if search range size < 100000 (test would be redundant)
+        skip_strictness = (self.end_value - self.start_value < 100000)
+
+        if skip_strictness:
+            print(f"\n[INFO] Search range size < 100000 ({self.end_value - self.start_value}), skipping strictness test")
+        else:
+            print("\n[INFO] Testing sample strictness (0-100000 seeds)...")
 
         strictness_scores = []
         structure_info_lines = []
         structure_info_lines.append("=" * 80)
-        structure_info_lines.append("Structure samples (testing strictness, strictest first):")
+        if skip_strictness:
+            structure_info_lines.append("Structure samples (strictness test skipped, range size < 100000):")
+        else:
+            structure_info_lines.append("Structure samples (testing strictness, strictest first):")
         structure_info_lines.append("=" * 80)
 
         for i, structure in enumerate(sorted_structures):
@@ -567,39 +600,47 @@ class Low32Worker(QThread):
             spacing = config.get("spacing", 32)
             separation = config.get("separation", 8)
 
-            # Calculate target parameters
-            cx, cz = x >> 4, z >> 4
-            rx, rz = cx // spacing, cz // spacing
-            target_ox, target_oz = cx % spacing, cz % spacing
-            r_base = r_base_list[i]
+            # Get per-structure 4 offsets (already computed above)
+            offsets = per_structure_offsets[i]  # [(r_base, ox, oz), ...4 tuples]
             spread_type_int = spread_type_list[i]
             offset_range = offset_range_list[i]
 
-            # Test using C library
+            if skip_strictness:
+                # Skip C library test, just record structure info
+                strictness_scores.append(0)
+                name = config.get("name_zh", structure_type)
+                spread_type_str = "linear" if spread_type_int == 0 else "triangular"
+                info_line = f"    {i+1}. {name} at ({x}, {z}) [{spread_type_str}]"
+                print(info_line)
+                structure_info_lines.append(info_line)
+                continue
+
+            # Test using C library (4-chunk grid, single structure)
             try:
                 dll_path = get_dll_path(opencl=False)
                 if os.path.exists(dll_path):
                     lib = ctypes.CDLL(dll_path, winmode=0x00000008)
-                    lib.crack_low32.argtypes = [
+                    lib.crack_low32_grid.argtypes = [
                         ctypes.c_uint32, ctypes.c_uint32,
                         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
                         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-                        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+                        ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
                         ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
                     ]
-                    lib.crack_low32.restype = ctypes.c_int
+                    lib.crack_low32_grid.restype = ctypes.c_int
 
-                    r_base_arr = (ctypes.c_uint32 * 1)(r_base)
-                    ox_arr = (ctypes.c_uint32 * 1)(target_ox)
-                    oz_arr = (ctypes.c_uint32 * 1)(target_oz)
+                    r_base_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*[o[0] for o in offsets])
+                    ox_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*[o[1] for o in offsets])
+                    oz_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*[o[2] for o in offsets])
                     offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
                     spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
                     results_arr = (ctypes.c_uint32 * 100000)()
 
-                    found = lib.crack_low32(
+                    found = lib.crack_low32_grid(
                         0, 100000,
                         r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                        1, results_arr, 100000
+                        1, NUM_OFFSETS,  # num_structures=1, num_offsets=4
+                        results_arr, 100000
                     )
 
                     strictness_scores.append(found)
@@ -638,15 +679,18 @@ class Low32Worker(QThread):
         # Combine: linear first, then triangular
         sorted_indices = linear_indices + triangular_indices
 
-        # Reorder all lists
-        r_base_list = [r_base_list[i] for i in sorted_indices]
-        ox_list = [ox_list[i] for i in sorted_indices]
-        oz_list = [oz_list[i] for i in sorted_indices]
+        # Reorder all lists (r_base/ox/oz are flattened with NUM_OFFSETS entries per structure)
+        r_base_list = [v for i in sorted_indices for v in r_base_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
+        ox_list = [v for i in sorted_indices for v in ox_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
+        oz_list = [v for i in sorted_indices for v in oz_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
         offset_range_list = [offset_range_list[i] for i in sorted_indices]
         spread_type_list = [spread_type_list[i] for i in sorted_indices]
 
         # Print optimized order
-        structure_info_lines.append("\nOptimized sample order (strictest first, linear优先):")
+        if skip_strictness:
+            structure_info_lines.append("\nSample order (strictness test skipped, linear first):")
+        else:
+            structure_info_lines.append("\nOptimized sample order (strictest first, linear优先):")
         structure_info_lines.append("=" * 80)
         order_info = []
         for i, idx in enumerate(sorted_indices):
@@ -657,7 +701,10 @@ class Low32Worker(QThread):
             strictness = strictness_scores[idx]
             match_rate = strictness / 100000 * 100
 
-            order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}] - {strictness}/100000 ({match_rate:.4f}%)"
+            if skip_strictness:
+                order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}]"
+            else:
+                order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}] - {strictness}/100000 ({match_rate:.4f}%)"
             print(order_line)
             structure_info_lines.append(order_line)
 

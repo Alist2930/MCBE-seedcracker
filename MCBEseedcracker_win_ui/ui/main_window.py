@@ -74,6 +74,7 @@ class MainWindow(QMainWindow):
         
         self.structure_list.retranslate_ui()
         self.biome_list.retranslate_ui()
+        self.lcg_structure_list.retranslate_ui()
         self.low32_progress.retranslate_ui()
         self.high32_progress.retranslate_ui()
         
@@ -103,7 +104,7 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        self.structure_list = StructureListWidget()
+        self.structure_list = StructureListWidget(rng_type_filter="mt19937")
         layout.addWidget(self.structure_list)
         
         self.low32_progress = ProgressWidget()
@@ -212,6 +213,10 @@ class MainWindow(QMainWindow):
         
         self.biome_list = BiomeListWidget()
         layout.addWidget(self.biome_list)
+        
+        # Java LCG structure list (optional, for faster high32 cracking)
+        self.lcg_structure_list = StructureListWidget(rng_type_filter="java_lcg")
+        layout.addWidget(self.lcg_structure_list)
         
         self.high32_progress = ProgressWidget()
         layout.addWidget(self.high32_progress)
@@ -573,6 +578,7 @@ class MainWindow(QMainWindow):
                     os.remove(progress_file)
         
         self.biome_list.set_enabled(False)
+        self.lcg_structure_list.set_enabled(False)
         self.set_high32_settings_enabled(False)
         self.set_high32_inputs_enabled(False)
         
@@ -586,8 +592,11 @@ class MainWindow(QMainWindow):
         
         # Get user-specified process count
         process_count = self.high32_process_count_input.value()
+        
+        # Get optional Java LCG structures (for phase 2 acceleration)
+        lcg_structures = self.lcg_structure_list.get_structures()
 
-        self.high32_worker = High32Worker(low32_value, biomes, start, end, original_start=original_start, mc_version=self.mc_version_combo.currentData(), process_count=process_count)
+        self.high32_worker = High32Worker(low32_value, biomes, start, end, original_start=original_start, mc_version=self.mc_version_combo.currentData(), process_count=process_count, lcg_structures=lcg_structures)
         self.high32_worker.progress_updated.connect(self.update_high32_progress)
         self.high32_worker.found_seed.connect(self.add_high32_result)
         self.high32_worker.finished.connect(self.high32_finished)
@@ -645,6 +654,7 @@ class MainWindow(QMainWindow):
             self.restart_low32_btn.setEnabled(True)
             
             self.biome_list.set_enabled(True)
+            self.lcg_structure_list.set_enabled(True)
             self.set_high32_settings_enabled(True)
             self.set_high32_inputs_enabled(True)
             self.high32_results_list.clear()
@@ -899,7 +909,7 @@ class MainWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(
             self, lang_manager.get("about_title"),
-            f"MCBE Seed Cracker v1.3.4\n\n{lang_manager.get('about_text')}"
+            f"MCBE Seed Cracker v1.4.0\n\n{lang_manager.get('about_text')}"
         )
     
     def copy_low32_seed(self, item):
@@ -1013,6 +1023,7 @@ class MainWindow(QMainWindow):
         session_data = {
             "structures": self.structure_list.get_structures(),
             "biomes": self.biome_list.get_biomes(),
+            "lcg_structures": self.lcg_structure_list.get_structures(),
             "low32_results": self.low32_results,
             "high32_results": self.high32_results,
             "low32_value": self.low32_value_input.text(),
@@ -1046,6 +1057,10 @@ class MainWindow(QMainWindow):
                 if "biomes" in data:
                     self.biome_list.biomes = data["biomes"]
                     self.biome_list.update_table()
+                
+                if "lcg_structures" in data:
+                    self.lcg_structure_list.structures = data["lcg_structures"]
+                    self.lcg_structure_list.update_table()
                 
                 if "low32_results" in data:
                     self.low32_results = data["low32_results"]

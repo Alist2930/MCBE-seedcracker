@@ -142,5 +142,35 @@
     "spacing": 4,
     "separation": 2,
     "spread_type": "triangular"
+  },
+  "trail_ruins": {
+    "name_zh": "古迹废墟",
+    "name_en": "Trail Ruins",
+    "id": 17,
+    "salt": 83469867,
+    "spacing": 34,
+    "separation": 8,
+    "spread_type": "linear",
+    "rng_type": "java_lcg"
+  },
+  "trial_chamber": {
+    "name_zh": "试炼密室",
+    "name_en": "Trial Chamber",
+    "id": 18,
+    "salt": 94251327,
+    "spacing": 34,
+    "separation": 12,
+    "spread_type": "linear",
+    "rng_type": "java_lcg"
+  },
+  "abandoned_camp": {
+    "name_zh": "废弃营地",
+    "name_en": "Abandoned Camp",
+    "id": 19,
+    "salt": 91231127,
+    "spacing": 37,
+    "separation": 8,
+    "spread_type": "linear",
+    "rng_type": "java_lcg"
   }
 }

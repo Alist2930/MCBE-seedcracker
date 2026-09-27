@@ -201,6 +201,16 @@ class LanguageManager:
                 # 关闭确认
                 "confirm_exit_low32": "低32位破解正在进行中，确定要退出吗？",
                 "confirm_exit_high32": "高32位破解正在进行中，确定要退出吗？",
+
+                # Java LCG 结构 (高32位可选辅助)
+                "lcg_structure_list": "Java LCG 建筑列表 (可选，加速高32位破解)",
+                "lcg_structure_hint": "提示: 填入古迹废墟/试炼密室/废弃营地坐标可先破32-47位，再用群系破48-63位，比纯群系快很多",
+                "lcg_structure_recommend": "推荐: 古迹废墟(分布稀疏，误报少)。坐标需精确到区块(无需9宫格)",
+                "lcg_phase2_start": "阶段2: Java LCG 暴力破解 32-47 位 (2^16)...",
+                "lcg_phase2_done": "阶段2完成: 找到 {} 个候选值，耗时 {:.2f}s",
+                "lcg_phase2_no_candidates": "Java LCG 阶段未找到候选值，请检查坐标或改用纯群系破解",
+                "lcg_phase3_start": "阶段3: 群系验证 48-63 位 (每个候选 2^16)...",
+                "lcg_no_lcg_using_biome_only": "未提供 Java LCG 结构，使用纯群系破解 (2^32 范围)",
             },
             "en_US": {
                 # App Title
@@ -396,6 +406,16 @@ class LanguageManager:
                 # Close Confirmation
                 "confirm_exit_low32": "Low 32-bit cracking is in progress, are you sure you want to exit?",
                 "confirm_exit_high32": "High 32-bit cracking is in progress, are you sure you want to exit?",
+
+                # Java LCG structures (optional high32 acceleration)
+                "lcg_structure_list": "Java LCG Structure List (Optional, accelerates high32)",
+                "lcg_structure_hint": "Tip: Enter Trail Ruins/Trial Chamber/Abandoned Camp coords to crack bits 32-47 first, then biome for 48-63, much faster than biome-only",
+                "lcg_structure_recommend": "Recommended: Trail Ruins (sparse distribution, fewer false positives). Coords must be chunk-accurate (no 9-grid)",
+                "lcg_phase2_start": "Phase 2: Java LCG brute-force bits 32-47 (2^16)...",
+                "lcg_phase2_done": "Phase 2 done: found {} candidates in {:.2f}s",
+                "lcg_phase2_no_candidates": "Java LCG phase found no candidates, check coords or use biome-only",
+                "lcg_phase3_start": "Phase 3: Biome verify bits 48-63 (2^16 per candidate)...",
+                "lcg_no_lcg_using_biome_only": "No Java LCG structures provided, using biome-only (2^32 range)",
             }
         }
     

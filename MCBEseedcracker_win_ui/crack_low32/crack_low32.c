@@ -166,3 +166,65 @@ EXPORT int crack_low32(
 
     return found_count;
 }
+
+/**
+ * Crack low32 with grid offset support (4-chunk grid).
+ * For each structure, checks num_offsets possible (r_base, ox, oz) combinations.
+ * A seed is valid if each structure matches at least one of its offsets.
+ *
+ * Array layout: r_base/ox/oz are [num_structures * num_offsets] (flattened by structure then offset).
+ * offset_range/spread_type are [num_structures] (shared across offsets of same structure).
+ */
+EXPORT int crack_low32_grid(
+    uint32_t start,
+    uint32_t end,
+    uint32_t* r_base,        /* [num_structures * num_offsets] */
+    uint32_t* ox,            /* [num_structures * num_offsets] */
+    uint32_t* oz,            /* [num_structures * num_offsets] */
+    uint32_t* offset_range,  /* [num_structures] */
+    int* spread_type,        /* [num_structures] */
+    int num_structures,
+    int num_offsets,
+    uint32_t* results,
+    int max_results
+) {
+    if (!r_base || !ox || !oz || !offset_range || !spread_type || !results) {
+        return -1;
+    }
+    if (num_structures <= 0 || num_offsets <= 0 || max_results <= 0) {
+        return -1;
+    }
+    for (int i = 0; i < num_structures; i++) {
+        if (offset_range[i] == 0) {
+            return -1;
+        }
+    }
+
+    int found_count = 0;
+
+    for (uint64_t w_seed = start; w_seed < end && found_count < max_results; w_seed++) {
+        uint32_t w = (uint32_t)w_seed;
+        int all_match = 1;
+
+        for (int s = 0; s < num_structures && all_match; s++) {
+            int structure_matched = 0;
+            for (int g = 0; g < num_offsets; g++) {
+                int idx = s * num_offsets + g;
+                uint32_t r = w + r_base[idx];
+                if (check_mt_seed(r, ox[idx], oz[idx], offset_range[s], spread_type[s])) {
+                    structure_matched = 1;
+                    break;
+                }
+            }
+            if (!structure_matched) {
+                all_match = 0;
+            }
+        }
+
+        if (all_match) {
+            results[found_count++] = w;
+        }
+    }
+
+    return found_count;
+}

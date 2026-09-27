@@ -712,3 +712,129 @@ EXPORT int crack_high32_soa(
 
     return found_count;
 }
+
+/**
+ * Phase 3 of Java LCG structure cracking: Search bits 48-63 with fixed h16 (bits 32-47).
+ *
+ * After Phase 2 (Java LCG brute-force) identifies the lower 16 bits of high32 (h16),
+ * this function iterates the upper 16 bits (bits_48_63) to complete the high32 search.
+ * Since high32 = (bits_48_63 << 16) | h16, the valid high32 values are non-contiguous
+ * (spaced 65536 apart), so we cannot use crack_high32_soa which expects a contiguous range.
+ *
+ * Processes 4 seeds at a time for SIMD optimization (setBiomeSeedSOA accepts 4 independent seeds).
+ *
+ * @param h16 Fixed bits 32-47 (from Java LCG phase 2)
+ * @param low32 Known lower 32 bits
+ * @param min_upper Minimum bits 48-63 (inclusive)
+ * @param max_upper Maximum bits 48-63 (inclusive)
+ * @param samples Biome samples array
+ * @param num_samples Number of biome samples
+ * @param results Output array for matching seeds
+ * @param max_results Maximum number of results to store
+ * @param mc_version Minecraft version constant
+ * @return Number of matching seeds found, or -1 on invalid input
+ */
+EXPORT int crack_high32_lcg_phase3(
+    uint16_t h16,
+    uint32_t low32,
+    uint16_t min_upper,
+    uint16_t max_upper,
+    BiomeSample *samples,
+    int num_samples,
+    uint64_t *results,
+    int max_results,
+    int mc_version)
+{
+    // Validate inputs
+    if (min_upper > max_upper || num_samples == 0 || max_results <= 0 ||
+        samples == NULL || results == NULL)
+        return -1;
+
+    // OPTIMIZATION: Initialize global BiomeNoise cache once for this MC version
+    initGlobalBiomeNoise(mc_version);
+
+    int found_count = 0;
+
+    // Cache-aligned allocations for better memory performance
+    BiomeNoiseSOA *bn_soa = (BiomeNoiseSOA *)ALIGNED_ALLOC(sizeof(BiomeNoiseSOA), 64);
+    if (!bn_soa)
+        return -1;
+    memset(bn_soa, 0, sizeof(BiomeNoiseSOA));
+    bn_soa->oct = (PerlinNoiseSOA *)ALIGNED_ALLOC(256 * sizeof(PerlinNoiseSOA), 64);
+    if (!bn_soa->oct)
+    {
+        ALIGNED_FREE(bn_soa);
+        return -1;
+    }
+    memset(bn_soa->oct, 0, 256 * sizeof(PerlinNoiseSOA));
+
+    uint64_t seeds[4] CACHE_ALIGNED;
+    uint64_t sha[4] CACHE_ALIGNED;
+
+    // Iterate bits_48_63 from min_upper to max_upper (inclusive), 4 at a time
+    uint32_t upper = min_upper;
+    while (upper <= max_upper)
+    {
+        int batch_size = 4;
+        uint32_t remaining = (uint32_t)max_upper - upper + 1;
+        if (remaining < 4)
+            batch_size = (int)remaining;
+
+        // Compute 4 independent seeds: high32 = (upper << 16) | h16
+        for (int s = 0; s < batch_size; s++)
+        {
+            uint64_t high32 = ((uint64_t)(upper + s) << 16) | h16;
+            seeds[s] = (high32 << 32) | low32;
+            sha[s] = getVoronoiSHA(seeds[s]);
+        }
+
+        setBiomeSeedSOA(bn_soa, seeds, 0);
+
+        int all_match[4] = {1, 1, 1, 1};
+
+        // Early termination optimization: stop checking if all seeds failed
+        for (int i = 0; i < num_samples &&
+             LIKELY(all_match[0] || all_match[1] || all_match[2] || all_match[3]); i++)
+        {
+            int x4[4], y4[4], z4[4];
+            int64_t np[4][6];
+
+            for (int s = 0; s < batch_size; s++)
+            {
+                voronoiAccess3D(sha[s], samples[i].x, samples[i].y, samples[i].z,
+                                &x4[s], &y4[s], &z4[s]);
+            }
+
+            sampleBiomeNoiseSOA(bn_soa, np, x4, y4, z4, mc_version);
+
+            for (int s = 0; s < batch_size; s++)
+            {
+                if (LIKELY(all_match[s]))
+                {
+                    int actual_id = climateToBiomeSOA(mc_version, np[s]);
+                    if (UNLIKELY(actual_id != samples[i].biome_id))
+                        all_match[s] = 0;
+                }
+            }
+        }
+
+        // Store results
+        for (int s = 0; s < batch_size; s++)
+        {
+            if (LIKELY(all_match[s]))
+            {
+                if (LIKELY(found_count < max_results))
+                {
+                    results[found_count++] = seeds[s];
+                }
+            }
+        }
+
+        upper += 4;
+    }
+
+    ALIGNED_FREE(bn_soa->oct);
+    ALIGNED_FREE(bn_soa);
+
+    return found_count;
+}

@@ -14,9 +14,15 @@ from ..utils.structure_icon_loader import structure_icon_loader
 
 
 class StructureListWidget(QWidget):
-    def __init__(self):
+    def __init__(self, rng_type_filter=None):
+        """
+        Args:
+            rng_type_filter: None to show all structures, "mt19937" for MT19937
+            structures only, "java_lcg" for Java LCG structures only.
+        """
         super().__init__()
         self.structures = []
+        self.rng_type_filter = rng_type_filter
         self.structure_data = self.load_structure_data()
         self.init_ui()
     
@@ -26,20 +32,30 @@ class StructureListWidget(QWidget):
         )
         if os.path.exists(data_file):
             with open(data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                raw = json.load(f)
         else:
-            return {
+            raw = {
                 "desert_temple": {"name_zh": "沙漠神殿", "name_en": "Desert Temple", "id": 1},
                 "swamp_hut": {"name_zh": "女巫屋", "name_en": "Swamp Hut", "id": 2},
                 "jungle_temple": {"name_zh": "丛林神庙", "name_en": "Jungle Temple", "id": 3},
                 "ocean_monument": {"name_zh": "海底神殿", "name_en": "Ocean Monument", "id": 4},
                 "end_city": {"name_zh": "末地城", "name_en": "End City", "id": 5}
             }
+        # Filter by rng_type if specified (default rng_type is "mt19937")
+        if self.rng_type_filter is None:
+            return raw
+        return {k: v for k, v in raw.items()
+                if v.get('rng_type', 'mt19937') == self.rng_type_filter}
     
     def init_ui(self):
         layout = QVBoxLayout(self)
         
-        self.group_box = QGroupBox(lang_manager.get("structure_list"))
+        # Use LCG-specific title when filtering for java_lcg structures
+        if self.rng_type_filter == "java_lcg":
+            title_key = "lcg_structure_list"
+        else:
+            title_key = "structure_list"
+        self.group_box = QGroupBox(lang_manager.get(title_key))
         group_layout = QVBoxLayout(self.group_box)
         
         self.table = QTableWidget()
@@ -78,7 +94,11 @@ class StructureListWidget(QWidget):
         layout.addWidget(self.group_box)
     
     def retranslate_ui(self):
-        self.group_box.setTitle(lang_manager.get("structure_list"))
+        if self.rng_type_filter == "java_lcg":
+            title_key = "lcg_structure_list"
+        else:
+            title_key = "structure_list"
+        self.group_box.setTitle(lang_manager.get(title_key))
         self.table.setHorizontalHeaderLabels([
             lang_manager.get("structure_type"),
             lang_manager.get("x_coord"),
@@ -91,7 +111,7 @@ class StructureListWidget(QWidget):
         self.update_table()
     
     def add_structure(self):
-        dialog = AddStructureDialog(self.structure_data, self, edit_mode=False)
+        dialog = AddStructureDialog(self.structure_data, self, edit_mode=False, rng_type_filter=self.rng_type_filter)
         if dialog.exec_() == QDialog.Accepted:
             structure_type, x, z = dialog.get_data()
             self.structures.append({
@@ -143,7 +163,7 @@ class StructureListWidget(QWidget):
             return
         
         structure = self.structures[row]
-        dialog = AddStructureDialog(self.structure_data, self, edit_mode=True)
+        dialog = AddStructureDialog(self.structure_data, self, edit_mode=True, rng_type_filter=self.rng_type_filter)
         
         index = dialog.type_combo.findData(structure["type"])
         if index >= 0:
@@ -171,10 +191,11 @@ class StructureListWidget(QWidget):
 
 
 class AddStructureDialog(QDialog):
-    def __init__(self, structure_data, parent=None, edit_mode=False):
+    def __init__(self, structure_data, parent=None, edit_mode=False, rng_type_filter=None):
         super().__init__(parent)
         self.structure_data = structure_data
         self.edit_mode = edit_mode
+        self.rng_type_filter = rng_type_filter
         self.init_ui()
     
     def init_ui(self):
@@ -236,12 +257,20 @@ class AddStructureDialog(QDialog):
         layout.addRow(f"{self.x_label}:", self.x_spin)
         layout.addRow(f"{self.z_label}:", self.z_spin)
         
-        self.hint_label = QLabel(lang_manager.get("structure_hint"))
+        # Use LCG-specific hints when filtering for java_lcg structures
+        if self.rng_type_filter == "java_lcg":
+            hint_key = "lcg_structure_hint"
+            recommend_key = "lcg_structure_recommend"
+        else:
+            hint_key = "structure_hint"
+            recommend_key = "structure_recommend"
+        
+        self.hint_label = QLabel(lang_manager.get(hint_key))
         self.hint_label.setStyleSheet("color: gray; font-size: 10px;")
         self.hint_label.setWordWrap(True)
         layout.addRow(self.hint_label)
         
-        self.help_label = QLabel(lang_manager.get("structure_recommend"))
+        self.help_label = QLabel(lang_manager.get(recommend_key))
         self.help_label.setStyleSheet("color: #2196F3; font-size: 10px;")
         self.help_label.setWordWrap(True)
         layout.addRow(self.help_label)

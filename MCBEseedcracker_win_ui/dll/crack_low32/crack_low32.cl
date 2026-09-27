@@ -195,3 +195,81 @@ __kernel void crack_low32_kernel(
         }
     }
 }
+
+/**
+ * Grid kernel: Check seeds with 4-chunk grid offset support.
+ * For each structure, checks num_offsets possible (r_base, ox, oz) combinations.
+ * A seed is valid if each structure matches at least one of its offsets.
+ *
+ * Array layout: r_base/ox/oz are [num_structures * num_offsets] (flattened by structure then offset).
+ * offset_range/spread_type are [num_structures] (shared across offsets of same structure).
+ */
+__kernel void crack_low32_grid_kernel(
+    __global uint *results,
+    __global uint *result_count,
+    const uint start_seed,
+    const uint end_seed,
+    const uint seeds_per_thread,
+    __global const uint *r_base,        // [num_structures * num_offsets]
+    __global const uint *ox,            // [num_structures * num_offsets]
+    __global const uint *oz,            // [num_structures * num_offsets]
+    __global const uint *offset_range,  // [num_structures]
+    __global const int *spread_type,    // [num_structures]
+    const uint num_structures,
+    const uint num_offsets,
+    const uint max_results
+)
+{
+    uint gid = get_global_id(0);
+    uint thread_start = start_seed + gid * seeds_per_thread;
+
+    if (start_seed <= end_seed)
+    {
+        if (thread_start > end_seed || thread_start < start_seed)
+            return;
+    }
+    else
+    {
+        return;
+    }
+
+    for (uint i = 0; i < seeds_per_thread; i++)
+    {
+        uint seed = thread_start + i;
+        if (seed > end_seed)
+            break;
+
+        int all_match = 1;
+
+        for (uint s = 0; s < num_structures; s++)
+        {
+            if (!all_match)
+                break;
+
+            int structure_matched = 0;
+            for (uint g = 0; g < num_offsets; g++)
+            {
+                uint idx = s * num_offsets + g;
+                uint r = seed + r_base[idx];
+                if (check_mt_seed(r, ox[idx], oz[idx], offset_range[s], spread_type[s]))
+                {
+                    structure_matched = 1;
+                    break;
+                }
+            }
+            if (!structure_matched)
+            {
+                all_match = 0;
+            }
+        }
+
+        if (all_match)
+        {
+            uint idx = atomic_inc(result_count);
+            if (idx < max_results)
+            {
+                results[idx] = seed;
+            }
+        }
+    }
+}

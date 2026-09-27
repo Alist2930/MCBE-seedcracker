@@ -57,6 +57,11 @@ python3 crack_low32.py --start 1000 --end 2000  # 指定范围
 python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 ```
 
+**找到的种子输出：**
+所有找到的种子会自动保存到 `crack_low32/found_seeds.txt`，包含时间戳。程序启动时创建该文件，破解过程中实时追加找到的种子。
+
+**4宫格容差说明：** 破解器会自动为每个结构测试 4 个相邻的起始区块候选（2x2 宫格），±1 区块内的坐标偏差会被自动处理。
+
 ### 低32位破解命令行参数
 
 | 参数          | 说明                                         |
@@ -128,8 +133,13 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 | jungle_temple           | 丛林神庙             | **linear** |
 | ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
 | ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
+| trail_ruins             | 古迹废墟（Java LCG） | **linear** |
+| trial_chamber           | 试炼密室（Java LCG） | **linear** |
+| abandoned_camp          | 废弃营地（Java LCG） | **linear** |
 
-> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。避免使用村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑，因为生成规则复杂，在游戏中可能有一个区块的偏移。
+> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。生成规则复杂的结构（村庄、林地府邸、掠夺者哨塔、雪屋、废弃传送门、下界建筑）在游戏中可能有一个区块的偏移——4宫格会自动处理，可放心使用。
+>
+> **注意**：最后三个结构（古迹废墟、试炼密室、废弃营地）使用 Java LCG 随机数生成器，用于**高32位破解**阶段的可选加速。详见 Java LCG 结构一节。
 >
 > ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
@@ -177,6 +187,8 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 
   ![海底废墟群区块确定](../assets/imgs/ocean_ruins_group.png)
 
+> **注意**：破解器会自动检查输入坐标周围 4 个可能的起始区块（4宫格），因此区块选择允许 ±1 区块的误差。
+
 ---
 
 ### 高32位破解
@@ -188,7 +200,11 @@ python3 crack_high32.py --test                  # 测试模式 (0 ~ 100M)
 python3 crack_high32.py --low32 1818588773      # 指定低32位值
 python3 crack_high32.py --start 0 --end 1000000000  # 自定义范围
 python3 crack_high32.py --processes 16          # 指定进程数（最大16）
+python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure trial_chamber:-200:300  # Java LCG 结构模式
 ```
+
+**Java LCG 结构模式（推荐）：**
+添加一个或多个 `--lcg-structure` 参数（格式：`name:x:z`，支持的名称：`trail_ruins` / `trial_chamber` / `abandoned_camp`）后进入两阶段模式：阶段一直接由结构推导第 32-47 位；阶段二在搜索范围内遍历第 48-63 位并用群系样本验证。2-3 个结构通常即可唯一确定结果，相比纯暴力破解大幅提速。详见 [Java LCG 结构](#java-lcg-结构可选加速)。
 
 **找到的种子输出：**
 所有找到的种子会自动保存到 `crack_high32/found_seeds.txt`，包含时间戳和详细信息。程序启动时会创建/清空此文件，确保即使进度输出过多也不会遗漏找到的种子。
@@ -204,6 +220,7 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 | `--test`      | 测试模式（0 ~ 100M）         |
 | `--low32`     | 低32位值                     |
 | `--processes` | 进程数（默认: CPU核心数）    |
+| `--lcg-structure` | Java LCG 结构，格式 `name:x:z`，可重复（`trail_ruins` / `trial_chamber` / `abandoned_camp`） |
 
 #### 高32位破解配置
 
@@ -218,6 +235,10 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
     "low32": 1818588773,
     "mc_version": "26.30-26.40",
     "processes": 16,
+    "lcg_structures": [
+      { "type": "trail_ruins", "x": 123, "z": 456 },
+      { "type": "trial_chamber", "x": -200, "z": 300 }
+    ],
     "samples": [
       { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
       { "x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove" },
@@ -240,6 +261,7 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 | `mc_version` | MC版本字符串（见下方版本对应表）            |
 | `processes`  | 进程数（最大16，推荐16）                    |
 | `samples`    | 群系样本列表（建议5个样本）                 |
+| `lcg_structures` | 可选的 Java LCG 结构列表（两阶段模式，见 [Java LCG 结构](#java-lcg-结构可选加速)） |
 
 **群系样本格式：**
 
@@ -257,11 +279,38 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 > - 洞穴群系（如硫磺洞穴）需使用低Y坐标（`Y≤60`）
 > - 高32位破解仅支持CPU模式（多进程并行），不支持GPU加速
 
+## Java LCG 结构（可选加速）
+
+有三个结构使用 Java LCG 随机数生成器（而非标准 MT19937）：**古迹废墟**、**试炼密室**、**废弃营地**。
+
+在高32位破解阶段添加这些结构后，将启用两阶段模式：
+
+1. **阶段一（第 32-47 位）**：Java LCG 结构位置直接约束种子的第 32-47 位。每个结构可将候选数缩减约 65536 倍；2-3 个结构通常可以直接唯一确定第 32-47 位（无需暴力搜索）。
+2. **阶段二（第 48-63 位）**：对每个幸存候选，遍历第 48-63 位（最多 65536 个候选），并在搜索范围内用群系样本验证。
+
+相比默认的纯暴力搜索第 32-47 位，此模式大幅提速。
+
+**结构参数：**
+
+| 结构 | Salt | 间距 | 分隔 | 分布 | RNG |
+| ---- | ---- | ---- | ---- | ---- | --- |
+| Trail Ruins（古迹废墟） | 83469867 | 34 | 8 | Linear | Java LCG |
+| Trial Chamber（试炼密室） | 94251327 | 34 | 12 | Linear | Java LCG |
+| Abandoned Camp（废弃营地） | 91231127 | 37 | 8 | Linear | Java LCG |
+
+**使用提示：**
+
+- 2-3 个 Java LCG 结构即可唯一确定第 32-47 位
+- 结构坐标可在游戏中按区块坐标输入（与常规结构相同）
+- Windows 界面与 Linux 均支持（Linux 使用 `--lcg-structure` 参数或 `lcg_structures` 配置项）
+
+---
+
 #### 版本对应关系
 
 | 基岩版版本          | 对应 Java 版本            | 支持的群系                  |
 | ------------------- | ------------------------- | --------------------------- |
-| **26.50**           | Java 26.3 (Wilderness Bound)       | ✅ 斑驳森林（新群系）       |
+| **26.50**           | Java 26.3 (MC_26_3)       | ✅ 斑驳森林（新群系）       |
 | **26.30-26.40**          | Java 26.2 (Chaos Cubed)   | ✅ 硫磺洞穴（新地下群系）   |
 | **1.21.60-26.23**   | Java 1.21.5-26.1          | ✅ 苍白之园（扩大范围）     |
 | **1.21.50**         | Java 1.21.4 (Winter Drop) | ✅ 苍白之园（较小范围）     |
@@ -281,12 +330,12 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 | **1.21.50**       | ⚠️ 存在但范围较小         |
 | **1.21.60-26.23** | ✅ 扩大的生成范围         |
 
-**最新版本（基岩版 26.50）**：
+**最新版本（基岩版 26.30-26.40）**：
 
-- 对应 Java 26.3（奔赴荒野）
-- 新增群系：斑驳森林（ID: 188）
-- 斑驳森林为地表群系（稀有度约0.45%）
-- 同时支持硫磺洞穴（ID: 187），需使用低 Y 坐标（Y≤60）
+- 对应 Java 26.2（混沌立方更新）
+- 新增群系：硫磺洞穴（ID: 187）
+- 洞穴群系破解需使用低 Y 坐标（Y≤60）
+- 推荐：使用地表群系进行破解（有稀有度数据）
 
 **版本 1.21.60-26.23**：
 
@@ -316,19 +365,19 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 
 #### 重要限制
 
-**高32位破解功能基于 cubiomes 库，已集成 SeedMapper 的 MC 26.3 支持。**
+**高32位破解功能基于 cubiomes 库，支持到 Java 版 1.21.11（通过社区 fork 版本）。**
 
-| cubiomes 信息  | 详情                                              |
-| -------------- | ------------------------------------------------- |
-| 最新版本       | 4.1.2 (集成 MC 26.3 支持的 fork 版本)             |
-| 最后更新       | 2026年9月 (集成 SeedMapper btree263)              |
-| 支持的最高版本 | Java 26.3 (基岩版 26.50)                          |
+| cubiomes 信息  | 详情                                          |
+| -------------- | --------------------------------------------- |
+| 最新版本       | 4.1.2 (fork 版本)                             |
+| 最后更新       | 2025年1月 (fork 版本)                         |
+| 支持的最高版本 | Java 版 1.21.5-1.21.11 (基岩版 1.21.60-26.23) |
 
 **cubiomes 更新状态：**
 
 - 官方 cubiomes 在 2024年11月后停止更新
-- 集成 SeedMapper 的 cubiomes fork 版本支持 1.21.5+ 和 26.2+/26.3+
-- 支持苍白之园（1.21.50+）、硫磺洞穴（26.30-26.40）和斑驳森林（26.50）
+- 集成 SeedMapper 的 cubiomes fork 版本支持 1.21.5+ 和 26.2+
+- 支持苍白之园（1.21.50+）和硫磺洞穴（26.30-26.40）
 
 ### 稀有度自动排序
 
@@ -336,45 +385,46 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 
 ```
 [*] Biome samples (sorted by rarity, rarest first):
-    1. (-270, 470, Y=200) -> extreme_hills_mutated (ID: 131, 0.1050%)
-    2. (-1922, 1231, Y=200) -> stony_peaks (ID: 182, 0.1160%)
-    3. (-4706, 3302, Y=200) -> pale_garden (ID: 186, 0.1390%)
+    1. (-270, 470, Y=200) -> pale_garden (ID: 186, 0.1210%)
+    2. (-1922, 1231, Y=200) -> cherry_grove (ID: 185, 0.2950%)
+    3. (-4706, 3302, Y=200) -> flower_forest (ID: 132, 0.6940%)
     ...
 ```
 
-#### 主世界群系ID参考（26.50）
+**注意**：当搜索范围大小（`end - start`）小于 100,000 时，会自动跳过严格度测试，按原始顺序检查群系样本。
+
+#### 主世界群系ID参考（1.21.60-26.23）
 
 | 群系                                  | ID  | 稀有度 | 群系                                    | ID  | 稀有度 |
 | ------------------------------------- | --- | ------ | --------------------------------------- | --- | ------ |
-| extreme_hills_mutated（风袭沙砾丘陵）         | 131 | 0.10%  | deep_frozen_ocean（冰冻深海）                 | 50  | 1.16%  |
-| stony_peaks（裸岩山峰）                     | 182 | 0.12%  | stone_beach（石岸）                         | 25  | 1.25%  |
-| mushroom_island（蘑菇岛）                  | 14  | 0.14%  | jungle_edge（稀疏丛林）                       | 23  | 1.35%  |
-| pale_garden（苍白之园）                     | 186 | 0.14%  | warm_ocean（暖水海洋）                        | 44  | 1.97%  |
-| frozen_peaks（冰封山峰）                    | 181 | 0.14%  | roofed_forest（黑森林）                      | 29  | 2.02%  |
-| jagged_peaks（尖峭山峰）                    | 180 | 0.17%  | jungle（丛林）                              | 21  | 2.08%  |
-| extreme_hills_plus_trees（风袭森林）        | 34  | 0.19%  | birch_forest_mutated（原始桦木森林）            | 155 | 2.20%  |
-| ice_spikes（冰刺之地）                      | 140 | 0.19%  | birch_forest（桦木森林）                      | 27  | 2.21%  |
-| savanna_mutated（风袭热带草原）               | 163 | 0.20%  | frozen_ocean（冻洋）                        | 10  | 2.25%  |
-| cherry_grove（樱花树林）                    | 185 | 0.28%  | desert（沙漠）                              | 2   | 2.35%  |
-| mesa_bryce（风蚀恶地）                      | 165 | 0.29%  | cold_taiga（积雪针叶林）                       | 30  | 2.36%  |
-| extreme_hills（风袭丘陵）                   | 3   | 0.29%  | beach（沙滩）                               | 16  | 2.39%  |
-| cold_beach（积雪沙滩）                      | 26  | 0.34%  | deep_cold_ocean（冷水深海）                   | 49  | 2.39%  |
-| snowy_slopes（积雪山坡）                    | 179 | 0.41%  | deep_lukewarm_ocean（温水深海）               | 48  | 2.39%  |
-| savanna_plateau（热带高原）                 | 36  | 0.41%  | ice_plains（雪原）                          | 12  | 2.76%  |
-| dappled_forest（斑驳森林）                  | 188 | 0.45%  | taiga（针叶林）                              | 5   | 3.38%  |
-| mangrove_swamp（红树林沼泽）                 | 184 | 0.50%  | deep_ocean（深海）                          | 24  | 3.70%  |
-| mesa_plateau_stone（繁茂的恶地高原）           | 38  | 0.59%  | savanna（热带草原）                           | 35  | 4.04%  |
-| sunflower_plains（向日葵平原）               | 129 | 0.66%  | lukewarm_ocean（温水海洋）                    | 45  | 4.47%  |
-| flower_forest（繁花森林）                   | 132 | 0.66%  | cold_ocean（冷水海洋）                        | 46  | 4.52%  |
-| bamboo_jungle（竹林）                     | 168 | 0.67%  | river（河流）                               | 7   | 6.31%  |
-| redwood_taiga_mutated（原始云杉针叶林）        | 160 | 0.67%  | ocean（海洋）                               | 0   | 6.87%  |
-| mega_taiga（原始松木针叶林）                   | 32  | 0.71%  | plains（平原）                              | 1   | 10.33% |
-| grove（雪林）                             | 178 | 0.75%  | forest（森林）                              | 4   | 12.22% |
-| frozen_river（冻河）                      | 11  | 0.83%  | dripstone_caves（溶洞）                     | 174 | -      |
-| mesa（恶地）                              | 37  | 0.88%  | lush_caves（繁茂洞穴）                        | 175 | -      |
-| swamp（沼泽）                             | 6   | 0.95%  | deep_dark（深暗之域）                         | 183 | -      |
-| meadow（草甸）                            | 177 | 1.16%  | sulfur_caves（硫磺洞穴）                      | 187 | -      |
-
+| extreme_hills_mutated（风袭沙砾丘陵） | 131 | 0.10%  | stony_peaks（裸岩山峰）                 | 182 | 0.10%  |
+| pale_garden（苍白之园）               | 186 | 0.12%  | mushroom_island（蘑菇岛）               | 14  | 0.14%  |
+| frozen_peaks（冰封山峰）              | 181 | 0.16%  | jagged_peaks（尖峭山峰）                | 180 | 0.18%  |
+| extreme_hills_plus_trees（风袭森林）  | 34  | 0.19%  | savanna_mutated（风袭热带草原）         | 163 | 0.21%  |
+| ice_spikes（冰刺之地）                | 140 | 0.24%  | extreme_hills（风袭丘陵）               | 3   | 0.26%  |
+| cherry_grove（樱花树林）              | 185 | 0.29%  | mesa_bryce（风蚀恶地）                  | 165 | 0.33%  |
+| cold_beach（积雪沙滩）                | 26  | 0.36%  | snowy_slopes（积雪山坡）                | 179 | 0.39%  |
+| savanna_plateau（热带高原）           | 36  | 0.40%  | mangrove_swamp（红树林沼泽）            | 184 | 0.51%  |
+| mesa_plateau_stone（繁茂的恶地高原）  | 38  | 0.62%  | bamboo_jungle（竹林）                   | 168 | 0.64%  |
+| sunflower_plains（向日葵平原）        | 129 | 0.67%  | mega_taiga（原始松木针叶林）            | 32  | 0.69%  |
+| flower_forest（繁花森林）             | 132 | 0.69%  | redwood_taiga_mutated（原始云杉针叶林） | 160 | 0.71%  |
+| grove（雪林）                         | 178 | 0.72%  | frozen_river（冻河）                    | 11  | 0.83%  |
+| mesa（恶地）                          | 37  | 0.89%  | swamp（沼泽）                           | 6   | 0.98%  |
+| meadow（草甸）                        | 177 | 1.16%  | stone_beach（石岸）                     | 25  | 1.17%  |
+| deep_frozen_ocean（冰冻深海）         | 50  | 1.25%  | jungle_edge（稀疏丛林）                 | 23  | 1.38%  |
+| roofed_forest（黑森林）               | 29  | 1.84%  | jungle（丛林）                          | 21  | 2.04%  |
+| warm_ocean（暖水海洋）                | 44  | 2.13%  | birch_forest_mutated（原始桦木森林）    | 155 | 2.15%  |
+| frozen_ocean（冻洋）                  | 10  | 2.26%  | birch_forest（桦木森林）                | 27  | 2.29%  |
+| desert（沙漠）                        | 2   | 2.33%  | deep_lukewarm_ocean（温水深海）         | 48  | 2.37%  |
+| cold_taiga（积雪针叶林）              | 30  | 2.40%  | deep_cold_ocean（冷水深海）             | 49  | 2.42%  |
+| beach（沙滩）                         | 16  | 2.45%  | ice_plains（雪原）                      | 12  | 2.78%  |
+| taiga（针叶林）                       | 5   | 3.40%  | deep_ocean（深海）                      | 24  | 3.60%  |
+| savanna（热带草原）                   | 35  | 3.91%  | lukewarm_ocean（温水海洋）              | 45  | 4.55%  |
+| cold_ocean（冷水海洋）                | 46  | 4.59%  | river（河流）                           | 7   | 6.22%  |
+| ocean（海洋）                         | 0   | 6.87%  | plains（平原）                          | 1   | 10.69% |
+| forest（森林）                        | 4   | 12.31% | dripstone_caves（溶洞）                 | 174 | -      |
+| lush_caves（繁茂洞穴）                | 175 | -      | deep_dark（深暗之域）                   | 183 | -      |
+| sulfur_caves（硫磺洞穴）              | 187 | -      | dappled_forest（斑驳森林）             | 188 | 0.45%  |
 
 > **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
 
@@ -451,6 +501,7 @@ chmod +x build.sh
 - 低32位破解支持 OpenCL GPU 加速，兼容 NVIDIA/AMD/Intel 显卡
 - 旧显卡（计算单元 < 10）会自动使用 CPU 模式以确保稳定性
 - 高32位破解因算法复杂度高，暂不支持 GPU 加速
+- 高32位破解可通过可选的 Java LCG 结构模式大幅加速：2-3 个结构即可唯一确定第 32-47 位（见 [Java LCG 结构](#java-lcg-结构可选加速)）
 
 ---
 
@@ -462,9 +513,9 @@ chmod +x build.sh
 
 1. **结构坐标错误** - 坐标填写不正确，或区块定位方法有误
 2. **结构数量不足** - 结构数量不足会导致找到过多的候选种子，建议至少提供 5 个不同类型的结构
-3. **结构类型选择不当** - 某些结构（如村庄）生成规则复杂，建议优先使用：
-   - 沙漠神殿、女巫屋、丛林神庙（生成规则简单稳定）
-   - 海底神殿、末地城
+3. **结构类型选择不当** - Linear 类型结构计算量更少，速度更快：
+   - 推荐：沙漠神殿、女巫屋、丛林神庙、沉船、海底神殿、末地城
+   - 复杂结构（村庄、林地府邸等）也可以使用——4宫格会自动处理其一个区块的偏移
 4. **版本不兼容** - 如果目标世界是旧版本（1.18以下）生成的，结构位置可能与当前版本不同
 
 **解决方法：**
@@ -484,6 +535,7 @@ chmod +x build.sh
 4. **采样高度不当** - 建议 Y >= 200，避免地下群系干扰（某些地下群系可延伸至 Y=150 以上）
 5. **群系样本数量不足** - 建议至少 5 个样本
 6. **样本选择不当** - 应选择稀有群系（如樱花林），避免常见群系（如平原、海洋）
+7. **Java LCG 模式问题** - 使用 Java LCG 结构时：坐标必须是结构的实际方块坐标；结构名必须为 `trail_ruins` / `trial_chamber` / `abandoned_camp`（无效名称会跳过并警告）
 
 **解决方法：**
 
@@ -496,7 +548,9 @@ chmod +x build.sh
 
 **低32位破解：** GPU约30秒，CPU约6分钟（112核）
 
-**高32位破解：** 约2.5小时（112核，16进程）
+**高32位破解（纯群系模式）：** 约2.5小时（112核，16进程）
+
+**高32位破解（Java LCG模式）：** Phase 2（32-47位）只需数秒；Phase 3 群系验证仅对幸存候选进行，通常数分钟内完成
 
 如果时间明显超出：
 

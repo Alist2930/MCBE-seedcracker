@@ -69,7 +69,8 @@ def load_config():
                 {"x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest"},
                 {"x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga"},
                 {"x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest"}
-            ]
+            ],
+            "lcg_structures": []
         }
     }
     
@@ -240,6 +241,25 @@ def validate_high32_config(config):
     if not isinstance(low32, int) or low32 < 0 or low32 > UINT32_MAX:
         raise ValueError(f"Configuration error: 'low32' must be in range [0, {UINT32_MAX}]")
 
+    # Validate lcg_structures (optional, for Java LCG phase 2+3 mode)
+    lcg_structures = config.get('lcg_structures', [])
+    if lcg_structures is None:
+        lcg_structures = []
+    if not isinstance(lcg_structures, list):
+        raise ValueError("Configuration error: 'lcg_structures' must be a list")
+
+    valid_lcg_types = {'trail_ruins', 'trial_chamber', 'abandoned_camp'}
+    for i, s in enumerate(lcg_structures):
+        if not isinstance(s, dict):
+            raise ValueError(f"Configuration error: lcg_structure {i} is not a dictionary")
+        for field in ['type', 'x', 'z']:
+            if field not in s:
+                raise ValueError(f"Configuration error: lcg_structure {i} missing '{field}' field")
+        if s['type'] not in valid_lcg_types:
+            raise ValueError(f"Configuration error: lcg_structure {i} has invalid type '{s['type']}'. Valid: {sorted(valid_lcg_types)}")
+        if not isinstance(s['x'], int) or not isinstance(s['z'], int):
+            raise ValueError(f"Configuration error: lcg_structure {i} coordinates must be integers")
+
 def get_high32_config():
     """Get high32-bit cracker configuration
 
@@ -260,7 +280,8 @@ def get_high32_config():
             {"x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest"},
             {"x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga"},
             {"x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest"}
-        ]
+        ],
+        'lcg_structures': []
     }
 
     if config and 'high32' in config:

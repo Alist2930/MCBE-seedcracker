@@ -267,14 +267,25 @@ class BiomeSample(ctypes.Structure):
 
 def init_dll():
     dll = ctypes.CDLL(str(dll_path))
-    
+
     dll.crack_high32_soa.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int,
         ctypes.POINTER(BiomeSample), ctypes.c_int,
         ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
     ]
     dll.crack_high32_soa.restype = ctypes.c_int
-    
+
+    # Phase 3 of Java LCG: non-contiguous high32 search (fixed h16, vary bits 48-63)
+    dll.crack_high32_lcg_phase3.argtypes = [
+        ctypes.c_uint16,    # h16 (fixed bits 32-47)
+        ctypes.c_uint32,    # low32
+        ctypes.c_uint16,    # min_upper (bits 48-63, inclusive)
+        ctypes.c_uint16,    # max_upper (bits 48-63, inclusive)
+        ctypes.POINTER(BiomeSample), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint64), ctypes.c_int, ctypes.c_int
+    ]
+    dll.crack_high32_lcg_phase3.restype = ctypes.c_int
+
     return dll
 
 def crack_batch_soa(args):
@@ -312,6 +323,145 @@ def crack_batch_soa(args):
 
     return [results[i] for i in range(found)]
 
+
+def crack_batch_lcg_phase3(args):
+    """Phase 3 wrapper: Call crack_high32_lcg_phase3 for non-contiguous high32 search.
+
+    Iterates bits_48_63 (upper) with fixed h16 (bits 32-47).
+    high32 = (upper << 16) | h16, so valid high32 values are spaced 65536 apart.
+    """
+    h16, low32, min_upper, max_upper, samples, mc_version = args
+    dll = init_dll()
+
+    if dll is None:
+        raise RuntimeError("crack_high32 library not found or failed to load")
+
+    num_samples = len(samples)
+    sample_array = (BiomeSample * num_samples)()
+    for i, sample in enumerate(samples):
+        if len(sample) == 4:
+            x, z, y, biome_id = sample
+        else:
+            x, z, biome_id = sample
+            y = 200
+        sample_array[i].x = x
+        sample_array[i].z = z
+        sample_array[i].y = y
+        sample_array[i].biome_id = biome_id
+
+    results = (ctypes.c_uint64 * MAX_RESULTS)()
+
+    found = dll.crack_high32_lcg_phase3(
+        h16, low32, min_upper, max_upper,
+        sample_array, num_samples,
+        results, MAX_RESULTS, mc_version
+    )
+
+    if found < 0:
+        raise RuntimeError(f"crack_high32_lcg_phase3 failed for h16=0x{h16:04X} (return code {found})")
+
+    return [results[i] for i in range(found)]
+
+
+# ===== Java LCG structure cracking (phase 2: bits 32-47) =====
+# Java LCG constants (cubiomes-bedrock algorithm)
+JLCG_K = 0x5DEECE66D
+JLCG_M48 = (1 << 48) - 1
+JLCG_B = 0xB
+JLCG_A_REG = 341873128712
+JLCG_B_REG = 132897987541
+
+# Java LCG structure configs (Trail Ruins, Trial Chambers, Abandoned Camp)
+JAVA_LCG_STRUCTURES = {
+    "trail_ruins": {"name": "Trail Ruins", "salt": 83469867, "spacing": 34, "separation": 8},
+    "trial_chamber": {"name": "Trial Chamber", "salt": 94251327, "spacing": 34, "separation": 12},
+    "abandoned_camp": {"name": "Abandoned Camp", "salt": 91231127, "spacing": 37, "separation": 8},
+}
+
+
+def crack_high16_java_lcg(low32, lcg_structures, search_start=0, search_end=0xFFFFFFFF):
+    """
+    Phase 2: Brute-force bits 32-47 using Java LCG structures.
+    Only searches h16 values whose range overlaps with [search_start, search_end].
+
+    Args:
+        low32: Known lower 32 bits of the seed.
+        lcg_structures: List of dicts with keys: type, x, z (block coordinates)
+        search_start: User's high32 search start (inclusive)
+        search_end: User's high32 search end (inclusive)
+
+    Returns:
+        List of 16-bit values (bits 32-47) that match all targets.
+    """
+    # Prepare constraints: per-structure list of 4 (r_const, target_ox, target_oz) offsets.
+    # 4-chunk grid: a player-reported coordinate may correspond to one of 4 origin chunks:
+    # (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1). A structure matches if ANY offset matches.
+    structure_constraints = []  # [(chunk_range, [(r_const, target_ox, target_oz), ...4]), ...]
+    for s in lcg_structures:
+        stype = s.get('type')
+        config = JAVA_LCG_STRUCTURES.get(stype)
+        if not config:
+            print(f"[WARNING] Unknown Java LCG structure: {stype}, skipping")
+            continue
+        spacing = config['spacing']
+        separation = config['separation']
+        chunk_range = spacing - separation
+        salt = config['salt']
+        cx = s['x'] >> 4  # block to chunk
+        cz = s['z'] >> 4
+
+        offsets = []
+        for dx in [0, 1]:
+            for dz in [0, 1]:
+                origin_cx = cx + dx
+                origin_cz = cz + dz
+                rx = origin_cx // spacing
+                rz = origin_cz // spacing
+                target_ox = origin_cx % spacing
+                target_oz = origin_cz % spacing
+                r_const = (rx * JLCG_A_REG + rz * JLCG_B_REG + salt) & JLCG_M48
+                offsets.append((r_const, target_ox, target_oz))
+        structure_constraints.append((chunk_range, offsets))
+
+    if not structure_constraints:
+        return []
+
+    # Brute-force h16 candidates (bits 32-47)
+    # h16 is valid iff its minimum possible high32 (h16 itself, upper=0) <= end
+    # and its maximum possible high32 (0xFFFF0000 + h16, upper=0xFFFF) >= start
+    min_h16 = 0
+    if search_start > 0xFFFF0000:
+        min_h16 = search_start - 0xFFFF0000
+    max_h16 = min(0xFFFF, search_end)
+
+    candidates = []
+    for h16 in range(min_h16, max_h16 + 1):
+        candidate_48 = (h16 << 32) | low32
+        all_match = True
+        for chunk_range, offsets in structure_constraints:
+            structure_matched = False
+            for r_const, target_ox, target_oz in offsets:
+                region_seed = (candidate_48 + r_const) & JLCG_M48
+                seed = region_seed ^ JLCG_K
+                seed = (seed * JLCG_K + JLCG_B) & JLCG_M48
+                ox = (seed >> 17) % chunk_range
+                if ox != target_ox:
+                    continue
+                seed = (seed * JLCG_K + JLCG_B) & JLCG_M48
+                oz = (seed >> 17) % chunk_range
+                if oz != target_oz:
+                    continue
+                structure_matched = True
+                break
+            if not structure_matched:
+                all_match = False
+                break
+        if all_match:
+            candidates.append(h16)
+
+    return candidates
+
+
 def main():
     # Create/Clear found seeds file
     found_seeds_file = Path(__file__).parent / "found_seeds.txt"
@@ -329,11 +479,44 @@ def main():
     parser.add_argument('--test', action='store_true', help='Test mode: 0 ~ 100M, overrides config')
     parser.add_argument('--low32', type=int, default=None, help='Low 32-bit value, overrides config')
     parser.add_argument('--processes', type=int, default=None, help='Number of processes')
+    parser.add_argument('--lcg-structure', action='append', default=None,
+                        help='Java LCG structure (format: name:x:z, e.g., trail_ruins:3069:2883). Repeatable. Enables phase 2 (32-47 bit) + phase 3 (48-63 bit) flow.')
     args = parser.parse_args()
-    
+
     # Load configuration
     cfg = config_loader.get_high32_config()
-    
+
+    # Parse Java LCG structures: CLI args override config.json
+    lcg_structures = []
+    if args.lcg_structure:
+        # CLI args provided, use them
+        for s in args.lcg_structure:
+            parts = s.split(':')
+            if len(parts) == 3:
+                name = parts[0]
+                try:
+                    x, z = int(parts[1]), int(parts[2])
+                except ValueError:
+                    print(f"[WARNING] Invalid coordinates in: {s}, skipping")
+                    continue
+                if name in JAVA_LCG_STRUCTURES:
+                    lcg_structures.append({"type": name, "x": x, "z": z})
+                else:
+                    valid = ", ".join(sorted(JAVA_LCG_STRUCTURES.keys()))
+                    print(f"[WARNING] Unknown Java LCG structure '{name}'. Valid: {valid}")
+            else:
+                print(f"[WARNING] Invalid format (expected name:x:z): {s}")
+    else:
+        # Load from config.json
+        cfg_lcg = cfg.get('lcg_structures', [])
+        for s in cfg_lcg:
+            stype = s.get('type')
+            if stype in JAVA_LCG_STRUCTURES:
+                lcg_structures.append({"type": stype, "x": s['x'], "z": s['z']})
+            else:
+                valid = ", ".join(sorted(JAVA_LCG_STRUCTURES.keys()))
+                print(f"[WARNING] Unknown Java LCG structure '{stype}' in config.json. Valid: {valid}")
+
     # Override config with command-line arguments
     if args.test:
         test_mode = True
@@ -379,6 +562,10 @@ def main():
     print(f"\n[*] Low 32-bit: {low32}")
     print(f"[*] MC Version: {MC_VERSION_STR}")
     print(f"[*] Processes: {max_processes} ({source}, limited to 16)")
+    if lcg_structures:
+        print(f"[*] Java LCG structures: {len(lcg_structures)} (enables phase 2+3 mode)")
+    else:
+        print(f"[*] Java LCG structures: none (biome-only mode)")
     
     # Check biome version compatibility BEFORE strictness testing
     version_warnings = check_biome_version(SAMPLES, MC_VERSION_STR)
@@ -390,21 +577,157 @@ def main():
         input("\nPress Enter to exit...")
         sys.exit(1)
 
-    # Sort by empirical strictness (fewest matches = rarest = first)
+    # Skip strictness test if search range size < 100000 (test would be redundant)
     num_test_seeds = 100000
-    print(f"\n[*] Testing biome sample strictness (0-{num_test_seeds:,} high32 seeds)...")
-    sorted_samples, strictness_scores = sort_samples_by_strictness(SAMPLES, low32, MC_VERSION, num_test_seeds=num_test_seeds)
+    skip_strictness = (search_end - search_start < num_test_seeds)
 
-    print(f"\n[*] Biome samples (sorted by strictness, rarest first):")
-    for i, (sample, score) in enumerate(zip(sorted_samples, strictness_scores)):
-        if len(sample) == 4:
-            x, z, y, biome_id = sample
-        else:
-            x, z, biome_id = sample
-            y = 200
-        match_pct = score / num_test_seeds * 100
-        print(f"    {i+1}. ({x}, {z}, Y={y}) -> {get_biome_name(biome_id)} (ID: {biome_id}) - {score}/{num_test_seeds} matches ({match_pct:.4f}%)")
-    
+    if skip_strictness:
+        print(f"\n[*] Search range size < {num_test_seeds:,} ({search_end - search_start}), skipping strictness test")
+        sorted_samples = SAMPLES
+        strictness_scores = []
+        print(f"\n[*] Biome samples (strictness test skipped, range size < {num_test_seeds:,}):")
+        for i, sample in enumerate(sorted_samples):
+            if len(sample) == 4:
+                x, z, y, biome_id = sample
+            else:
+                x, z, biome_id = sample
+                y = 200
+            print(f"    {i+1}. ({x}, {z}, Y={y}) -> {get_biome_name(biome_id)} (ID: {biome_id})")
+    else:
+        # Sort by empirical strictness (fewest matches = rarest = first)
+        print(f"\n[*] Testing biome sample strictness (0-{num_test_seeds:,} high32 seeds)...")
+        sorted_samples, strictness_scores = sort_samples_by_strictness(SAMPLES, low32, MC_VERSION, num_test_seeds=num_test_seeds)
+
+        print(f"\n[*] Biome samples (sorted by strictness, rarest first):")
+        for i, (sample, score) in enumerate(zip(sorted_samples, strictness_scores)):
+            if len(sample) == 4:
+                x, z, y, biome_id = sample
+            else:
+                x, z, biome_id = sample
+                y = 200
+            match_pct = score / num_test_seeds * 100
+            print(f"    {i+1}. ({x}, {z}, Y={y}) -> {get_biome_name(biome_id)} (ID: {biome_id}) - {score}/{num_test_seeds} matches ({match_pct:.4f}%)")
+
+    # ===== Java LCG phase 2+3 (if structures provided) =====
+    if lcg_structures:
+        print(f"\n{'=' * 60}")
+        print("Phase 2: Java LCG brute-force bits 32-47 (2^16 candidates)")
+        print(f"{'=' * 60}")
+        print(f"  Structures: {len(lcg_structures)}")
+        for s in lcg_structures:
+            cfg_name = JAVA_LCG_STRUCTURES.get(s['type'], {}).get('name', s['type'])
+            print(f"    {cfg_name}: ({s['x']}, {s['z']})")
+
+        t0 = time.time()
+        h16_candidates = crack_high16_java_lcg(low32, lcg_structures, search_start, search_end)
+        elapsed_p2 = time.time() - t0
+
+        print(f"\n  Phase 2 done in {elapsed_p2:.2f}s")
+        print(f"  Found {len(h16_candidates)} candidate(s) for bits 32-47")
+
+        if not h16_candidates:
+            print("\n[!] Java LCG phase found no candidates. Check coordinates or use biome-only.")
+            input("\nPress Enter to exit...")
+            sys.exit(1)
+
+        # Phase 3: Biome verify bits 48-63 per candidate
+        print(f"\n{'=' * 60}")
+        print("Phase 3: Biome verify bits 48-63 (2^16 per candidate)")
+        print(f"{'=' * 60}")
+
+        # Precompute valid upper ranges per candidate (high32 = (upper << 16) | h16)
+        valid_candidates = []
+        total_uppers = 0
+        for h16 in h16_candidates:
+            # Need start <= high32 <= end
+            if search_end < h16:
+                continue
+
+            if search_start <= h16:
+                min_upper = 0
+            else:
+                min_upper = (search_start - h16 + 65535) // 65536
+
+            max_upper = min(0xFFFF, (search_end - h16) // 65536)
+
+            if min_upper > max_upper:
+                continue
+
+            range_size = max_upper - min_upper + 1
+            valid_candidates.append((h16, min_upper, max_upper, range_size))
+            total_uppers += range_size
+
+        # Parallel Phase 3: same spawn process pool as the normal path
+        ctx = mp.get_context('spawn')
+        print(f"\n[*] Initializing {max_processes} worker processes (using spawn)...")
+        pool = ctx.Pool(max_processes)
+        print("[*] Workers initialized! Starting biome verify...")
+
+        tasks = [(h, low32, min_u, max_u, sorted_samples, MC_VERSION)
+                 for (h, min_u, max_u, _rs) in valid_candidates]
+
+        all_results = []
+        found_count = 0
+        done_uppers = 0
+        start_time = time.time()
+        bar_len = 30
+
+        try:
+            for i, results in enumerate(pool.imap(crack_batch_lcg_phase3, tasks)):
+                h16, min_upper, max_upper, range_size = valid_candidates[i]
+                done_uppers += range_size
+
+                for seed in results:
+                    all_results.append(seed)
+                    found_count += 1
+                    seed_info = format_seed_output(seed, low32)
+                    sys.stdout.write('\r\033[K')
+                    sys.stdout.flush()
+                    print(seed_info)
+                    with open(found_seeds_file, 'a', encoding='utf-8') as f:
+                        f.write(seed_info + '\n')
+                        f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                        f.write("-" * 60 + '\n')
+
+                # In-place progress with speed and ETA (same style as the normal path)
+                progress = (i + 1) / len(valid_candidates) * 100
+                elapsed = time.time() - start_time
+                speed = done_uppers / elapsed if elapsed > 0 else 0
+                eta = (total_uppers - done_uppers) / speed if speed > 0 else 0
+                filled = int(bar_len * progress / 100)
+                bar = '#' * filled + '-' * (bar_len - filled)
+                sys.stdout.write(f"\r  [{bar}] {progress:.1f}% | Candidate {i+1}/{len(valid_candidates)} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}")
+                sys.stdout.flush()
+        finally:
+            pool.close()
+            pool.join()
+
+        # Clear the progress line after completion
+        sys.stdout.write('\r\033[K')
+        sys.stdout.flush()
+
+        total_elapsed = time.time() - start_time
+        print(f"\n{'=' * 60}")
+        print("[Complete]")
+        print(f"{'=' * 60}")
+        print(f"  Phase 2 + 3 Time: {total_elapsed:.1f}s")
+        print(f"  Found: {len(all_results)} seed(s)")
+
+        if all_results:
+            print("\n" + "=" * 60)
+            print("All found seeds:")
+            print("=" * 60)
+            for seed in all_results:
+                high32 = seed >> 32
+                display_seed = to_signed64(seed)
+                print(f"\n  Low 32-bit:  {low32} (0x{low32:08X})")
+                print(f"  High 32-bit: {high32} (0x{high32:08X})")
+                print(f"  Full seed:   {display_seed} (0x{seed:016X})")
+
+        input("\nPress Enter to exit...")
+        sys.exit(0)
+    # ===== End Java LCG phase =====
+
     total_search = search_end - search_start + 1
 
     print(f"\n[*] Search range: {search_start:,} ~ {search_end:,}")
