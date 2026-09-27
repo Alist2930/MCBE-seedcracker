@@ -8,8 +8,11 @@ import ctypes
 from ui.utils.language_manager import lang_manager
 
 # 4-chunk grid: a player-reported coordinate may correspond to one of 4 origin chunks:
-# (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1). We test all 4 to find the matching seed.
+# (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1).
+# Only structures with complex generation rules need the grid; others use the exact
+# origin chunk (single offset repeated to fill the uniform NUM_OFFSETS slots).
 NUM_OFFSETS = 4
+FOUR_GRID_STRUCTURES = {"village", "igloo", "pillager_outpost", "ruined_portal_overworld", "ruined_portal_nether"}
 
 
 def get_dll_path(opencl=False):
@@ -539,7 +542,7 @@ class Low32Worker(QThread):
         # r_base_list/ox_list/oz_list are flattened: [num_structures * NUM_OFFSETS]
         # offset_range_list/spread_type_list are per-structure: [num_structures]
         r_base_list, ox_list, oz_list, offset_range_list, spread_type_list = [], [], [], [], []
-        # per_structure_offsets[i] = [(r_base, ox, oz), ...4 tuples] for strictness test
+        # per_structure_offsets[i] = [(r_base, ox, oz), ...] for strictness test (4 for grid structures, 1 otherwise)
         per_structure_offsets = []
 
         for structure in sorted_structures:
@@ -555,10 +558,12 @@ class Low32Worker(QThread):
             cx, cz = x >> 4, z >> 4
             spread_type_int = 1 if spread_type_str == "triangular" else 0
 
-            # 4 origin chunks: (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+            # Grid structures: 4 origin chunks (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+            # Others: exact origin chunk only, repeated to keep arrays uniform (NUM_OFFSETS slots)
+            use_grid = structure_type in FOUR_GRID_STRUCTURES
             offsets_for_structure = []
-            for dx in [0, 1]:
-                for dz in [0, 1]:
+            for dx in ([0, 1] if use_grid else [0]):
+                for dz in ([0, 1] if use_grid else [0]):
                     origin_cx = cx + dx
                     origin_cz = cz + dz
                     rx = origin_cx // spacing
@@ -570,6 +575,14 @@ class Low32Worker(QThread):
                     ox_list.append(ox)
                     oz_list.append(oz)
                     offsets_for_structure.append((r_base, ox, oz))
+
+            if not use_grid:
+                # Repeat the single exact-chunk offset to fill NUM_OFFSETS slots
+                only = offsets_for_structure[0]
+                r_base_list.extend([only[0]] * (NUM_OFFSETS - 1))
+                ox_list.extend([only[1]] * (NUM_OFFSETS - 1))
+                oz_list.extend([only[2]] * (NUM_OFFSETS - 1))
+                offsets_for_structure = [only]
 
             offset_range_list.append(spacing - separation)
             spread_type_list.append(spread_type_int)
@@ -600,8 +613,8 @@ class Low32Worker(QThread):
             spacing = config.get("spacing", 32)
             separation = config.get("separation", 8)
 
-            # Get per-structure 4 offsets (already computed above)
-            offsets = per_structure_offsets[i]  # [(r_base, ox, oz), ...4 tuples]
+            # Get per-structure offsets (already computed above; 4 for grid structures, 1 otherwise)
+            offsets = per_structure_offsets[i]  # [(r_base, ox, oz), ... tuples]
             spread_type_int = spread_type_list[i]
             offset_range = offset_range_list[i]
 
@@ -615,7 +628,7 @@ class Low32Worker(QThread):
                 structure_info_lines.append(info_line)
                 continue
 
-            # Test using C library (4-chunk grid, single structure)
+            # Test using C library (single structure; 4-chunk grid where applicable)
             try:
                 dll_path = get_dll_path(opencl=False)
                 if os.path.exists(dll_path):
@@ -629,9 +642,10 @@ class Low32Worker(QThread):
                     ]
                     lib.crack_low32_grid.restype = ctypes.c_int
 
-                    r_base_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*[o[0] for o in offsets])
-                    ox_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*[o[1] for o in offsets])
-                    oz_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*[o[2] for o in offsets])
+                    num_offsets = len(offsets)
+                    r_base_arr = (ctypes.c_uint32 * num_offsets)(*[o[0] for o in offsets])
+                    ox_arr = (ctypes.c_uint32 * num_offsets)(*[o[1] for o in offsets])
+                    oz_arr = (ctypes.c_uint32 * num_offsets)(*[o[2] for o in offsets])
                     offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
                     spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
                     results_arr = (ctypes.c_uint32 * 100000)()
@@ -639,7 +653,7 @@ class Low32Worker(QThread):
                     found = lib.crack_low32_grid(
                         0, 100000,
                         r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                        1, NUM_OFFSETS,  # num_structures=1, num_offsets=4
+                        1, num_offsets,  # num_structures=1, num_offsets per grid membership
                         results_arr, 100000
                     )
 

@@ -31,8 +31,11 @@ CONST_A = 2570712328
 CONST_B = 4048968661
 
 # 4-chunk grid: a player-reported coordinate may correspond to one of 4 origin chunks:
-# (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1). We test all 4 to find the matching seed.
+# (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1).
+# Only structures with complex generation rules need the grid; others use the exact
+# origin chunk (single offset repeated to fill the uniform NUM_OFFSETS slots).
 NUM_OFFSETS = 4
+FOUR_GRID_STRUCTURES = {"village", "igloo", "pillager_outpost", "ruined_portal_overworld", "ruined_portal_nether"}
 
 # Found seeds output file (set in main(), used by run_crack_cpu/gpu)
 FOUND_SEEDS_FILE = None
@@ -119,14 +122,16 @@ def has_opencl_gpu():
     except Exception as e:
         return False, str(e)
 
-def test_sample_strictness(config, x, z, num_test_seeds=100000):
+def test_sample_strictness(structure, config, x, z, num_test_seeds=100000):
     """
-    Test the strictness (matching probability) of a structure sample using 4-chunk grid.
+    Test the strictness (matching probability) of a structure sample.
     Returns the number of matches in num_test_seeds attempts.
 
-    A seed matches if ANY of the 4 origin chunks produces the target (ox, oz).
+    4-chunk grid structures match if ANY of the 4 origin chunks produces the
+    target (ox, oz); other structures match the exact origin chunk only.
 
     Args:
+        structure: Structure name key (decides whether the 4-chunk grid is used)
         config: Structure configuration dict
         x: Block X coordinate
         z: Block Z coordinate
@@ -142,10 +147,12 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
     offset_range = spacing - separation
     spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
 
-    # Build 4 origin chunks: (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+    # Grid structures: 4 origin chunks; others: exact origin chunk only
+    use_grid = structure in FOUR_GRID_STRUCTURES
+    num_offsets = NUM_OFFSETS if use_grid else 1
     r_base_vals, ox_vals, oz_vals = [], [], []
-    for dx in [0, 1]:
-        for dz in [0, 1]:
+    for dx in ([0, 1] if use_grid else [0]):
+        for dz in ([0, 1] if use_grid else [0]):
             origin_cx = cx + dx
             origin_cz = cz + dz
             rx = origin_cx // spacing
@@ -167,9 +174,9 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
         ]
         lib.crack_low32_grid.restype = ctypes.c_int
 
-        r_base_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*r_base_vals)
-        ox_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*ox_vals)
-        oz_arr = (ctypes.c_uint32 * NUM_OFFSETS)(*oz_vals)
+        r_base_arr = (ctypes.c_uint32 * num_offsets)(*r_base_vals)
+        ox_arr = (ctypes.c_uint32 * num_offsets)(*ox_vals)
+        oz_arr = (ctypes.c_uint32 * num_offsets)(*oz_vals)
         offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
         spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
         results_arr = (ctypes.c_uint32 * num_test_seeds)()
@@ -177,7 +184,7 @@ def test_sample_strictness(config, x, z, num_test_seeds=100000):
         found = lib.crack_low32_grid(
             0, num_test_seeds,
             r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-            1, NUM_OFFSETS,  # num_structures=1, num_offsets=4
+            1, num_offsets,  # num_structures=1, num_offsets per grid membership
             results_arr, num_test_seeds
         )
 
@@ -221,10 +228,12 @@ def prepare_targets(targets, skip_strictness=False):
         cx, cz = x >> 4, z >> 4
         spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
 
-        # 4 origin chunks: (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+        # Grid structures: 4 origin chunks (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
+        # Others: exact origin chunk only, repeated to keep arrays uniform (NUM_OFFSETS slots)
+        use_grid = t["structure"] in FOUR_GRID_STRUCTURES
         first_rx = first_rz = None
-        for dx in [0, 1]:
-            for dz in [0, 1]:
+        for dx in ([0, 1] if use_grid else [0]):
+            for dz in ([0, 1] if use_grid else [0]):
                 origin_cx = cx + dx
                 origin_cz = cz + dz
                 rx = origin_cx // spacing
@@ -237,6 +246,12 @@ def prepare_targets(targets, skip_strictness=False):
                 oz_list.append(oz)
                 if first_rx is None:
                     first_rx, first_rz = rx, rz
+
+        if not use_grid:
+            # Repeat the single exact-chunk offset to fill NUM_OFFSETS slots
+            r_base_list.extend([r_base_list[-1]] * (NUM_OFFSETS - 1))
+            ox_list.extend([ox_list[-1]] * (NUM_OFFSETS - 1))
+            oz_list.extend([oz_list[-1]] * (NUM_OFFSETS - 1))
 
         offset_range_list.append(spacing - separation)
         spread_type_list.append(spread_type_int)
@@ -255,7 +270,7 @@ def prepare_targets(targets, skip_strictness=False):
             config = STRUCTURE_CONFIGS[t["structure"]]
             x, z = t["x"], t["z"]
 
-            matches = test_sample_strictness(config, x, z, num_test_seeds=100000)
+            matches = test_sample_strictness(t["structure"], config, x, z, num_test_seeds=100000)
             strictness_scores.append(matches)
 
     # Sort by strictness (fewer matches = stricter = higher priority)
@@ -288,7 +303,7 @@ def prepare_targets(targets, skip_strictness=False):
 R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = [], [], [], [], [], []
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing (uses 4-chunk grid)"""
+    """CPU worker for multiprocessing (per-structure offsets; 4-chunk grid where applicable)"""
     start, end, r_base, ox, oz, offset_range, spread_type = args
 
     lib_path = Path(__file__).parent / 'crack_low32.so'

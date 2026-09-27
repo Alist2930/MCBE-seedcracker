@@ -169,13 +169,10 @@ Multiple structures matching simultaneously can significantly narrow down candid
 | jungle_temple           | Jungle Temple             | **linear**  |
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
-| trail_ruins             | Trail Ruins (Java LCG)    | **linear**  |
-| trial_chamber           | Trial Chamber (Java LCG)  | **linear**  |
-| abandoned_camp          | Abandoned Camp (Java LCG) | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether complexes) may appear offset by one chunk in-game — they are safe to use.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — they are safe to use.
 >
-> **Note**: The last three structures (Trail Ruins, Trial Chamber, Abandoned Camp) use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. See the Java LCG Structures section for details.
+> **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the Java LCG Structures section.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -293,6 +290,12 @@ When added in the high 32-bit cracking stage, these structures enable a two-stag
 
 This is dramatically faster than the default full brute force over bits 32-47.
 
+| Name          | Description               | Spread Type |
+| ------------- | ------------------------- | ----------- |
+| trail_ruins   | Trail Ruins               | linear      |
+| trial_chamber | Trial Chamber             | linear      |
+| abandoned_camp| Abandoned Camp            | linear      |
+
 **Chunk Location Method:**
 
 Same as regular structures, enter a position within the chunk where the structure is located (see [Structure Chunk Location Method](#structure-chunk-location-method)). The specific chunk determination methods for the three structures (with screenshots) will be added later:
@@ -335,12 +338,17 @@ Same as regular structures, enter a position within the chunk where the structur
 | **1.21.50**       | ⚠️ Exists but smaller range               |
 | **1.21.60-26.23** | ✅ Expanded generation range              |
 
-**Latest version (Bedrock 26.30-26.40)**:
+**Latest version (Bedrock 26.50)**:
+
+- Corresponds to Java 26.3
+- New biome: Dappled Forest (ID: 188)
+- Recommended: Use surface biomes for cracking (rarity data available)
+
+**Version 26.30-26.40**:
 
 - Corresponds to Java 26.2 (Chaos Cubed Drop)
 - New biome: Sulfur Caves (ID: 187)
 - Requires low Y coordinate (Y≤60) for cave biome cracking
-- Recommended: Use surface biomes for cracking (rarity data available)
 
 **Version 1.21.60-26.23**:
 
@@ -372,19 +380,19 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 #### Important Limitation
 
-**High 32-bit cracking is based on cubiomes library, integrated with MC 26.2 support from SeedMapper.**
+**High 32-bit cracking is based on cubiomes library, integrated with MC 26.3 support from SeedMapper.**
 
 | cubiomes Info  | Details                                    |
 | -------------- | ------------------------------------------ |
-| Latest Version | 4.1.2 (fork with MC 26.2 support)          |
+| Latest Version | 4.1.2 (fork with MC 26.3 support)          |
 | Last Update    | July 2026 (integrated SeedMapper btree262) |
-| Max Supported  | Java 26.2 (Bedrock 26.30-26.40)                 |
+| Max Supported  | Java 26.3 (Bedrock 26.50)                  |
 
 **cubiomes Update Status:**
 
 - Official cubiomes stopped updating after November 2024
-- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.2+ support
-- Supports Pale Garden (1.21.50+) and Sulfur Caves (26.30-26.40)
+- Integrated SeedMapper's cubiomes fork for 1.21.5+ and 26.3+ support
+- Supports Pale Garden (1.21.50+), Sulfur Caves (26.30-26.40), and Dappled Forest (26.50)
 
 #### Overworld Biome ID Reference (1.21.60-26.23)
 
@@ -453,6 +461,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
+| High 32-bit | Java LCG | — | — | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
 
 **Notes**:
 
