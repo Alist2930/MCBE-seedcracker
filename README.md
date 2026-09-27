@@ -17,9 +17,6 @@ Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
 
 Crack Minecraft Bedrock Edition world seeds through structure coordinates and biome samples.
 
-- **4-chunk grid matching**: Automatically checks 4 candidate origin chunks per structure, tolerating ±1 chunk coordinate offsets
-- **Optional Java LCG structure cracking**: Trail Ruins / Trial Chamber / Abandoned Camp coordinates reduce high 32-bit cracking from 2^32 to 2^16 candidates before biome verification
-
 ---
 
 ## Requirements
@@ -150,8 +147,6 @@ Iterate through all possible low 32-bit values (0 - 2³²-1, about 4.3 billion).
 2. Initialize MT19937 and generate offset values
 3. Check if offsets match actual structure positions
 
-**4-chunk grid**: The structure origin chunk may be offset by one chunk from the player-reported position. The cracker automatically checks all 4 candidate origin chunks — (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1) — so coordinates within ±1 chunk are accepted.
-
 Multiple structures matching simultaneously can significantly narrow down candidates, typically completing within half an hour.
 
 #### Supported Structures
@@ -178,7 +173,7 @@ Multiple structures matching simultaneously can significantly narrow down candid
 | trial_chamber           | Trial Chamber (Java LCG)  | **linear**  |
 | abandoned_camp          | Abandoned Camp (Java LCG) | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether complexes) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether complexes) may appear offset by one chunk in-game — they are safe to use.
 >
 > **Note**: The last three structures (Trail Ruins, Trial Chamber, Abandoned Camp) use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. See the Java LCG Structures section for details.
 
@@ -227,8 +222,6 @@ Multiple structures matching simultaneously can significantly narrow down candid
   Ocean ruins group:
 
   ![Ocean Ruins Group Chunk Location](assets/imgs/ocean_ruins_group.png)
-
-> **Note**: The cracker automatically checks the 4 possible origin chunks (4-chunk grid) around the input coordinate, so chunk selection within ±1 chunk is tolerated.
 
 ---
 
@@ -300,19 +293,21 @@ When added in the high 32-bit cracking stage, these structures enable a two-stag
 
 This is dramatically faster than the default full brute force over bits 32-47.
 
-**Structure Parameters:**
+**Chunk Location Method:**
 
-| Structure | Salt | Spacing | Separation | Spread | RNG |
-| --------- | ---- | ------- | ---------- | ------ | --- |
-| Trail Ruins (古迹废墟) | 83469867 | 34 | 8 | Linear | Java LCG |
-| Trial Chamber (试炼密室) | 94251327 | 34 | 12 | Linear | Java LCG |
-| Abandoned Camp (废弃营地) | 91231127 | 37 | 8 | Linear | Java LCG |
+Same as regular structures, enter a position within the chunk where the structure is located (see [Structure Chunk Location Method](#structure-chunk-location-method)). The specific chunk determination methods for the three structures (with screenshots) will be added later:
 
-**Usage Tips:**
+- **Trail Ruins**: (chunk location method to be added)
 
-- 2-3 Java LCG structures are sufficient to uniquely determine bits 32-47
-- Structure coordinates can be entered as chunk coordinates in-game (same as regular structures)
-- Supported on both the Windows UI and Linux (via the `--lcg-structure` argument or the `lcg_structures` config field)
+  ![Trail Ruins Chunk Location](assets/imgs/trail_ruins.png)
+
+- **Trial Chamber**: (chunk location method to be added)
+
+  ![Trial Chamber Chunk Location](assets/imgs/trial_chamber.png)
+
+- **Abandoned Camp**: (chunk location method to be added)
+
+  ![Abandoned Camp Chunk Location](assets/imgs/abandoned_camp.png)
 
 ---
 
@@ -369,9 +364,11 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 #### Biome Sample Selection Tips
 
-- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-- **Avoid sampling near biome boundaries**
-- If cracking fails, try different coordinates within the same biome
+> ⚠️ **Important**
+>
+> - **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+> - **Avoid sampling near biome boundaries**
+> - If cracking fails, try different coordinates within the same biome
 
 #### Important Limitation
 
@@ -461,8 +458,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 - Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
 - Old GPUs (compute units < 10) automatically use CPU mode for stability
-- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
-- High 32-bit cracking can be dramatically accelerated by the optional Java LCG structure mode: 2-3 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
+- High 32-bit cracking does not support GPU acceleration due to algorithm complexity, but can be dramatically accelerated by the optional Java LCG structure mode: 2-3 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
 
 ---
 
@@ -476,7 +472,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 2. **Insufficient structures** - Too few structures will result in too many candidate seeds, recommend at least 5 different structure types
 3. **Poor structure type selection** - Linear structures are faster (less computation):
    - Recommended: Desert Temple, Witch Hut, Jungle Temple, Shipwreck, Ocean Monument, End City
-   - Complex structures (Village, Mansion, etc.) also work — the 4-chunk grid handles their one-chunk offset
+   - Complex structures (Village, Mansion, etc.) also work
 4. **Version incompatibility** - If the target world was generated in an older version (pre-1.18), structure positions may differ from current version
 
 **Solutions:**
@@ -496,7 +492,6 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 5. **Insufficient biome samples** - Recommend at least 5 samples
 6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
-7. **Java LCG mode issues** - When using Java LCG structures: coordinates must be the structure's actual block position; structure names must be `trail_ruins` / `trial_chamber` / `abandoned_camp` (invalid names are skipped with a warning)
 
 **Solutions:**
 

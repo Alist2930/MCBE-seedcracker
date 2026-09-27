@@ -60,8 +60,6 @@ python3 crack_low32.py --processes 8      # Specify process count (CPU mode)
 **Found Seeds Output:**
 All found seeds are automatically saved to `crack_low32/found_seeds.txt` with timestamps. The file is created at program start, and found seeds are appended in real time during cracking.
 
-**4-Chunk Grid Tolerance:** The cracker automatically tests 4 adjacent origin chunk candidates (a 2x2 grid) for each structure, so coordinate deviation within ±1 chunk is handled automatically.
-
 ### Low 32-bit Command Line Arguments
 
 | Argument      | Description                                                      |
@@ -137,7 +135,7 @@ Edit the `low32` section in `config.json`:
 | trial_chamber           | Trial Chamber (Java LCG)  | **linear**  |
 | abandoned_camp          | Abandoned Camp (Java LCG) | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether complexes) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Woodland Mansion, Pillager Outpost, Igloo, Ruined Portal, Nether complexes) may appear offset by one chunk in-game — they are safe to use.
 >
 > **Note**: The last three structures (Trail Ruins, Trial Chamber, Abandoned Camp) use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. See the Java LCG Structures section for details.
 
@@ -187,8 +185,6 @@ Edit the `low32` section in `config.json`:
 
   ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
 
-> **Note**: The cracker automatically checks the 4 possible origin chunks (4-chunk grid) around the input coordinate, so chunk selection within ±1 chunk is tolerated.
-
 ---
 
 ### High 32-bit Cracking
@@ -205,6 +201,14 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 
 **Java LCG Structure Mode (Recommended):**
 Adding one or more `--lcg-structure` arguments (format: `name:x:z`, supported names: `trail_ruins` / `trial_chamber` / `abandoned_camp`) switches to a two-stage mode: Stage 1 derives bits 32-47 directly from the structures; Stage 2 iterates bits 48-63 within your search range and verifies biome samples. With 2-3 structures, Stage 1 usually yields a unique result, which is dramatically faster than pure brute force. See [Java LCG Structures](#java-lcg-structures-optional-acceleration).
+
+**Phase 3 Progress Output Example:**
+
+```
+  [#-----------------------------] 4.4% | Candidate 24/541 | 98,453/s | ETA: 8.2min | Found: 0
+  [#-----------------------------] 4.6% | Candidate 25/541 | 101,372/s | ETA: 7.9min | Found: 0
+  [#-----------------------------] 4.8% | Candidate 26/541 | 103,914/s | ETA: 7.7min | Found: 0
+```
 
 **Found Seeds Output:**
 All found seeds are automatically saved to `crack_high32/found_seeds.txt` with timestamps and detailed information. This file is created/cleared at program start, ensuring you never miss any found seeds even with verbose progress output.
@@ -290,19 +294,21 @@ When added in the high 32-bit cracking stage, these structures enable a two-stag
 
 This is dramatically faster than the default full brute force over bits 32-47.
 
-**Structure Parameters:**
+**Chunk Location Method:**
 
-| Structure | Salt | Spacing | Separation | Spread | RNG |
-| --------- | ---- | ------- | ---------- | ------ | --- |
-| Trail Ruins (古迹废墟) | 83469867 | 34 | 8 | Linear | Java LCG |
-| Trial Chamber (试炼密室) | 94251327 | 34 | 12 | Linear | Java LCG |
-| Abandoned Camp (废弃营地) | 91231127 | 37 | 8 | Linear | Java LCG |
+Same as regular structures, enter a position within the chunk where the structure is located (see [Structure Chunk Location Method](#structure-chunk-location-method)). The specific chunk determination methods for the three structures (with screenshots) will be added later:
 
-**Usage Tips:**
+- **Trail Ruins**: (chunk location method to be added)
 
-- 2-3 Java LCG structures are sufficient to uniquely determine bits 32-47
-- Structure coordinates can be entered as chunk coordinates in-game (same as regular structures)
-- Supported on both the Windows UI and Linux (via the `--lcg-structure` argument or the `lcg_structures` config field)
+  ![Trail Ruins Chunk Location](../assets/imgs/trail_ruins.png)
+
+- **Trial Chamber**: (chunk location method to be added)
+
+  ![Trial Chamber Chunk Location](../assets/imgs/trial_chamber.png)
+
+- **Abandoned Camp**: (chunk location method to be added)
+
+  ![Abandoned Camp Chunk Location](../assets/imgs/abandoned_camp.png)
 
 ---
 
@@ -359,9 +365,11 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 #### Biome Sample Selection Tips
 
-- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-- **Avoid sampling near biome boundaries**
-- If cracking fails, try different coordinates within the same biome
+> ⚠️ **Important**
+>
+> - **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+> - **Avoid sampling near biome boundaries**
+> - If cracking fails, try different coordinates within the same biome
 
 #### Important Limitation
 
@@ -500,8 +508,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 - Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
 - Old GPUs (compute units < 10) automatically use CPU mode for stability
-- High 32-bit cracker does not support GPU acceleration due to algorithm complexity
-- High 32-bit cracking can be dramatically accelerated by the optional Java LCG structure mode: 2-3 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
+- High 32-bit cracking does not support GPU acceleration due to algorithm complexity, but can be dramatically accelerated by the optional Java LCG structure mode: 2-3 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
 
 ---
 
@@ -515,7 +522,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 2. **Insufficient structures** - Too few structures will result in too many candidate seeds, recommend at least 5 different structure types
 3. **Poor structure type selection** - Linear structures are faster (less computation):
    - Recommended: Desert Temple, Witch Hut, Jungle Temple, Shipwreck, Ocean Monument, End City
-   - Complex structures (Village, Mansion, etc.) also work — the 4-chunk grid handles their one-chunk offset
+   - Complex structures (Village, Mansion, etc.) also work
 4. **Version incompatibility** - If the target world was generated in an older version (pre-1.18), structure positions may differ from current version
 
 **Solutions:**
@@ -535,7 +542,6 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 4. **Improper sampling height** - Recommend Y >= 200 to avoid underground biome interference (some underground biomes can extend above Y=150)
 5. **Insufficient biome samples** - Recommend at least 5 samples
 6. **Poor sample selection** - Should choose rare biomes (like Cherry Grove), avoid common biomes (like Plains, Ocean)
-7. **Java LCG mode issues** - When using Java LCG structures: coordinates must be the structure's actual block position; structure names must be `trail_ruins` / `trial_chamber` / `abandoned_camp` (invalid names are skipped with a warning)
 
 **Solutions:**
 
