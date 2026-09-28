@@ -307,15 +307,6 @@ Each sample contains the following fields:
 
 Three structures use the Java LCG random number generator in Bedrock Edition (instead of the standard MT19937): **Trail Ruins**, **Trial Chamber**, and **Abandoned Camp**.
 
-**Cracking Principle:**
-
-These structures use the Java edition `Random` LCG: `s ← s × 0x5DEECE66D + 0xB (mod 2⁴⁸)`.
-
-1. For each candidate 48-bit value, compute the region constant: `r_const = (rx × 341873128712 + rz × 132897987541 + salt) mod 2⁴⁸`
-2. `region_seed = (candidate48 + r_const) mod 2⁴⁸`
-3. `s = region_seed ⊕ 0x5DEECE66D`, then iterate the LCG twice; each time take `(s >> 17) mod chunk_range` to get the chunk offsets `ox`, `oz` (`chunk_range = spacing - separation`)
-4. Compare the computed offsets against the actual positions (4-chunk grid); 2-3 structures uniquely determine bits 32-47, leaving only bits 48-63 for biome verification
-
 When added in the high 32-bit cracking stage, these structures enable a two-stage mode:
 
 1. **Stage 1 (bits 32-47)**: Java LCG structure positions directly constrain the seed's bits 32-47. Each structure reduces the candidates by a factor of ~65536; with 2-3 structures, a unique candidate for bits 32-47 is usually derived directly (no brute force needed).
@@ -403,13 +394,11 @@ Even with same version number, Java and Bedrock have biome generation difference
 - **Biome Boundaries**: Biome boundary positions may differ slightly between versions
 - **New Version Differences**: Bedrock 1.26.x has minor differences from Java 1.21 biome algorithms
 
-#### Biome Sample Selection Tips
+#### ⚠️ Biome Sample Selection Tips
 
-> ⚠️ **Important**
->
-> - **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
-> - **Avoid sampling near biome boundaries**
-> - If cracking fails, try different coordinates within the same biome
+- **Choose coordinates at biome centers**, at least 3 blocks away from biome boundaries
+- **Avoid sampling near biome boundaries**
+- If cracking fails, try different coordinates within the same biome
 
 #### Important Limitation
 
@@ -563,7 +552,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 2. **Insufficient structures** - Too few structures will result in too many candidate seeds, recommend at least 5 different structure types
 3. **Poor structure type selection** - Linear structures are faster (less computation):
    - Recommended: Desert Temple, Witch Hut, Jungle Temple, Shipwreck, Ocean Monument, End City
-   - Complex structures (Village, Mansion, etc.) also work
+   - Complex structures (Village, Igloo, Pillager Outpost, Ruined Portal) also work
 4. **Version incompatibility** - If the target world was generated in an older version (pre-1.18), structure positions may differ from current version
 
 **Solutions:**
