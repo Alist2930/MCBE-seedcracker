@@ -333,7 +333,7 @@ MCBEseedcracker_win_ui/
 
 **注意**：当搜索范围大小（`end - start`）小于 100,000 时，会自动跳过严格度测试，按原始顺序检查群系样本。
 
-#### 主世界群系ID参考（1.21.60-26.23）
+#### 主世界群系ID参考（1.21.60-26.50）
 
 | 群系                                  | ID  | 稀有度 | 群系                                    | ID  | 稀有度 |
 | ------------------------------------- | --- | ------ | --------------------------------------- | --- | ------ |
@@ -344,27 +344,27 @@ MCBEseedcracker_win_ui/
 | ice_spikes（冰刺之地）                | 140 | 0.24%  | extreme_hills（风袭丘陵）               | 3   | 0.26%  |
 | cherry_grove（樱花树林）              | 185 | 0.29%  | mesa_bryce（风蚀恶地）                  | 165 | 0.33%  |
 | cold_beach（积雪沙滩）                | 26  | 0.36%  | snowy_slopes（积雪山坡）                | 179 | 0.39%  |
-| savanna_plateau（热带高原）           | 36  | 0.40%  | mangrove_swamp（红树林沼泽）            | 184 | 0.51%  |
-| mesa_plateau_stone（繁茂的恶地高原）  | 38  | 0.62%  | bamboo_jungle（竹林）                   | 168 | 0.64%  |
-| sunflower_plains（向日葵平原）        | 129 | 0.67%  | mega_taiga（原始松木针叶林）            | 32  | 0.69%  |
-| flower_forest（繁花森林）             | 132 | 0.69%  | redwood_taiga_mutated（原始云杉针叶林） | 160 | 0.71%  |
-| grove（雪林）                         | 178 | 0.72%  | frozen_river（冻河）                    | 11  | 0.83%  |
-| mesa（恶地）                          | 37  | 0.89%  | swamp（沼泽）                           | 6   | 0.98%  |
-| meadow（草甸）                        | 177 | 1.16%  | stone_beach（石岸）                     | 25  | 1.17%  |
-| deep_frozen_ocean（冰冻深海）         | 50  | 1.25%  | jungle_edge（稀疏丛林）                 | 23  | 1.38%  |
-| roofed_forest（黑森林）               | 29  | 1.84%  | jungle（丛林）                          | 21  | 2.04%  |
-| warm_ocean（暖水海洋）                | 44  | 2.13%  | birch_forest_mutated（原始桦木森林）    | 155 | 2.15%  |
-| frozen_ocean（冻洋）                  | 10  | 2.26%  | birch_forest（桦木森林）                | 27  | 2.29%  |
-| desert（沙漠）                        | 2   | 2.33%  | deep_lukewarm_ocean（温水深海）         | 48  | 2.37%  |
-| cold_taiga（积雪针叶林）              | 30  | 2.40%  | deep_cold_ocean（冷水深海）             | 49  | 2.42%  |
-| beach（沙滩）                         | 16  | 2.45%  | ice_plains（雪原）                      | 12  | 2.78%  |
-| taiga（针叶林）                       | 5   | 3.40%  | deep_ocean（深海）                      | 24  | 3.60%  |
-| savanna（热带草原）                   | 35  | 3.91%  | lukewarm_ocean（温水海洋）              | 45  | 4.55%  |
-| cold_ocean（冷水海洋）                | 46  | 4.59%  | river（河流）                           | 7   | 6.22%  |
-| ocean（海洋）                         | 0   | 6.87%  | plains（平原）                          | 1   | 10.69% |
-| forest（森林）                        | 4   | 12.31% | dripstone_caves（溶洞）                 | 174 | -      |
-| lush_caves（繁茂洞穴）                | 175 | -      | deep_dark（深暗之域）                   | 183 | -      |
-| sulfur_caves（硫磺洞穴）              | 187 | -      | dappled_forest（斑驳森林）             | 188 | 0.45%  |
+| savanna_plateau（热带高原）           | 36  | 0.40%  | dappled_forest（斑驳森林）              | 188 | 0.45%  |
+| mangrove_swamp（红树林沼泽）          | 184 | 0.51%  | mesa_plateau_stone（繁茂的恶地高原）    | 38  | 0.62%  |
+| bamboo_jungle（竹林）                 | 168 | 0.64%  | sunflower_plains（向日葵平原）          | 129 | 0.67%  |
+| mega_taiga（原始松木针叶林）          | 32  | 0.69%  | flower_forest（繁花森林）               | 132 | 0.69%  |
+| redwood_taiga_mutated（原始云杉针叶林） | 160 | 0.71% | grove（雪林）                           | 178 | 0.72%  |
+| frozen_river（冻河）                  | 11  | 0.83%  | mesa（恶地）                            | 37  | 0.89%  |
+| swamp（沼泽）                         | 6   | 0.98%  | meadow（草甸）                          | 177 | 1.16%  |
+| stone_beach（石岸）                   | 25  | 1.17%  | deep_frozen_ocean（冰冻深海）           | 50  | 1.25%  |
+| jungle_edge（稀疏丛林）               | 23  | 1.38%  | roofed_forest（黑森林）                 | 29  | 1.84%  |
+| jungle（丛林）                        | 21  | 2.04%  | warm_ocean（暖水海洋）                  | 44  | 2.13%  |
+| birch_forest_mutated（原始桦木森林）  | 155 | 2.15%  | frozen_ocean（冻洋）                    | 10  | 2.26%  |
+| birch_forest（桦木森林）              | 27  | 2.29%  | desert（沙漠）                          | 2   | 2.33%  |
+| deep_lukewarm_ocean（温水深海）       | 48  | 2.37%  | cold_taiga（积雪针叶林）                | 30  | 2.40%  |
+| deep_cold_ocean（冷水深海）           | 49  | 2.42%  | beach（沙滩）                           | 16  | 2.45%  |
+| ice_plains（雪原）                    | 12  | 2.78%  | taiga（针叶林）                         | 5   | 3.40%  |
+| deep_ocean（深海）                    | 24  | 3.60%  | savanna（热带草原）                     | 35  | 3.91%  |
+| lukewarm_ocean（温水海洋）            | 45  | 4.55%  | cold_ocean（冷水海洋）                  | 46  | 4.59%  |
+| river（河流）                         | 7   | 6.22%  | ocean（海洋）                           | 0   | 6.87%  |
+| plains（平原）                        | 1   | 10.69% | forest（森林）                          | 4   | 12.31% |
+| dripstone_caves（溶洞）               | 174 | -      | lush_caves（繁茂洞穴）                  | 175 | -      |
+| deep_dark（深暗之域）                 | 183 | -      | sulfur_caves（硫磺洞穴）                | 187 | -      |
 
 > **注**：稀有度基于地表 Y=200 采样统计。地下群系（dripstone_caves、lush_caves、deep_dark、sulfur_caves）不参与稀有度排序，默认稀有度为1。
 
@@ -459,7 +459,7 @@ pyinstaller build.spec --noconfirm
 | 低32位 | GPU  | ~156M/s | **~30秒**       | RTX 3090 OpenCL加速 |
 | 低32位 | CPU  | ~12M/s  | ~6 分钟         | 112核并行           |
 | 高32位 | CPU  | ~432K/s | ~2.5 小时       | 16进程（自动限制）  |
-| 高32位 | Java LCG | — | — | 2-3 个结构直接确定第 32-47 位，群系验证候选缩减至 ≤ 2^16 |
+| 高32位 | Java LCG | ~98K/s | — | 2-3 个结构直接确定第 32-47 位，群系验证候选缩减至 ≤ 2^16 |
 
 **注**：
 

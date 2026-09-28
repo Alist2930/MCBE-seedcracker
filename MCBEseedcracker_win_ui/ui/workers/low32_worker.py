@@ -121,8 +121,8 @@ def has_opencl_gpu():
 
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing (uses 4-chunk grid)"""
-    start, end, r_base, ox, oz, offset_range, spread_type = args
+    """CPU worker for multiprocessing (per-structure offsets; 4-chunk grid where applicable)"""
+    start, end, r_base, ox, oz, offset_range, spread_type, num_offsets = args
 
     dll_path = get_dll_path(opencl=False)
 
@@ -142,7 +142,6 @@ def crack_worker_cpu(args):
     lib.crack_low32_grid.restype = ctypes.c_int
 
     num_structures = len(offset_range)
-    num_offsets = NUM_OFFSETS
     grid_count = num_structures * num_offsets
     r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
     ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
@@ -194,7 +193,7 @@ class Low32Worker(QThread):
 
     def run(self):
         try:
-            r_base, ox, oz, offset_range, spread_type = self.prepare_structures()
+            r_base, ox, oz, offset_range, spread_type, num_offsets = self.prepare_structures()
 
             # Load configuration
             config = load_config()
@@ -266,16 +265,16 @@ class Low32Worker(QThread):
                 return
 
             if use_gpu:
-                self._run_gpu(r_base, ox, oz, offset_range, spread_type, config)
+                self._run_gpu(r_base, ox, oz, offset_range, spread_type, num_offsets, config)
             else:
-                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
+                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes)
 
         except Exception as e:
             import traceback
             traceback.print_exc()
             self.error_occurred.emit(str(e))
 
-    def _run_cpu(self, r_base, ox, oz, offset_range, spread_type, num_processes):
+    def _run_cpu(self, r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes):
         """Run crack using CPU multiprocessing"""
         total_range = self.end_value - self.original_start_value + 1
         step_size = 200_000_000
@@ -305,7 +304,7 @@ class Low32Worker(QThread):
                     task_start = step_start + i * chunk_size
                     task_end = min(step_start + (i + 1) * chunk_size - 1, step_end) if i < num_processes - 1 else step_end
                     if task_start <= task_end:
-                        tasks.append((task_start, task_end + 1, r_base, ox, oz, offset_range, spread_type))
+                        tasks.append((task_start, task_end + 1, r_base, ox, oz, offset_range, spread_type, num_offsets))
 
                 try:
                     results_list = pool.map(crack_worker_cpu, tasks)
@@ -358,7 +357,7 @@ class Low32Worker(QThread):
         else:
             print(f"[STOPPED] Worker stopped by user at {current:,}")
 
-    def _run_gpu(self, r_base, ox, oz, offset_range, spread_type, config):
+    def _run_gpu(self, r_base, ox, oz, offset_range, spread_type, num_offsets, config):
         """Run crack using GPU (OpenCL)"""
         dll_path = get_dll_path(opencl=True)
         cl_path = get_cl_path()
@@ -389,7 +388,6 @@ class Low32Worker(QThread):
             lib.crack_low32_grid_opencl.restype = ctypes.c_int
 
             num_structures = len(offset_range)
-            num_offsets = NUM_OFFSETS
             grid_count = num_structures * num_offsets
             r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
             ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
@@ -455,7 +453,7 @@ class Low32Worker(QThread):
                             num_processes = max_processes
                         if mp.cpu_count() > 16:
                             print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes}")
-                        self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
+                        self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes)
                     else:
                         self.error_occurred.emit(f"GPU crack failed: {found}")
                     return
@@ -505,7 +503,7 @@ class Low32Worker(QThread):
             if config.get('auto_fallback', True):
                 print("[INFO] Falling back to CPU mode...")
                 num_processes = mp.cpu_count()
-                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_processes)
+                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes)
             else:
                 self.error_occurred.emit(str(e))
         finally:
@@ -521,7 +519,7 @@ class Low32Worker(QThread):
             structure_type = structure.get("type")
             if not structure_type:
                 self.error_occurred.emit(f"Structure {i} missing 'type' field")
-                return [], [], [], [], []
+                return [], [], [], [], [], []
 
             if structure_type not in self.structure_data:
                 invalid_structures.append(structure_type)
@@ -533,14 +531,17 @@ class Low32Worker(QThread):
                 f"Valid structures are: {valid_structures}"
             )
             self.error_occurred.emit(error_msg)
-            return [], [], [], [], []
+            return [], [], [], [], [], []
 
         # First sort by spread_type (linear first)
         sorted_structures = sorted(self.structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)
 
         # Calculate parameters for all structures
-        # r_base_list/ox_list/oz_list are flattened: [num_structures * NUM_OFFSETS]
+        # r_base_list/ox_list/oz_list are flattened: [num_structures * num_offsets]
         # offset_range_list/spread_type_list are per-structure: [num_structures]
+        # If no structure needs the 4-chunk grid, use num_offsets=1 (saves 4x MT19937 work in DLL/GPU)
+        any_grid = any(s.get("type") in FOUR_GRID_STRUCTURES for s in self.structures)
+        num_offsets = NUM_OFFSETS if any_grid else 1
         r_base_list, ox_list, oz_list, offset_range_list, spread_type_list = [], [], [], [], []
         # per_structure_offsets[i] = [(r_base, ox, oz), ...] for strictness test (4 for grid structures, 1 otherwise)
         per_structure_offsets = []
@@ -559,7 +560,8 @@ class Low32Worker(QThread):
             spread_type_int = 1 if spread_type_str == "triangular" else 0
 
             # Grid structures: 4 origin chunks (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
-            # Others: exact origin chunk only, repeated to keep arrays uniform (NUM_OFFSETS slots)
+            # Others: exact origin chunk only (repeated only when some structure uses the grid,
+            # to keep the uniform num_offsets layout required by the DLL/OpenCL interface)
             use_grid = structure_type in FOUR_GRID_STRUCTURES
             offsets_for_structure = []
             for dx in ([0, 1] if use_grid else [0]):
@@ -576,12 +578,12 @@ class Low32Worker(QThread):
                     oz_list.append(oz)
                     offsets_for_structure.append((r_base, ox, oz))
 
-            if not use_grid:
-                # Repeat the single exact-chunk offset to fill NUM_OFFSETS slots
+            if not use_grid and num_offsets > 1:
+                # Repeat the single exact-chunk offset to fill num_offsets slots
                 only = offsets_for_structure[0]
-                r_base_list.extend([only[0]] * (NUM_OFFSETS - 1))
-                ox_list.extend([only[1]] * (NUM_OFFSETS - 1))
-                oz_list.extend([only[2]] * (NUM_OFFSETS - 1))
+                r_base_list.extend([only[0]] * (num_offsets - 1))
+                ox_list.extend([only[1]] * (num_offsets - 1))
+                oz_list.extend([only[2]] * (num_offsets - 1))
                 offsets_for_structure = [only]
 
             offset_range_list.append(spacing - separation)
@@ -693,10 +695,10 @@ class Low32Worker(QThread):
         # Combine: linear first, then triangular
         sorted_indices = linear_indices + triangular_indices
 
-        # Reorder all lists (r_base/ox/oz are flattened with NUM_OFFSETS entries per structure)
-        r_base_list = [v for i in sorted_indices for v in r_base_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
-        ox_list = [v for i in sorted_indices for v in ox_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
-        oz_list = [v for i in sorted_indices for v in oz_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
+        # Reorder all lists (r_base/ox/oz are flattened with num_offsets entries per structure)
+        r_base_list = [v for i in sorted_indices for v in r_base_list[i*num_offsets:(i+1)*num_offsets]]
+        ox_list = [v for i in sorted_indices for v in ox_list[i*num_offsets:(i+1)*num_offsets]]
+        oz_list = [v for i in sorted_indices for v in oz_list[i*num_offsets:(i+1)*num_offsets]]
         offset_range_list = [offset_range_list[i] for i in sorted_indices]
         spread_type_list = [spread_type_list[i] for i in sorted_indices]
 
@@ -714,11 +716,12 @@ class Low32Worker(QThread):
             spread_type = "linear" if spread_type_list[i] == 0 else "triangular"
             strictness = strictness_scores[idx]
             match_rate = strictness / 100000 * 100
+            grid_flag = "4-grid" if len(per_structure_offsets[idx]) > 1 else "exact"
 
             if skip_strictness:
-                order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}]"
+                order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}, {grid_flag}]"
             else:
-                order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}] - {strictness}/100000 ({match_rate:.4f}%)"
+                order_line = f"    {i+1}. {name} at ({structure['x']}, {structure['z']}) [{spread_type}, {grid_flag}] - {strictness}/100000 ({match_rate:.4f}%)"
             print(order_line)
             structure_info_lines.append(order_line)
 
@@ -745,7 +748,7 @@ class Low32Worker(QThread):
         import json
         self.structure_info_updated.emit(json.dumps(order_info))
 
-        return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list
+        return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, num_offsets
 
     def save_progress(self, current):
         progress_data = {

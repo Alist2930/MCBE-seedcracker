@@ -215,8 +215,11 @@ def prepare_targets(targets, skip_strictness=False):
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
 
     # Calculate parameters for all targets
-    # r_base_list/ox_list/oz_list are flattened: [num_targets * NUM_OFFSETS]
+    # r_base_list/ox_list/oz_list are flattened: [num_targets * num_offsets]
     # offset_range_list/spread_type_list/structure_info are per-target: [num_targets]
+    # If no target needs the 4-chunk grid, use num_offsets=1 (saves 4x MT19937 work in C/GPU)
+    any_grid = any(t["structure"] in FOUR_GRID_STRUCTURES for t in targets)
+    num_offsets = NUM_OFFSETS if any_grid else 1
     r_base_list, ox_list, oz_list = [], [], []
     offset_range_list, spread_type_list, structure_info = [], [], []
 
@@ -229,7 +232,8 @@ def prepare_targets(targets, skip_strictness=False):
         spread_type_int = 1 if config.get("spread_type", "linear") == "triangular" else 0
 
         # Grid structures: 4 origin chunks (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1)
-        # Others: exact origin chunk only, repeated to keep arrays uniform (NUM_OFFSETS slots)
+        # Others: exact origin chunk only (repeated only when some structure uses the grid,
+        # to keep the uniform num_offsets layout required by the C/OpenCL interface)
         use_grid = t["structure"] in FOUR_GRID_STRUCTURES
         first_rx = first_rz = None
         for dx in ([0, 1] if use_grid else [0]):
@@ -247,15 +251,15 @@ def prepare_targets(targets, skip_strictness=False):
                 if first_rx is None:
                     first_rx, first_rz = rx, rz
 
-        if not use_grid:
-            # Repeat the single exact-chunk offset to fill NUM_OFFSETS slots
-            r_base_list.extend([r_base_list[-1]] * (NUM_OFFSETS - 1))
-            ox_list.extend([ox_list[-1]] * (NUM_OFFSETS - 1))
-            oz_list.extend([oz_list[-1]] * (NUM_OFFSETS - 1))
+        if not use_grid and num_offsets > 1:
+            # Repeat the single exact-chunk offset to fill num_offsets slots
+            r_base_list.extend([r_base_list[-1]] * (num_offsets - 1))
+            ox_list.extend([ox_list[-1]] * (num_offsets - 1))
+            oz_list.extend([oz_list[-1]] * (num_offsets - 1))
 
         offset_range_list.append(spacing - separation)
         spread_type_list.append(spread_type_int)
-        structure_info.append({"name": config["name"], "x": x, "z": z, "rx": first_rx, "rz": first_rz, "spread_type": config.get("spread_type", "linear")})
+        structure_info.append({"name": config["name"], "x": x, "z": z, "rx": first_rx, "rz": first_rz, "spread_type": config.get("spread_type", "linear"), "grid": use_grid})
 
     # Test strictness and sort (strictest first)
     # Skip if requested (when search range size < 100000)
@@ -289,22 +293,26 @@ def prepare_targets(targets, skip_strictness=False):
     # Combine: linear first, then triangular
     sorted_indices = linear_indices + triangular_indices
 
-    # Reorder all lists (r_base/ox/oz are flattened with NUM_OFFSETS entries per target)
-    r_base_list = [v for i in sorted_indices for v in r_base_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
-    ox_list = [v for i in sorted_indices for v in ox_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
-    oz_list = [v for i in sorted_indices for v in oz_list[i*NUM_OFFSETS:(i+1)*NUM_OFFSETS]]
+    # Reorder all lists (r_base/ox/oz are flattened with num_offsets entries per target)
+    r_base_list = [v for i in sorted_indices for v in r_base_list[i*num_offsets:(i+1)*num_offsets]]
+    ox_list = [v for i in sorted_indices for v in ox_list[i*num_offsets:(i+1)*num_offsets]]
+    oz_list = [v for i in sorted_indices for v in oz_list[i*num_offsets:(i+1)*num_offsets]]
     offset_range_list = [offset_range_list[i] for i in sorted_indices]
     spread_type_list = [spread_type_list[i] for i in sorted_indices]
     structure_info = [structure_info[i] for i in sorted_indices]
 
-    return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info
+    return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info, num_offsets
 
 # Global variables (initialized in main() after search range is determined)
+# ACTIVE_NUM_OFFSETS: uniform offsets-per-structure for this run (4 if any grid
+# structure, else 1); passed to CPU workers via task args because spawn workers
+# re-import the module and would lose runtime globals
 R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = [], [], [], [], [], []
+ACTIVE_NUM_OFFSETS = 4
 
 def crack_worker_cpu(args):
     """CPU worker for multiprocessing (per-structure offsets; 4-chunk grid where applicable)"""
-    start, end, r_base, ox, oz, offset_range, spread_type = args
+    start, end, r_base, ox, oz, offset_range, spread_type, num_offsets = args
 
     lib_path = Path(__file__).parent / 'crack_low32.so'
 
@@ -324,7 +332,6 @@ def crack_worker_cpu(args):
     lib.crack_low32_grid.restype = ctypes.c_int
 
     num_structures = len(offset_range)
-    num_offsets = NUM_OFFSETS
     grid_count = num_structures * num_offsets
     r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
     ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
@@ -361,7 +368,7 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
             start = step_start + i * chunk_size
             end = step_start + (i + 1) * chunk_size if i < num_processes - 1 else step_end
             if start < end:
-                tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE))
+                tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS))
         
         results = pool.map(crack_worker_cpu, tasks)
         
@@ -411,7 +418,7 @@ def run_crack_gpu(search_start, search_end, all_results, config):
         lib.crack_low32_grid_opencl.restype = ctypes.c_int
 
         num_structures = len(OFFSET_RANGE)
-        num_offsets = NUM_OFFSETS
+        num_offsets = ACTIVE_NUM_OFFSETS
         grid_count = num_structures * num_offsets
         r_base_arr = (ctypes.c_uint32 * grid_count)(*R_BASE)
         ox_arr = (ctypes.c_uint32 * grid_count)(*OX)
@@ -531,14 +538,14 @@ def main():
     print(f"[*] Found seeds will be saved to: {FOUND_SEEDS_FILE}")
 
     # Initialize global targets (skip strictness test if search range size < 100000)
-    global R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO
+    global R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS
     skip_strictness = (search_end - search_start < 100000)
-    R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = prepare_targets(TARGETS, skip_strictness=skip_strictness)
+    R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS = prepare_targets(TARGETS, skip_strictness=skip_strictness)
 
     print(f"\n[*] Target structures ({len(TARGETS)}) [sorted: linear first]:")
     for i, info in enumerate(STRUCTURE_INFO):
-        spread_type_str = f" [{info['spread_type']}]"
-        print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']}){spread_type_str}")
+        mode_str = "4-chunk grid" if info.get("grid") else "exact chunk"
+        print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']}) [{info['spread_type']}, {mode_str}]")
     
     # Determine compute mode
     use_gpu = False

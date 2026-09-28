@@ -333,7 +333,7 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 **Note**: When the search range size (`end - start`) is less than 100,000, strictness testing is skipped automatically and biome samples are checked in their original order.
 
-#### Overworld Biome ID Reference (1.21.60-26.23)
+#### Overworld Biome ID Reference (1.21.60-26.50)
 
 | Biome                    | ID  | Rarity | Biome                 | ID  | Rarity |
 | ------------------------ | --- | ------ | --------------------- | --- | ------ |
@@ -344,27 +344,27 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 | ice_spikes               | 140 | 0.24%  | extreme_hills         | 3   | 0.26%  |
 | cherry_grove             | 185 | 0.29%  | mesa_bryce            | 165 | 0.33%  |
 | cold_beach               | 26  | 0.36%  | snowy_slopes          | 179 | 0.39%  |
-| savanna_plateau          | 36  | 0.40%  | mangrove_swamp        | 184 | 0.51%  |
-| mesa_plateau_stone       | 38  | 0.62%  | bamboo_jungle         | 168 | 0.64%  |
-| sunflower_plains         | 129 | 0.67%  | mega_taiga            | 32  | 0.69%  |
-| flower_forest            | 132 | 0.69%  | redwood_taiga_mutated | 160 | 0.71%  |
-| grove                    | 178 | 0.72%  | frozen_river          | 11  | 0.83%  |
-| mesa                     | 37  | 0.89%  | swamp                 | 6   | 0.98%  |
-| meadow                   | 177 | 1.16%  | stone_beach           | 25  | 1.17%  |
-| deep_frozen_ocean        | 50  | 1.25%  | jungle_edge           | 23  | 1.38%  |
-| roofed_forest            | 29  | 1.84%  | jungle                | 21  | 2.04%  |
-| warm_ocean               | 44  | 2.13%  | birch_forest_mutated  | 155 | 2.15%  |
-| frozen_ocean             | 10  | 2.26%  | birch_forest          | 27  | 2.29%  |
-| desert                   | 2   | 2.33%  | deep_lukewarm_ocean   | 48  | 2.37%  |
-| cold_taiga               | 30  | 2.40%  | deep_cold_ocean       | 49  | 2.42%  |
-| beach                    | 16  | 2.45%  | ice_plains            | 12  | 2.78%  |
-| taiga                    | 5   | 3.40%  | deep_ocean            | 24  | 3.60%  |
-| savanna                  | 35  | 3.91%  | lukewarm_ocean        | 45  | 4.55%  |
-| cold_ocean               | 46  | 4.59%  | river                 | 7   | 6.22%  |
-| ocean                    | 0   | 6.87%  | plains                | 1   | 10.69% |
-| forest                   | 4   | 12.31% | dripstone_caves       | 174 | -      |
-| lush_caves               | 175 | -      | deep_dark             | 183 | -      |
-| sulfur_caves             | 187 | -      | dappled_forest        | 188 | 0.45%  |
+| savanna_plateau          | 36  | 0.40%  | dappled_forest        | 188 | 0.45%  |
+| mangrove_swamp           | 184 | 0.51%  | mesa_plateau_stone    | 38  | 0.62%  |
+| bamboo_jungle            | 168 | 0.64%  | sunflower_plains      | 129 | 0.67%  |
+| mega_taiga               | 32  | 0.69%  | flower_forest         | 132 | 0.69%  |
+| redwood_taiga_mutated    | 160 | 0.71%  | grove                 | 178 | 0.72%  |
+| frozen_river             | 11  | 0.83%  | mesa                  | 37  | 0.89%  |
+| swamp                    | 6   | 0.98%  | meadow                | 177 | 1.16%  |
+| stone_beach              | 25  | 1.17%  | deep_frozen_ocean     | 50  | 1.25%  |
+| jungle_edge              | 23  | 1.38%  | roofed_forest         | 29  | 1.84%  |
+| jungle                   | 21  | 2.04%  | warm_ocean            | 44  | 2.13%  |
+| birch_forest_mutated     | 155 | 2.15%  | frozen_ocean          | 10  | 2.26%  |
+| birch_forest             | 27  | 2.29%  | desert                | 2   | 2.33%  |
+| deep_lukewarm_ocean      | 48  | 2.37%  | cold_taiga            | 30  | 2.40%  |
+| deep_cold_ocean          | 49  | 2.42%  | beach                 | 16  | 2.45%  |
+| ice_plains               | 12  | 2.78%  | taiga                 | 5   | 3.40%  |
+| deep_ocean               | 24  | 3.60%  | savanna               | 35  | 3.91%  |
+| lukewarm_ocean           | 45  | 4.55%  | cold_ocean            | 46  | 4.59%  |
+| river                    | 7   | 6.22%  | ocean                 | 0   | 6.87%  |
+| plains                   | 1   | 10.69% | forest                | 4   | 12.31% |
+| dripstone_caves          | 174 | -      | lush_caves            | 175 | -      |
+| deep_dark                | 183 | -      | sulfur_caves          | 187 | -      |
 
 > **Note**: Rarity based on surface Y=200 sampling. Underground biomes (dripstone_caves, lush_caves, deep_dark, sulfur_caves) are not included in rarity sorting, default rarity is 1.
 
@@ -459,7 +459,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
-| High 32-bit | Java LCG | — | — | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
+| High 32-bit | Java LCG | ~98K/s | — | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
 
 **Notes**:
 
