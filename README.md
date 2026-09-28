@@ -170,9 +170,9 @@ Multiple structures matching simultaneously can significantly narrow down candid
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — they are safe to use.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
 >
-> **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the Java LCG Structures section.
+> **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the [Java LCG Structures](#java-lcg-structures-optional-acceleration) section.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -219,6 +219,30 @@ Multiple structures matching simultaneously can significantly narrow down candid
   Ocean ruins group:
 
   ![Ocean Ruins Group Chunk Location](assets/imgs/ocean_ruins_group.png)
+
+- **Village**: (chunk location method to be added)
+
+  ![Village Chunk Location](assets/imgs/village.png)
+
+- **Igloo**: (chunk location method to be added)
+
+  ![Igloo Chunk Location](assets/imgs/igloo.png)
+
+- **Pillager Outpost**: (chunk location method to be added)
+
+  ![Pillager Outpost Chunk Location](assets/imgs/pillager_outpost.png)
+
+- **Woodland Mansion**: (chunk location method to be added)
+
+  ![Woodland Mansion Chunk Location](assets/imgs/mansion.png)
+
+- **Ruined Portal**: (chunk location method to be added)
+
+  ![Ruined Portal Chunk Location](assets/imgs/ruined_portal.png)
+
+- **Ancient City**: (chunk location method to be added)
+
+  ![Ancient City Chunk Location](assets/imgs/ancient_city.png)
 
 ---
 
@@ -268,18 +292,27 @@ Iterate through all possible high 32-bit values (0 - 2³²-1). For each candidat
 
 Due to the need for complete traversal and complex biome calculations, it takes a long time, usually several hours.
 
-**Alternative: Java LCG structure mode (recommended)**
+**Alternative: [Java LCG structure mode](#java-lcg-structures-optional-acceleration) (recommended)**
 
-If Java LCG structure coordinates are provided (Trail Ruins, Trial Chamber, Abandoned Camp), cracking switches to a two-phase mode:
+If [Java LCG structure](#java-lcg-structures-optional-acceleration) coordinates are provided (Trail Ruins, Trial Chamber, Abandoned Camp), cracking switches to a two-phase mode:
 
-1. **Phase 2**: Brute-force bits 32-47 (65536 candidates) using Java LCG structure position constraints
+1. **Phase 2**: Brute-force bits 32-47 (65536 candidates) using [Java LCG structure](#java-lcg-structures-optional-acceleration) position constraints
 2. **Phase 3**: Verify bits 48-63 with biome samples, only on candidates surviving Phase 2
 
-With 2-3 Java LCG structure samples, Phase 2 usually narrows down to a unique candidate, reducing cracking time from hours to minutes. See [Java LCG Structures](#java-lcg-structures-optional-acceleration) for details.
+With 2-3 [Java LCG structure](#java-lcg-structures-optional-acceleration) samples, Phase 2 usually narrows down to a unique candidate, reducing cracking time from hours to minutes. See [Java LCG Structures](#java-lcg-structures-optional-acceleration) for details.
 
 ## Java LCG Structures (Optional Acceleration)
 
-Three structures use a Java LCG random number generator instead of the standard MT19937: **Trail Ruins**, **Trial Chamber**, and **Abandoned Camp**.
+Three structures use the Java LCG random number generator in Bedrock Edition (instead of the standard MT19937): **Trail Ruins**, **Trial Chamber**, and **Abandoned Camp**.
+
+**Cracking Principle:**
+
+These structures use the Java edition `Random` LCG: `s ← s × 0x5DEECE66D + 0xB (mod 2⁴⁸)`.
+
+1. For each candidate 48-bit value, compute the region constant: `r_const = (rx × 341873128712 + rz × 132897987541 + salt) mod 2⁴⁸`
+2. `region_seed = (candidate48 + r_const) mod 2⁴⁸`
+3. `s = region_seed ⊕ 0x5DEECE66D`, then iterate the LCG twice; each time take `(s >> 17) mod chunk_range` to get the chunk offsets `ox`, `oz` (`chunk_range = spacing - separation`)
+4. Compare the computed offsets against the actual positions (4-chunk grid); 2-3 structures uniquely determine bits 32-47, leaving only bits 48-63 for biome verification
 
 When added in the high 32-bit cracking stage, these structures enable a two-stage mode:
 
@@ -459,7 +492,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
-| High 32-bit | Java LCG | ~98K/s | — | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
+| High 32-bit | Java LCG | ~98K/s | ~8 min (2^16) | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
 
 **Notes**:
 
@@ -513,7 +546,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 **High 32-bit cracking (biome-only mode):** Normally about 10-20 hours (4-core CPU)
 
-**High 32-bit cracking (Java LCG mode):** Phase 2 (bits 32-47) takes seconds; Phase 3 biome verification only runs on surviving candidates, usually finishing within minutes
+**High 32-bit cracking ([Java LCG mode](#java-lcg-structures-optional-acceleration)):** Phase 2 (bits 32-47) takes seconds; Phase 3 biome verification only runs on surviving candidates, usually finishing within minutes
 
 If significantly longer:
 

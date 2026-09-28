@@ -132,9 +132,9 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 | ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
 | ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
 
-> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。生成规则复杂的结构（村庄、雪屋、掠夺者哨塔、废弃传送门）在游戏中可能有一个区块的偏移，可放心使用。
+> **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。生成规则复杂的结构（村庄、雪屋、掠夺者哨塔、废弃传送门）在游戏中可能有一个区块的偏移——4宫格会自动处理，可放心使用。
 >
-> **注意**：古迹废墟、试炼密室、废弃营地使用 Java LCG 随机数生成器，用于**高32位破解**阶段的可选加速，详见 Java LCG 结构一节。
+> **注意**：古迹废墟、试炼密室、废弃营地使用 Java LCG 随机数生成器，用于**高32位破解**阶段的可选加速，详见 [Java LCG 结构](#java-lcg-结构可选加速) 一节。
 >
 > ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
@@ -182,6 +182,30 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 
   ![海底废墟群区块确定](../assets/imgs/ocean_ruins_group.png)
 
+- **村庄**：（区块确定方法待补充）
+
+  ![村庄区块确定](../assets/imgs/village.png)
+
+- **雪屋**：（区块确定方法待补充）
+
+  ![雪屋区块确定](../assets/imgs/igloo.png)
+
+- **掠夺者前哨站**：（区块确定方法待补充）
+
+  ![掠夺者前哨站区块确定](../assets/imgs/pillager_outpost.png)
+
+- **林地府邸**：（区块确定方法待补充）
+
+  ![林地府邸区块确定](../assets/imgs/mansion.png)
+
+- **废弃传送门**：（区块确定方法待补充）
+
+  ![废弃传送门区块确定](../assets/imgs/ruined_portal.png)
+
+- **远古城市**：（区块确定方法待补充）
+
+  ![远古城市区块确定](../assets/imgs/ancient_city.png)
+
 ---
 
 ### 高32位破解
@@ -196,7 +220,7 @@ python3 crack_high32.py --processes 16          # 指定进程数（最大16）
 python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure trial_chamber:-200:300  # Java LCG 结构模式
 ```
 
-**Java LCG 结构模式（推荐）：**
+**[Java LCG 结构模式](#java-lcg-结构可选加速)（推荐）：**
 添加一个或多个 `--lcg-structure` 参数（格式：`name:x:z`，支持的名称：`trail_ruins` / `trial_chamber` / `abandoned_camp`）后进入两阶段模式：阶段一直接由结构推导第 32-47 位；阶段二在搜索范围内遍历第 48-63 位并用群系样本验证。2-3 个结构通常即可唯一确定结果，相比纯暴力破解大幅提速。详见 [Java LCG 结构](#java-lcg-结构可选加速)。
 
 **阶段二进度输出示例：**
@@ -221,7 +245,7 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 | `--test`      | 测试模式（0 ~ 100M）         |
 | `--low32`     | 低32位值                     |
 | `--processes` | 进程数（默认: CPU核心数）    |
-| `--lcg-structure` | Java LCG 结构，格式 `name:x:z`，可重复（`trail_ruins` / `trial_chamber` / `abandoned_camp`） |
+| `--lcg-structure` | [Java LCG 结构](#java-lcg-结构可选加速)，格式 `name:x:z`，可重复（`trail_ruins` / `trial_chamber` / `abandoned_camp`） |
 
 #### 高32位破解配置
 
@@ -232,20 +256,19 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
   "high32": {
     "test_mode": false,
     "start": 0,
-    "end": 100000000,
+    "end": 4294967295,
     "low32": 1818588773,
-    "mc_version": "26.30-26.40",
-    "processes": 16,
-    "lcg_structures": [
-      { "type": "trail_ruins", "x": 123, "z": 456 },
-      { "type": "trial_chamber", "x": -200, "z": 300 }
-    ],
+    "mc_version": "26.50",
+    "processes": null,
     "samples": [
-      { "x": -270, "z": 470, "y": 200, "biome_id": 186, "name": "pale_garden" },
-      { "x": -1922, "z": 1231, "y": 200, "biome_id": 185, "name": "cherry_grove" },
-      { "x": -4706, "z": 3302, "y": 200, "biome_id": 132, "name": "flower_forest" },
-      { "x": -935, "z": 2592, "y": 200, "biome_id": 5, "name": "taiga" },
-      { "x": -2697, "z": 1363, "y": 200, "biome_id": 4, "name": "forest" }
+      { "x": -270, "z": 470, "y": 200, "biome_id": 186 },
+      { "x": -1922, "z": 1231, "y": 200, "biome_id": 185 },
+      { "x": -4706, "z": 3302, "y": 200, "biome_id": 132 },
+      { "x": -935, "z": 2592, "y": 200, "biome_id": 5 },
+      { "x": -2697, "z": 1363, "y": 200, "biome_id": 4 }
+    ],
+    "lcg_structures": [
+      { "type": "trial_chamber", "x": 633, "z": 311 }
     ]
   }
 }
@@ -260,7 +283,7 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 | `end`        | 结束高32位值（默认: 2^32-1）                |
 | `low32`      | 低32位值（已破解得到）                      |
 | `mc_version` | MC版本字符串（见下方版本对应表）            |
-| `processes`  | 进程数（最大16，推荐16）                    |
+| `processes`  | 进程数（null: 自动检测，最大16）                    |
 | `samples`    | 群系样本列表（建议5个样本）                 |
 | `lcg_structures` | 可选的 Java LCG 结构列表（两阶段模式，见 [Java LCG 结构](#java-lcg-结构可选加速)） |
 
@@ -282,7 +305,16 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 
 ## Java LCG 结构（可选加速）
 
-有三个结构使用 Java LCG 随机数生成器（而非标准 MT19937）：**古迹废墟**、**试炼密室**、**废弃营地**。
+有三个结构在基岩版使用 Java LCG 随机数生成器（而非标准 MT19937）：**古迹废墟**、**试炼密室**、**废弃营地**。
+
+**破解原理：**
+
+这些结构使用 Java 版 `Random` 的 LCG：`s ← s × 0x5DEECE66D + 0xB (mod 2⁴⁸)`。
+
+1. 对每个 48 位候选值，计算区域常量：`r_const = (rx × 341873128712 + rz × 132897987541 + salt) mod 2⁴⁸`
+2. `region_seed = (candidate48 + r_const) mod 2⁴⁸`
+3. `s = region_seed ⊕ 0x5DEECE66D` 后连续迭代两次，每次取 `(s >> 17) mod chunk_range` 得到区块偏移 `ox`、`oz`（`chunk_range = spacing - separation`）
+4. 将计算出的偏移与实际位置比对（4宫格）；2-3 个结构即可唯一确定第 32-47 位，仅剩第 48-63 位用群系样本验证
 
 在高32位破解阶段添加这些结构后，将启用两阶段模式：
 
@@ -511,7 +543,7 @@ chmod +x build.sh
 | 低32位 | GPU  | ~156M/s | **~30秒**       | RTX 3090 OpenCL加速 |
 | 低32位 | CPU  | ~12M/s  | ~6 分钟         | 112核并行           |
 | 高32位 | CPU  | ~432K/s | ~2.5 小时       | 16进程（自动限制）  |
-| 高32位 | Java LCG | ~98K/s | — | 2-3 个结构直接确定第 32-47 位，群系验证候选缩减至 ≤ 2^16 |
+| 高32位 | Java LCG | ~98K/s | ~8 分钟 (2^16) | 2-3 个结构直接确定第 32-47 位，群系验证候选缩减至 ≤ 2^16 |
 
 **注**：
 
@@ -565,7 +597,7 @@ chmod +x build.sh
 
 **高32位破解（纯群系模式）：** 约2.5小时（112核，16进程）
 
-**高32位破解（Java LCG模式）：** Phase 2（32-47位）只需数秒；Phase 3 群系验证仅对幸存候选进行，通常数分钟内完成
+**高32位破解（[Java LCG 模式](#java-lcg-结构可选加速)）：** Phase 2（32-47位）只需数秒；Phase 3 群系验证仅对幸存候选进行，通常数分钟内完成
 
 如果时间明显超出：
 

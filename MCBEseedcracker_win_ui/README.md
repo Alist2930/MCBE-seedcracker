@@ -62,7 +62,7 @@ See [MCBEseedcracker_win_ui/README.md](README.md) for details.
 1. Collect structure coordinates in-game (recommend 5 different structure types)
 2. Click "Add Structure" button, enter structure type and coordinates
 3. Select cracking range (test mode 0-100M or full mode 0-4.3B)
-4. (Optional) Manually set process count in Settings (default: auto-use all CPU cores, max 16 processes)
+4. (Optional) Set the process count in the parameter settings on this page (default: auto-use all CPU cores, max 16 processes)
 5. Click "Start Cracking"
 6. Wait for completion, view candidate low 32-bit values
 
@@ -132,9 +132,9 @@ Edit `crack_config.json` in the application directory:
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
 
-> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — they are safe to use.
+> **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
 >
-> **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the Java LCG Structures section.
+> **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the [Java LCG Structures](#java-lcg-structures-optional-acceleration) section.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -182,17 +182,39 @@ Edit `crack_config.json` in the application directory:
 
   ![Ocean Ruins Group Chunk Location](../assets/imgs/ocean_ruins_group.png)
 
+- **Village**: (chunk location method to be added)
+
+  ![Village Chunk Location](../assets/imgs/village.png)
+
+- **Igloo**: (chunk location method to be added)
+
+  ![Igloo Chunk Location](../assets/imgs/igloo.png)
+
+- **Pillager Outpost**: (chunk location method to be added)
+
+  ![Pillager Outpost Chunk Location](../assets/imgs/pillager_outpost.png)
+
+- **Woodland Mansion**: (chunk location method to be added)
+
+  ![Woodland Mansion Chunk Location](../assets/imgs/mansion.png)
+
+- **Ruined Portal**: (chunk location method to be added)
+
+  ![Ruined Portal Chunk Location](../assets/imgs/ruined_portal.png)
+
+- **Ancient City**: (chunk location method to be added)
+
+  ![Ancient City Chunk Location](../assets/imgs/ancient_city.png)
+
 ---
 
 ### 2. High 32-bit Cracking (Biomes)
-
-> **Important**: Biome samples must use **Overworld** biomes only. Do not use biomes from the Nether or End.
 
 1. Collect biome sample coordinates in-game (recommend 5 different biomes)
 2. **Select Bedrock version** (see version mapping table below)
 3. Click "Add Biome" button, enter coordinates and biome type
 4. Enter low 32-bit value (from low 32-bit cracking results)
-5. (Optional) Manually set process count in Settings (default: 16 processes, already optimal)
+5. (Optional) Set the process count in the parameter settings on this page (default: 16 processes, already optimal)
 6. Click "Start Cracking"
 7. Wait for completion, view full seed
 
@@ -202,11 +224,20 @@ Edit `crack_config.json` in the application directory:
 - **Default 16 processes**: This is the tested optimal value (avoids memory bandwidth saturation)
 - **Recommendation**: Keep default 16 processes, more processes won't improve performance
 
-**Optional: Java LCG Structure Mode (Recommended):** You can also add Java LCG structures (Trail Ruins / Trial Chamber / Abandoned Camp) in this tab. With 2-3 such structures, the cracker switches to a two-stage mode: bits 32-47 are derived directly from the structures, and only bits 48-63 are brute-forced with biome samples — dramatically faster than pure brute force. See [Java LCG Structures](#java-lcg-structures-optional-acceleration).
+**Optional: [Java LCG Structure Mode](#java-lcg-structures-optional-acceleration) (Recommended):** You can also add [Java LCG structures](#java-lcg-structures-optional-acceleration) (Trail Ruins / Trial Chamber / Abandoned Camp) in this tab. With 2-3 such structures, the cracker switches to a two-stage mode: bits 32-47 are derived directly from the structures, and only bits 48-63 are brute-forced with biome samples — dramatically faster than pure brute force. See [Java LCG Structures](#java-lcg-structures-optional-acceleration).
 
 ## Java LCG Structures (Optional Acceleration)
 
-Three structures use a Java LCG random number generator instead of the standard MT19937: **Trail Ruins**, **Trial Chamber**, and **Abandoned Camp**.
+Three structures use the Java LCG random number generator in Bedrock Edition (instead of the standard MT19937): **Trail Ruins**, **Trial Chamber**, and **Abandoned Camp**.
+
+**Cracking Principle:**
+
+These structures use the Java edition `Random` LCG: `s ← s × 0x5DEECE66D + 0xB (mod 2⁴⁸)`.
+
+1. For each candidate 48-bit value, compute the region constant: `r_const = (rx × 341873128712 + rz × 132897987541 + salt) mod 2⁴⁸`
+2. `region_seed = (candidate48 + r_const) mod 2⁴⁸`
+3. `s = region_seed ⊕ 0x5DEECE66D`, then iterate the LCG twice; each time take `(s >> 17) mod chunk_range` to get the chunk offsets `ox`, `oz` (`chunk_range = spacing - separation`)
+4. Compare the computed offsets against the actual positions (4-chunk grid); 2-3 structures uniquely determine bits 32-47, leaving only bits 48-63 for biome verification
 
 When added in the high 32-bit cracking stage, these structures enable a two-stage mode:
 
@@ -459,7 +490,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
-| High 32-bit | Java LCG | ~98K/s | — | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
+| High 32-bit | Java LCG | ~98K/s | ~8 min (2^16) | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
 
 **Notes**:
 
@@ -513,7 +544,7 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 
 **High 32-bit cracking (biome-only mode):** Normally about 10-20 hours (4-core CPU)
 
-**High 32-bit cracking (Java LCG mode):** Phase 2 (bits 32-47) takes seconds; Phase 3 biome verification only runs on surviving candidates, usually finishing within minutes
+**High 32-bit cracking ([Java LCG mode](#java-lcg-structures-optional-acceleration)):** Phase 2 (bits 32-47) takes seconds; Phase 3 biome verification only runs on surviving candidates, usually finishing within minutes
 
 If significantly longer:
 
