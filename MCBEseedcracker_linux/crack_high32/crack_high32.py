@@ -462,6 +462,51 @@ def crack_high16_java_lcg(low32, lcg_structures, search_start=0, search_end=0xFF
     return candidates
 
 
+# Sampling window (high32 values) for the pre-check that estimates the final
+# candidate count before the full-range biome-only scan
+SAMPLE_SEEDS_HIGH = 1 << 17
+
+
+def estimate_candidate_count_high32(search_start, total_span, sorted_samples, low32, num_processes):
+    """Sampling pre-check for biome-only mode: scan a small high32 window with the
+    same worker as the real scan (crack_batch_soa) and extrapolate the candidate
+    count over the full range.
+
+    Returns (predicted, sampled_found, saturated): saturated is True when a
+    worker hit its MAX_RESULTS buffer cap, meaning the real count is far higher
+    than the extrapolation.
+    """
+    sample_span = min(total_span, SAMPLE_SEEDS_HIGH)
+    sample_end_exclusive = search_start + sample_span
+
+    ctx = mp.get_context('spawn')
+    pool = ctx.Pool(num_processes)
+    sampled_found = 0
+    saturated = False
+    try:
+        chunk = max(1, sample_span // num_processes)
+        pos = search_start
+        while pos < sample_end_exclusive and not saturated:
+            tasks = []
+            for i in range(num_processes):
+                s = pos + i * chunk
+                e = min(pos + (i + 1) * chunk, sample_end_exclusive) if i < num_processes - 1 else sample_end_exclusive
+                if s < e:
+                    tasks.append((s, e, low32, sorted_samples, 0, MC_VERSION))
+            if tasks:
+                for found in pool.map(crack_batch_soa, tasks):
+                    sampled_found += len(found)
+                    if len(found) >= MAX_RESULTS:  # worker result buffer cap reached
+                        saturated = True
+            pos += chunk * num_processes
+    finally:
+        pool.close()
+        pool.join()
+
+    predicted = round(sampled_found * total_span / sample_span)
+    return predicted, sampled_found, saturated
+
+
 def main():
     # Create/Clear found seeds file
     found_seeds_file = Path(__file__).parent / "found_seeds.txt"
@@ -567,6 +612,30 @@ def main():
     else:
         print(f"[*] Java LCG structures: none (biome-only mode)")
     
+    # A single (x, z, y) point cannot hold two different biomes - block contradictory input
+    point_biomes = {}
+    for sample in SAMPLES:
+        if len(sample) == 4:
+            x, z, y, biome_id = sample
+        else:
+            x, z, biome_id = sample
+            y = 200
+        ids = point_biomes.setdefault((x, z, y), [])
+        if biome_id not in ids:
+            ids.append(biome_id)
+    conflict_lines = []
+    for (x, z, y), ids in point_biomes.items():
+        if len(ids) > 1:
+            joined = ", ".join(f"{get_biome_name(bid)} (ID: {bid})" for bid in sorted(ids))
+            conflict_lines.append(f"({x}, {z}, Y={y}): {joined}")
+    if conflict_lines:
+        print("\n[!] ERROR: the following sample points have multiple different biomes (one point cannot hold multiple biomes):")
+        for line in conflict_lines:
+            print(f"    {line}")
+        print("[!] Remove or fix the contradictory samples and retry!")
+        input("\nPress Enter to exit...")
+        sys.exit(1)
+
     # Check biome version compatibility BEFORE strictness testing
     version_warnings = check_biome_version(SAMPLES, MC_VERSION_STR)
     if version_warnings:
@@ -607,6 +676,8 @@ def main():
                 y = 200
             match_pct = score / num_test_seeds * 100
             print(f"    {i+1}. ({x}, {z}, Y={y}) -> {get_biome_name(biome_id)} (ID: {biome_id}) - {score}/{num_test_seeds} matches ({match_pct:.4f}%)")
+            if score == 0:
+                print(f"[!] Sample ({x}, {z}, Y={y}) {get_biome_name(biome_id)} (ID: {biome_id}) matched 0/{num_test_seeds} test seeds - it may be invalid, check coordinates/type!")
 
     # ===== Java LCG phase 2+3 (if structures provided) =====
     if lcg_structures:
@@ -727,6 +798,31 @@ def main():
         input("\nPress Enter to exit...")
         sys.exit(0)
     # ===== End Java LCG phase =====
+
+    # Sampling pre-check: estimate the final candidate count before the full scan
+    total_span = search_end - search_start + 1
+    has_zero_sample = any(sc == 0 for sc in strictness_scores)
+    if total_span > SAMPLE_SEEDS_HIGH:
+        try:
+            print(f"\n[*] Estimating candidate count (sampling {SAMPLE_SEEDS_HIGH:,} high32 values)...")
+            predicted, sampled, saturated = estimate_candidate_count_high32(
+                search_start, total_span, sorted_samples, low32, max_processes)
+            if saturated:
+                print("[!] Estimated candidates: far more than 10,000 (sampling buffer saturated)")
+                print("[!] Too few biome samples - many false positives are expected!")
+            elif predicted <= 0:
+                if has_zero_sample:
+                    print("[!] Estimated candidates: ~0 - some sample(s) matched 0/100000 (possibly invalid), no results expected - check sample coordinates/type!")
+                else:
+                    print(f"[*] Estimated candidates: ~0 (sampled {sampled:,} high32 values)")
+                    print("[*] Samples are fine - expect only 0-1 candidates over the full range")
+            elif predicted > 10000:
+                print(f"[!] Estimated candidates: ~{predicted:,} (sampled {sampled:,} high32 values)")
+                print("[!] Too few biome samples - many false positives are expected!")
+            else:
+                print(f"[*] Estimated candidates: ~{predicted:,} (sampled {sampled:,} high32 values)")
+        except Exception as e:
+            print(f"[WARNING] Candidate estimation skipped: {e}")
 
     total_search = search_end - search_start + 1
 

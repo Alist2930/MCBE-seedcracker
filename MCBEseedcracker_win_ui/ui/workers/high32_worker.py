@@ -282,6 +282,51 @@ def crack_batch_lcg_phase3(args):
         return []
 
 
+# Sampling window (high32 values) for the pre-check that estimates the final
+# candidate count before the full-range biome-only scan
+SAMPLE_SEEDS_HIGH = 1 << 17
+
+
+def estimate_candidate_count_high32(sample_start, total_span, samples, low32, num_processes, mc_version):
+    """Sampling pre-check for biome-only mode: scan a small high32 window with the
+    same worker as the real scan (crack_batch) and extrapolate the candidate
+    count over the user's full range (total_span values).
+
+    Returns (predicted, sampled_found, saturated): saturated is True when a
+    worker hit its 1000-result buffer cap, meaning the real count is far higher
+    than the extrapolation.
+    """
+    sample_span = min(total_span, SAMPLE_SEEDS_HIGH)
+    sample_end_exclusive = sample_start + sample_span
+
+    ctx = mp.get_context('spawn')
+    pool = ctx.Pool(num_processes)
+    sampled_found = 0
+    saturated = False
+    try:
+        chunk = max(1, sample_span // num_processes)
+        pos = sample_start
+        while pos < sample_end_exclusive and not saturated:
+            tasks = []
+            for i in range(num_processes):
+                s = pos + i * chunk
+                e = min(pos + (i + 1) * chunk, sample_end_exclusive) if i < num_processes - 1 else sample_end_exclusive
+                if s < e:
+                    tasks.append((s, e, low32, samples, 0, mc_version))
+            if tasks:
+                for found in pool.map(crack_batch, tasks):
+                    sampled_found += len(found)
+                    if len(found) >= 1000:  # worker result buffer cap reached
+                        saturated = True
+            pos += chunk * num_processes
+    finally:
+        pool.close()
+        pool.join()
+
+    predicted = round(sampled_found * total_span / sample_span)
+    return predicted, sampled_found, saturated
+
+
 class High32Worker(QThread):
     progress_updated = pyqtSignal(float, int, int)  # progress%, speed, eta
     found_seed = pyqtSignal(object)  # Use object to support large uint64 seeds
@@ -341,6 +386,30 @@ class High32Worker(QThread):
                 self.error_occurred.emit("No valid biome data")
                 return
 
+            # A single (x, z, y) point cannot hold two different biomes - block contradictory input
+            point_biomes = {}
+            for sample in biome_samples:
+                x, z, y, biome_id = sample
+                point_biomes.setdefault((x, z, y), set()).add(biome_id)
+
+            def _biome_display(bid):
+                for name, data in biome_data.items():
+                    if isinstance(data, dict) and data.get('id') == bid:
+                        key = 'name_zh' if lang_manager.language == "zh_CN" else 'name_en'
+                        return data.get(key, name)
+                return str(bid)
+
+            conflict_lines = []
+            for (x, z, y), ids in point_biomes.items():
+                if len(ids) > 1:
+                    joined = ", ".join(f"{_biome_display(bid)} (ID: {bid})" for bid in sorted(ids))
+                    conflict_lines.append(f"({x}, {z}, Y={y}): {joined}")
+            if conflict_lines:
+                err = lang_manager.get("conflicting_biome_samples").format("\n".join(conflict_lines))
+                print(f"[HIGH32 ERROR] {err}")
+                self.error_occurred.emit(err)
+                return
+
             # Skip strictness test if search range size < 100000 (test would be redundant)
             skip_strictness = (self.end_value - self.start_value < 100000)
 
@@ -388,6 +457,8 @@ class High32Worker(QThread):
                         score = sorted_scores[i-1]
                         match_pct = score / 100000 * 100
                         biome_info_lines.append(f"    {i}. ({x}, {z}, Y={y}) -> {biome_display_name} (ID: {biome_id}) - {score}/100000 matches ({match_pct:.4f}%)")
+                        if score == 0:
+                            biome_info_lines.append("    " + lang_manager.get("strictness_zero_sample").format(f"{biome_display_name} ({x}, {z})"))
             biome_info_lines.append("="*60)
 
             # Send biome info to UI
@@ -521,6 +592,33 @@ class High32Worker(QThread):
                 self.error_occurred.emit(f"DLL not found: {dll_path}")
                 return
             
+            # Sampling pre-check: estimate the final candidate count before the full scan
+            total_span = self.end_value - self.original_start_value + 1
+            has_zero_sample = any(sc == 0 for sc in sorted_scores)
+            if total_span > SAMPLE_SEEDS_HIGH:
+                try:
+                    est_text = lang_manager.get("estimate_sampling").format(f"{SAMPLE_SEEDS_HIGH:,}")
+                    print(f"[HIGH32 INFO] {est_text}")
+                    self.biome_info_updated.emit("\n" + est_text + "\n")
+                    predicted, sampled, saturated = estimate_candidate_count_high32(
+                        self.original_start_value, total_span, biome_samples_sorted,
+                        self.low32_value, num_processes, self.mc_version)
+                    if saturated:
+                        hint = lang_manager.get("estimate_saturated").format("10,000")
+                    elif predicted <= 0:
+                        if has_zero_sample:
+                            hint = lang_manager.get("estimate_zero_invalid")
+                        else:
+                            hint = lang_manager.get("estimate_zero")
+                    elif predicted > 10000:
+                        hint = lang_manager.get("estimate_many").format(f"{predicted:,}")
+                    else:
+                        hint = lang_manager.get("estimate_ok").format(f"{predicted:,}")
+                    print(f"[HIGH32 INFO] {hint}")
+                    self.biome_info_updated.emit(hint + "\n")
+                except Exception as e:
+                    print(f"[WARNING] Candidate estimation skipped: {e}")
+
             tasks = []
             current = self.start_value
             while current <= self.end_value:

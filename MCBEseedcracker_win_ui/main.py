@@ -21,11 +21,11 @@ def main():
     app = QApplication(sys.argv)
     
     app.setApplicationName("MCBE Seed Cracker")
-    app.setApplicationVersion("1.4.0")
+    app.setApplicationVersion("1.4.1")
     app.setOrganizationName("MCBE Seed Cracker")
     
     config_manager = ConfigManager()
-    language = config_manager.get("language", "zh_CN")
+    language = config_manager.get("language", "en_US")
     
     translator = QTranslator()
     if language == "zh_CN":

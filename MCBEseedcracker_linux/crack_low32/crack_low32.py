@@ -37,6 +37,10 @@ CONST_B = 4048968661
 NUM_OFFSETS = 4
 FOUR_GRID_STRUCTURES = {"village", "igloo", "pillager_outpost", "ruined_portal_overworld", "ruined_portal_nether"}
 
+# Sampling window (seeds) for the pre-check that estimates the total candidate
+# count before the full-range scan; skipped when the search range is smaller
+SAMPLE_SEEDS = 1 << 24
+
 # Found seeds output file (set in main(), used by run_crack_cpu/gpu)
 FOUND_SEEDS_FILE = None
 
@@ -264,6 +268,7 @@ def prepare_targets(targets, skip_strictness=False):
     # Test strictness and sort (strictest first)
     # Skip if requested (when search range size < 100000)
     strictness_scores = []
+    has_zero_sample = False
 
     if skip_strictness:
         print("\n[*] Search range size < 100000, skipping strictness test")
@@ -276,6 +281,9 @@ def prepare_targets(targets, skip_strictness=False):
 
             matches = test_sample_strictness(t["structure"], config, x, z, num_test_seeds=100000)
             strictness_scores.append(matches)
+            if matches == 0:
+                has_zero_sample = True
+                print(f"[!] Sample {config.get('name', t['structure'])} at ({x}, {z}) matched 0/100000 test seeds - it may be invalid, check coordinates/type!")
 
     # Sort by strictness (fewer matches = stricter = higher priority)
     # But maintain linear-first ordering
@@ -301,7 +309,7 @@ def prepare_targets(targets, skip_strictness=False):
     spread_type_list = [spread_type_list[i] for i in sorted_indices]
     structure_info = [structure_info[i] for i in sorted_indices]
 
-    return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info, num_offsets
+    return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info, num_offsets, has_zero_sample
 
 # Global variables (initialized in main() after search range is determined)
 # ACTIVE_NUM_OFFSETS: uniform offsets-per-structure for this run (4 if any grid
@@ -396,6 +404,51 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
     pool.join()
     
     return time.time() - global_start
+
+def estimate_candidate_count(search_start, search_end, num_processes):
+    """Sampling pre-check: scan a small window with the CPU pool and extrapolate
+    the total candidate count over the full range.
+
+    Reuses crack_worker_cpu so the estimate includes the same per-structure
+    offsets / 4-chunk grid logic as the real scan.
+
+    Returns (predicted, sampled_found, saturated): saturated is True when a
+    worker hit its 1000-result buffer cap, meaning the real count is far higher
+    than the extrapolation.
+    """
+    total_span = search_end - search_start + 1
+    sample_span = min(total_span, SAMPLE_SEEDS)
+    sample_end_exclusive = search_start + sample_span
+
+    pool = mp.Pool(num_processes)
+    sampled_found = 0
+    saturated = False
+    try:
+        step_size = max(1, sample_span // 8)
+        processed = search_start
+        while processed < sample_end_exclusive and not saturated:
+            step_end = min(processed + step_size, sample_end_exclusive)
+            chunk = max(1, (step_end - processed) // num_processes)
+
+            tasks = []
+            for i in range(num_processes):
+                s = processed + i * chunk
+                e = min(processed + (i + 1) * chunk, step_end) if i < num_processes - 1 else step_end
+                if s < e:
+                    tasks.append((s, e, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS))
+
+            for found in pool.map(crack_worker_cpu, tasks):
+                sampled_found += len(found)
+                if len(found) >= 1000:  # worker result buffer cap reached
+                    saturated = True
+
+            processed = step_end
+    finally:
+        pool.close()
+        pool.join()
+
+    predicted = round(sampled_found * total_span / sample_span)
+    return predicted, sampled_found, saturated
 
 def run_crack_gpu(search_start, search_end, all_results, config):
     """Run crack using GPU (OpenCL) with batch processing"""
@@ -540,7 +593,7 @@ def main():
     # Initialize global targets (skip strictness test if search range size < 100000)
     global R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS
     skip_strictness = (search_end - search_start < 100000)
-    R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS = prepare_targets(TARGETS, skip_strictness=skip_strictness)
+    R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS, has_zero_sample = prepare_targets(TARGETS, skip_strictness=skip_strictness)
 
     print(f"\n[*] Target structures ({len(TARGETS)}) [sorted: linear first]:")
     for i, info in enumerate(STRUCTURE_INFO):
@@ -625,6 +678,28 @@ def main():
     
     print(f"\n[*] Mode: {'Test' if test_mode else 'Full'}")
     print(f"[*] Search range: {search_start:,} ~ {search_end:,} ({total_seeds:,} seeds)")
+
+    # Sampling pre-check: estimate the candidate count before the full scan
+    if total_seeds > SAMPLE_SEEDS:
+        try:
+            print(f"\n[*] Estimating candidate count (sampling {SAMPLE_SEEDS:,} seeds)...")
+            predicted, sampled, saturated = estimate_candidate_count(search_start, search_end, num_processes)
+            if saturated:
+                print("[!] Estimated candidates: far more than 10,000 (sampling buffer saturated)")
+                print("[!] Too few structures - many false positives are expected!")
+            elif predicted <= 0:
+                if has_zero_sample:
+                    print("[!] Estimated candidates: ~0 - some sample(s) matched 0/100000 (possibly invalid), no results expected - check sample coordinates/type!")
+                else:
+                    print(f"[*] Estimated candidates: ~0 (sampled {sampled:,} seeds)")
+                    print("[*] Samples are fine - expect only 0-1 candidates over the full range")
+            elif predicted > 10000:
+                print(f"[!] Estimated candidates: ~{predicted:,} (sampled {sampled:,} seeds)")
+                print("[!] Too few structures - many false positives are expected!")
+            else:
+                print(f"[*] Estimated candidates: ~{predicted:,} (sampled {sampled:,} seeds)")
+        except Exception as e:
+            print(f"[WARNING] Candidate estimation skipped: {e}")
     
     print("\n" + "-" * 60)
     print("Starting crack...")

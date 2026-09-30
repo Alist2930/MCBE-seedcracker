@@ -14,6 +14,10 @@ from ui.utils.language_manager import lang_manager
 NUM_OFFSETS = 4
 FOUR_GRID_STRUCTURES = {"village", "igloo", "pillager_outpost", "ruined_portal_overworld", "ruined_portal_nether"}
 
+# Sampling window (seeds) for the pre-check that estimates the total candidate
+# count before the full-range scan; skipped when the search range is smaller
+SAMPLE_SEEDS = 1 << 24
+
 
 def get_dll_path(opencl=False):
     """Get DLL path for CPU or GPU version"""
@@ -159,6 +163,52 @@ def crack_worker_cpu(args):
     return [results_arr[i] for i in range(found)]
 
 
+def estimate_candidate_count(sample_start, total_span, r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes):
+    """Sampling pre-check: scan a small window with the CPU pool and extrapolate
+    the total candidate count over the user's full range (total_span seeds).
+
+    Reuses crack_worker_cpu so the estimate includes the same per-structure
+    offsets / 4-chunk grid logic as the real scan.
+
+    Returns (predicted, sampled_found, saturated): saturated is True when a
+    worker hit its 1000-result buffer cap, meaning the real count is far higher
+    than the extrapolation.
+    """
+    sample_span = min(total_span, SAMPLE_SEEDS)
+    sample_end_exclusive = sample_start + sample_span
+
+    ctx = mp.get_context('spawn')
+    pool = ctx.Pool(num_processes)
+    sampled_found = 0
+    saturated = False
+    try:
+        step_size = max(1, sample_span // 8)
+        processed = sample_start
+        while processed < sample_end_exclusive and not saturated:
+            step_end = min(processed + step_size, sample_end_exclusive)
+            chunk = max(1, (step_end - processed) // num_processes)
+
+            tasks = []
+            for i in range(num_processes):
+                s = processed + i * chunk
+                e = min(processed + (i + 1) * chunk, step_end) if i < num_processes - 1 else step_end
+                if s < e:
+                    tasks.append((s, e, r_base, ox, oz, offset_range, spread_type, num_offsets))
+
+            for found in pool.map(crack_worker_cpu, tasks):
+                sampled_found += len(found)
+                if len(found) >= 1000:  # worker result buffer cap reached
+                    saturated = True
+
+            processed = step_end
+    finally:
+        pool.close()
+        pool.join()
+
+    predicted = round(sampled_found * total_span / sample_span)
+    return predicted, sampled_found, saturated
+
+
 class Low32Worker(QThread):
     progress_updated = pyqtSignal(float, int, int)
     found_seed = pyqtSignal(object)
@@ -166,6 +216,7 @@ class Low32Worker(QThread):
     error_occurred = pyqtSignal(str)
     compute_device_info = pyqtSignal(str)  # Signal for GPU/CPU device info
     structure_info_updated = pyqtSignal(str)  # Signal for structure sorting info
+    estimate_hint_updated = pyqtSignal(str)  # Signal for candidate-count estimate hint
 
     def __init__(self, structures, start=0, end=4294967295, test_mode=False, force_gpu=None, process_count=None):
         super().__init__()
@@ -193,7 +244,7 @@ class Low32Worker(QThread):
 
     def run(self):
         try:
-            r_base, ox, oz, offset_range, spread_type, num_offsets = self.prepare_structures()
+            r_base, ox, oz, offset_range, spread_type, num_offsets, has_zero_sample = self.prepare_structures()
 
             # Load configuration
             config = load_config()
@@ -263,6 +314,32 @@ class Low32Worker(QThread):
             if not os.path.exists(dll_path):
                 self.error_occurred.emit(f"DLL not found: {dll_path}")
                 return
+
+            # Sampling pre-check: estimate the candidate count before the full scan
+            total_span = self.end_value - self.original_start_value + 1
+            if total_span > SAMPLE_SEEDS:
+                try:
+                    est_text = lang_manager.get("estimate_sampling").format(f"{SAMPLE_SEEDS:,}")
+                    print(f"[INFO] {est_text}")
+                    self.estimate_hint_updated.emit("\n" + est_text + "\n")
+                    predicted, sampled, saturated = estimate_candidate_count(
+                        self.original_start_value, total_span, r_base, ox, oz,
+                        offset_range, spread_type, num_offsets, num_processes)
+                    if saturated:
+                        hint = lang_manager.get("estimate_saturated").format("10,000")
+                    elif predicted <= 0:
+                        if has_zero_sample:
+                            hint = lang_manager.get("estimate_zero_invalid")
+                        else:
+                            hint = lang_manager.get("estimate_zero")
+                    elif predicted > 10000:
+                        hint = lang_manager.get("estimate_many").format(f"{predicted:,}")
+                    else:
+                        hint = lang_manager.get("estimate_ok").format(f"{predicted:,}")
+                    print(f"[INFO] {hint}")
+                    self.estimate_hint_updated.emit(hint + "\n")
+                except Exception as e:
+                    print(f"[WARNING] Candidate estimation skipped: {e}")
 
             if use_gpu:
                 self._run_gpu(r_base, ox, oz, offset_range, spread_type, num_offsets, config)
@@ -600,6 +677,7 @@ class Low32Worker(QThread):
 
         strictness_scores = []
         structure_info_lines = []
+        has_zero_sample = False
         structure_info_lines.append("=" * 80)
         if skip_strictness:
             structure_info_lines.append("Structure samples (strictness test skipped, range size < 100000):")
@@ -667,6 +745,11 @@ class Low32Worker(QThread):
                     info_line = f"    {i+1}. {name} at ({x}, {z}): {found}/100000 matches ({match_rate:.4f}%) [{spread_type_str}]"
                     print(info_line)
                     structure_info_lines.append(info_line)
+                    if found == 0:
+                        has_zero_sample = True
+                        zero_line = "    " + lang_manager.get("strictness_zero_sample").format(f"{name} ({x}, {z})")
+                        print(zero_line)
+                        structure_info_lines.append(zero_line)
                 else:
                     strictness_scores.append(0)
                     warning_line = f"    {i+1}. [WARNING] DLL not found for strictness test"
@@ -748,7 +831,7 @@ class Low32Worker(QThread):
         import json
         self.structure_info_updated.emit(json.dumps(order_info))
 
-        return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, num_offsets
+        return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, num_offsets, has_zero_sample
 
     def save_progress(self, current):
         progress_data = {

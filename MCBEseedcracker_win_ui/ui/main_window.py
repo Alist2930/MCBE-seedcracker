@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         self.low32_results = []
         self.high32_results = []
         
-        lang_manager.set_language(self.config_manager.get("language", "zh_CN"))
+        lang_manager.set_language(self.config_manager.get("language", "en_US"))
         
         self.init_ui()
         self.setup_menu()
@@ -431,6 +431,7 @@ class MainWindow(QMainWindow):
         self.low32_worker.error_occurred.connect(self.show_error)
         self.low32_worker.compute_device_info.connect(self.update_low32_compute_device)
         self.low32_worker.structure_info_updated.connect(self.update_low32_structure_info)
+        self.low32_worker.estimate_hint_updated.connect(self.update_low32_estimate_hint)
 
         self.low32_worker.start()
         self.low32_status_label.setText(lang_manager.get("start_low32_cracking"))
@@ -723,6 +724,11 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[ERROR] Failed to parse structure info: {e}")
 
+    def update_low32_estimate_hint(self, hint):
+        """Append the candidate-count estimate hint to the low32 status label"""
+        current_text = self.low32_status_label.text()
+        self.low32_status_label.setText(current_text + "\n" + hint)
+
     def low32_finished(self, results):
         self.start_low32_btn.setEnabled(True)
         self.pause_low32_btn.setEnabled(False)
@@ -825,7 +831,7 @@ class MainWindow(QMainWindow):
         )
     
     def update_language_menu(self):
-        current_lang = self.config_manager.get("language", "zh_CN")
+        current_lang = self.config_manager.get("language", "en_US")
         
         self.zh_action.setText("• 中文" if current_lang == "zh_CN" else "中文")
         self.en_action.setText("• English" if current_lang == "en_US" else "English")
@@ -909,7 +915,7 @@ class MainWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(
             self, lang_manager.get("about_title"),
-            f"MCBE Seed Cracker v1.4.0\n\n{lang_manager.get('about_text')}"
+            f"MCBE Seed Cracker v1.4.1\n\n{lang_manager.get('about_text')}"
         )
     
     def copy_low32_seed(self, item):

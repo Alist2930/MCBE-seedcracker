@@ -4,7 +4,7 @@ Language Manager for UI
 """
 
 class LanguageManager:
-    def __init__(self, language="zh_CN"):
+    def __init__(self, language="en_US"):
         self.language = language
         self.translations = {
             "zh_CN": {
@@ -211,6 +211,14 @@ class LanguageManager:
                 "lcg_phase2_no_candidates": "Java LCG 阶段未找到候选值，请检查坐标或改用纯群系破解",
                 "lcg_phase3_start": "阶段3: 群系验证 48-63 位 (每个候选 2^16)...",
                 "lcg_no_lcg_using_biome_only": "未提供 Java LCG 结构，使用纯群系破解 (2^32 范围)",
+                "estimate_sampling": "正在采样估算候选数（采样 {0} 个种子）...",
+                "estimate_ok": "预计候选数约为 {0}",
+                "estimate_zero": "预计候选数约为 0：样本正常，全范围预计仅 0~1 个候选",
+                "estimate_many": "预计候选数约为 {0}：结构/样本偏少，可能产生大量误报！",
+                "estimate_saturated": "预计候选数远超 {0}（采样结果已饱和）：结构/样本偏少，可能产生大量误报！",
+                "estimate_zero_invalid": "预计候选数约为 0：存在匹配率为 0 的样本（可能无效），预计不会找到结果，请检查样本坐标/类型！",
+                "strictness_zero_sample": "警告：样本 {0} 在 10 万测试种子中匹配 0 次，样本可能无效，请检查坐标/类型！",
+                "conflicting_biome_samples": "错误：以下样本点存在多个不同群系（同一点不可能同时为多个群系），请删除或修正矛盾样本：\n{0}",
             },
             "en_US": {
                 # App Title
@@ -416,6 +424,14 @@ class LanguageManager:
                 "lcg_phase2_no_candidates": "Java LCG phase found no candidates, check coords or use biome-only",
                 "lcg_phase3_start": "Phase 3: Biome verify bits 48-63 (2^16 per candidate)...",
                 "lcg_no_lcg_using_biome_only": "No Java LCG structures provided, using biome-only (2^32 range)",
+                "estimate_sampling": "Estimating candidate count (sampling {0} seeds)...",
+                "estimate_ok": "Estimated candidates: ~{0}",
+                "estimate_zero": "Estimated candidates: ~0 - samples are fine, expect only 0-1 candidates over the full range",
+                "estimate_many": "Estimated candidates: ~{0} - too few structures/samples, many false positives expected!",
+                "estimate_saturated": "Estimated candidates: far more than {0} (sampling buffer saturated) - too few structures/samples, many false positives expected!",
+                "estimate_zero_invalid": "Estimated candidates: ~0 - some sample(s) matched 0/100000 (possibly invalid), no results expected - check sample coordinates/type!",
+                "strictness_zero_sample": "WARNING: sample {0} matched 0/100000 test seeds - it may be invalid, check coordinates/type!",
+                "conflicting_biome_samples": "ERROR: the following sample points have multiple different biomes (one point cannot hold multiple biomes). Remove or fix the contradictory samples:\n{0}",
             }
         }
     

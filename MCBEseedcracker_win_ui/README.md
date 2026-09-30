@@ -134,6 +134,8 @@ Edit `crack_config.json` in the application directory:
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
 >
+> **Why the 4-chunk grid**: These structures consist of building pieces spanning multiple chunks, so the position observed in-game may lie in a chunk adjacent to the true origin chunk (the chunk from which generation is seeded) — the origin chunk cannot be determined from the coordinates alone. For each input coordinate, the cracker automatically tests all 4 possible origin chunks (the input chunk plus its 3 neighbors); a match on any one counts as a valid sample.
+>
 > **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the [Java LCG Structures](#java-lcg-structures-optional-acceleration) section.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
@@ -224,7 +226,32 @@ Edit `crack_config.json` in the application directory:
 - **Default 16 processes**: This is the tested optimal value (avoids memory bandwidth saturation)
 - **Recommendation**: Keep default 16 processes, more processes won't improve performance
 
-**Optional: [Java LCG Structure Mode](#java-lcg-structures-optional-acceleration) (Recommended):** You can also add [Java LCG structures](#java-lcg-structures-optional-acceleration) (Trail Ruins / Trial Chamber / Abandoned Camp) in this tab. With 2-3 such structures, the cracker switches to a two-stage mode: bits 32-47 are derived directly from the structures, and only bits 48-63 are brute-forced with biome samples — dramatically faster than pure brute force. See [Java LCG Structures](#java-lcg-structures-optional-acceleration).
+**Optional: [Java LCG Structure Mode](#java-lcg-structures-optional-acceleration) (Recommended):** You can also add [Java LCG structures](#java-lcg-structures-optional-acceleration) (Trail Ruins / Trial Chamber / Abandoned Camp) in this tab. With just 1-2 such structures, the cracker switches to a two-stage mode: bits 32-47 are derived directly from the structures, and only bits 48-63 are brute-forced with biome samples — dramatically faster than pure brute force. See [Java LCG Structures](#java-lcg-structures-optional-acceleration).
+
+### Estimated Candidate Count Hint
+
+Before the full scan, the program runs a quick sampling pre-check to estimate the real candidate count over your entire search range:
+
+- **Low 32-bit cracking**: samples 2^24 seeds (GPU ~0.1s, CPU ~1.4s)
+- **High 32-bit cracking (biome-only mode)**: samples 2^17 seeds (~0.3s)
+- **High 32-bit cracking (Java LCG mode)**: skipped — Stage 1 of the two-stage mode already reports the exact candidate count
+
+The estimate is shown as one of four hints:
+
+| Hint | Meaning | Suggestion |
+| --- | --- | --- |
+| Estimated ~0: samples are fine, expect only 0-1 candidates | Normal behavior for strict samples | Just wait for results |
+| Estimated ~0: some sample(s) matched 0/100000 (possibly invalid) | A sample matched 0 of 100000 test seeds | Check sample coordinates/types |
+| Estimated far more than 10000 (sampling saturated) | Too few structures/samples; many false positives expected | Add more structure/biome samples |
+| Estimated ≈ N | Normal estimate | Add more samples if N is large |
+
+Notes:
+
+- The sampling pre-check reuses the exact same verification logic as the real scan (including the 4-chunk grid), so the estimate is reliable
+- The pre-check is skipped automatically when the search range is no larger than the sampling window
+- During strictness testing each sample is checked individually: samples matching 0/100000 trigger a warning, and two different biomes at the same point (mathematically impossible) abort with an error
+
+---
 
 ## Java LCG Structures (Optional Acceleration)
 
@@ -232,7 +259,7 @@ Three structures use the Java LCG random number generator in Bedrock Edition (in
 
 When added in the high 32-bit cracking stage, these structures enable a two-stage mode:
 
-1. **Stage 1 (bits 32-47)**: Java LCG structure positions directly constrain the seed's bits 32-47. Each structure reduces the candidates by a factor of ~65536; with 2-3 structures, a unique candidate for bits 32-47 is usually derived directly (no brute force needed).
+1. **Stage 1 (bits 32-47)**: Java LCG structure positions directly constrain the seed's bits 32-47. Each structure reduces the candidates by a factor of ~65536; **just 1-2 structures suffice**: 1 structure usually determines bits 32-47 uniquely (if multiple candidates survive, Stage 1 reports the exact count), and 2 structures guarantee uniqueness.
 2. **Stage 2 (bits 48-63)**: For each surviving candidate, the cracker iterates bits 48-63 (at most 65536 candidates) and verifies biome samples within your search range.
 
 This is dramatically faster than the default full brute force over bits 32-47.
@@ -479,13 +506,13 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
-| High 32-bit | Java LCG | ~98K/s | ~8 min (2^16) | 2-3 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
+| High 32-bit | Java LCG | ~98K/s | ~8 min (2^16) | 1-2 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
 
 **Notes**:
 
 - Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
 - Old GPUs (compute units < 10) automatically use CPU mode for stability
-- High 32-bit cracking does not support GPU acceleration due to algorithm complexity, but can be dramatically accelerated by the optional Java LCG structure mode: 2-3 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
+- High 32-bit cracking does not support GPU acceleration due to algorithm complexity, but can be dramatically accelerated by the optional Java LCG structure mode: 1-2 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
 
 ---
 
