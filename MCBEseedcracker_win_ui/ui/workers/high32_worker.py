@@ -458,7 +458,7 @@ class High32Worker(QThread):
                         match_pct = score / 100000 * 100
                         biome_info_lines.append(f"    {i}. ({x}, {z}, Y={y}) -> {biome_display_name} (ID: {biome_id}) - {score}/100000 matches ({match_pct:.4f}%)")
                         if score == 0:
-                            biome_info_lines.append("    " + lang_manager.get("strictness_zero_sample").format(f"{biome_display_name} ({x}, {z})"))
+                            biome_info_lines.append("    " + lang_manager.get("strictness_zero_sample").format(f"{biome_display_name} ({x}, {z})", "100000"))
             biome_info_lines.append("="*60)
 
             # Send biome info to UI

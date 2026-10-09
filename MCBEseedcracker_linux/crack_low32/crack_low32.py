@@ -63,6 +63,14 @@ STRUCTURE_CONFIGS = {
     "buried_treasure": {"name": "Buried Treasure", "salt": 16842397, "spacing": 4, "separation": 2, "spread_type": "triangular"},
 }
 
+# Special structures use the per-chunk decoration RNG (low32-only constraints).
+# Desert Well: /tp coordinates are the exact anchor (chunk origin + dx,dz), 1/128000 per chunk.
+# Amethyst Geode: any block inside the geode; origin chunk = coord >> 4 (1.18+, 1/24 per chunk).
+SPECIAL_STRUCTURE_CONFIGS = {
+    "desert_well": {"name": "Desert Well", "salt": -1160484816, "rarity": 500, "sp_type": 0},
+    "amethyst_geode": {"name": "Amethyst Geode", "salt": 1974035328, "rarity": 24, "sp_type": 1},
+}
+
 # ===== Target structures (loaded from config.json) =====
 # Load from config file (users can edit config.json)
 _cfg = config_loader.get_low32_config()
@@ -198,22 +206,72 @@ def test_sample_strictness(structure, config, x, z, num_test_seeds=100000):
         return 0
 
 
+def test_special_strictness(sp_type, cx, cz, dx, dz):
+    """Test strictness of a special (decoration RNG) sample.
+
+    Desert wells match only 1/128000 seeds, so they need a larger test
+    window (2^20) than regular structures; geodes (1/24) use 100000.
+
+    Returns (matches, num_test_seeds).
+    """
+    num_test_seeds = (1 << 20) if sp_type == 0 else 100000
+    lib_path = Path(__file__).parent / 'crack_low32.so'
+    try:
+        lib = ctypes.CDLL(str(lib_path))
+        lib.crack_low32_grid_special.argtypes = [
+            ctypes.c_uint32, ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+        ]
+        lib.crack_low32_grid_special.restype = ctypes.c_int
+
+        sp_type_arr = (ctypes.c_int * 1)(sp_type)
+        sp_cx_arr = (ctypes.c_int * 1)(cx)
+        sp_cz_arr = (ctypes.c_int * 1)(cz)
+        sp_dx_arr = (ctypes.c_int * 1)(dx)
+        sp_dz_arr = (ctypes.c_int * 1)(dz)
+        results_arr = (ctypes.c_uint32 * num_test_seeds)()
+
+        # Special-only test: num_structures=0 skips the regular structure loop
+        found = lib.crack_low32_grid_special(
+            0, num_test_seeds,
+            None, None, None, None, None, 0, 1,
+            sp_type_arr, sp_cx_arr, sp_cz_arr, sp_dx_arr, sp_dz_arr, 1,
+            results_arr, num_test_seeds)
+
+        if found < 0:
+            raise RuntimeError(f"crack_low32_grid_special failed (return code {found})")
+        return found, num_test_seeds
+    except Exception as e:
+        print(f"[WARNING] Failed to test strictness with C library: {e}")
+        return 0, num_test_seeds
+
+
 def prepare_targets(targets, skip_strictness=False):
-    # Validate all structure names first
+    # Validate all structure names first (regular + special)
     invalid_structures = []
     for i, t in enumerate(targets):
         structure_name = t.get("structure")
         if not structure_name:
             raise ValueError(f"Target {i} missing 'structure' field")
-        if structure_name not in STRUCTURE_CONFIGS:
+        if structure_name not in STRUCTURE_CONFIGS and structure_name not in SPECIAL_STRUCTURE_CONFIGS:
             invalid_structures.append(structure_name)
 
     if invalid_structures:
-        valid_structures = ", ".join(sorted(STRUCTURE_CONFIGS.keys()))
+        valid_structures = ", ".join(sorted(STRUCTURE_CONFIGS.keys()) + sorted(SPECIAL_STRUCTURE_CONFIGS.keys()))
         raise ValueError(
             f"Invalid structure name(s): {', '.join(invalid_structures)}\n"
             f"Valid structures are: {valid_structures}"
         )
+
+    # Split into regular (structure RNG) and special (decoration RNG) targets
+    special_targets = [t for t in targets if t["structure"] in SPECIAL_STRUCTURE_CONFIGS]
+    targets = [t for t in targets if t["structure"] in STRUCTURE_CONFIGS]
 
     # First sort by spread_type (linear first)
     sorted_targets = sorted(targets, key=lambda t: 0 if STRUCTURE_CONFIGS[t["structure"]].get("spread_type", "linear") == "linear" else 1)
@@ -275,12 +333,16 @@ def prepare_targets(targets, skip_strictness=False):
         for i, t in enumerate(sorted_targets):
             strictness_scores.append(0)
     else:
+        print(f"\n[*] Testing sample strictness ({len(sorted_targets)} samples, 100000 seeds each):")
         for i, t in enumerate(sorted_targets):
             config = STRUCTURE_CONFIGS[t["structure"]]
             x, z = t["x"], t["z"]
+            spread_name = "triangular" if config.get("spread_type", "linear") == "triangular" else "linear"
 
             matches = test_sample_strictness(t["structure"], config, x, z, num_test_seeds=100000)
             strictness_scores.append(matches)
+            rate = matches / 100000 * 100
+            print(f"    {i + 1}. {config.get('name', t['structure'])} at ({x}, {z}): {matches}/100000 matches ({rate:.4f}%) [{spread_name}]")
             if matches == 0:
                 has_zero_sample = True
                 print(f"[!] Sample {config.get('name', t['structure'])} at ({x}, {z}) matched 0/100000 test seeds - it may be invalid, check coordinates/type!")
@@ -309,7 +371,34 @@ def prepare_targets(targets, skip_strictness=False):
     spread_type_list = [spread_type_list[i] for i in sorted_indices]
     structure_info = [structure_info[i] for i in sorted_indices]
 
-    return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info, num_offsets, has_zero_sample
+    # Special (decoration RNG) targets: sort strictest first (well 1/128000 before geode 1/24)
+    special_sorted = sorted(special_targets, key=lambda t: -SPECIAL_STRUCTURE_CONFIGS[t["structure"]]["rarity"])
+    sp_type_list, sp_cx_list, sp_cz_list, sp_dx_list, sp_dz_list, special_info = [], [], [], [], [], []
+
+    for t in special_sorted:
+        config = SPECIAL_STRUCTURE_CONFIGS[t["structure"]]
+        x, z = t["x"], t["z"]
+        sp_type = config["sp_type"]
+        # Wells: /tp coordinates are the exact anchor -> chunk origin + (dx, dz);
+        # geodes: any block inside the geode -> origin chunk only, offsets unused
+        sp_cx, sp_cz = x >> 4, z >> 4
+        sp_dx, sp_dz = (x & 15, z & 15) if sp_type == 0 else (0, 0)
+
+        if not skip_strictness:
+            matches, num_test = test_special_strictness(sp_type, sp_cx, sp_cz, sp_dx, sp_dz)
+            if matches == 0:
+                has_zero_sample = True
+                print(f"[!] Sample {config['name']} at ({x}, {z}) matched 0/{num_test} test seeds - it may be invalid, check coordinates/type!")
+
+        sp_type_list.append(sp_type)
+        sp_cx_list.append(sp_cx)
+        sp_cz_list.append(sp_cz)
+        sp_dx_list.append(sp_dx)
+        sp_dz_list.append(sp_dz)
+        special_info.append({"name": config["name"], "x": x, "z": z, "sp_type": sp_type})
+
+    return (r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, structure_info, num_offsets, has_zero_sample,
+            sp_type_list, sp_cx_list, sp_cz_list, sp_dx_list, sp_dz_list, special_info)
 
 # Global variables (initialized in main() after search range is determined)
 # ACTIVE_NUM_OFFSETS: uniform offsets-per-structure for this run (4 if any grid
@@ -317,10 +406,13 @@ def prepare_targets(targets, skip_strictness=False):
 # re-import the module and would lose runtime globals
 R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO = [], [], [], [], [], []
 ACTIVE_NUM_OFFSETS = 4
+# Special (decoration RNG) samples: [num_special] each, empty when none configured
+SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ, SPECIAL_INFO = [], [], [], [], [], []
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing (per-structure offsets; 4-chunk grid where applicable)"""
-    start, end, r_base, ox, oz, offset_range, spread_type, num_offsets = args
+    """CPU worker for multiprocessing (regular structures + special decoration samples)"""
+    (start, end, r_base, ox, oz, offset_range, spread_type, num_offsets,
+     sp_type, sp_cx, sp_cz, sp_dx, sp_dz) = args
 
     lib_path = Path(__file__).parent / 'crack_low32.so'
 
@@ -330,29 +422,44 @@ def crack_worker_cpu(args):
 
     lib = ctypes.CDLL(str(lib_path))
 
-    lib.crack_low32_grid.argtypes = [
+    lib.crack_low32_grid_special.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
     ]
-    lib.crack_low32_grid.restype = ctypes.c_int
+    lib.crack_low32_grid_special.restype = ctypes.c_int
 
     num_structures = len(offset_range)
     grid_count = num_structures * num_offsets
-    r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
-    ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
-    oz_arr = (ctypes.c_uint32 * grid_count)(*oz)
-    offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range)
-    spread_type_arr = (ctypes.c_int * num_structures)(*spread_type)
+    r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base) if num_structures > 0 else None
+    ox_arr = (ctypes.c_uint32 * grid_count)(*ox) if num_structures > 0 else None
+    oz_arr = (ctypes.c_uint32 * grid_count)(*oz) if num_structures > 0 else None
+    offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range) if num_structures > 0 else None
+    spread_type_arr = (ctypes.c_int * num_structures)(*spread_type) if num_structures > 0 else None
+
+    num_special = len(sp_type)
+    sp_type_arr = (ctypes.c_int * num_special)(*sp_type) if num_special > 0 else None
+    sp_cx_arr = (ctypes.c_int * num_special)(*sp_cx) if num_special > 0 else None
+    sp_cz_arr = (ctypes.c_int * num_special)(*sp_cz) if num_special > 0 else None
+    sp_dx_arr = (ctypes.c_int * num_special)(*sp_dx) if num_special > 0 else None
+    sp_dz_arr = (ctypes.c_int * num_special)(*sp_dz) if num_special > 0 else None
+
     results_arr = (ctypes.c_uint32 * 1000)()
 
-    found = lib.crack_low32_grid(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_structures, num_offsets, results_arr, 1000)
+    found = lib.crack_low32_grid_special(
+        start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
+        num_structures, num_offsets,
+        sp_type_arr, sp_cx_arr, sp_cz_arr, sp_dx_arr, sp_dz_arr, num_special,
+        results_arr, 1000)
 
     # Check for native function errors
     if found < 0:
-        raise RuntimeError(f"crack_low32_grid failed for range {start}-{end} (return code {found})")
+        raise RuntimeError(f"crack_low32_grid_special failed for range {start}-{end} (return code {found})")
 
     return [results_arr[i] for i in range(found)]
 
@@ -376,7 +483,8 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
             start = step_start + i * chunk_size
             end = step_start + (i + 1) * chunk_size if i < num_processes - 1 else step_end
             if start < end:
-                tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS))
+                tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS,
+                              SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ))
         
         results = pool.map(crack_worker_cpu, tasks)
         
@@ -435,7 +543,8 @@ def estimate_candidate_count(search_start, search_end, num_processes):
                 s = processed + i * chunk
                 e = min(processed + (i + 1) * chunk, step_end) if i < num_processes - 1 else step_end
                 if s < e:
-                    tasks.append((s, e, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS))
+                    tasks.append((s, e, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS,
+                                  SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ))
 
             for found in pool.map(crack_worker_cpu, tasks):
                 sampled_found += len(found)
@@ -461,23 +570,33 @@ def run_crack_gpu(search_start, search_end, all_results, config):
     try:
         lib = ctypes.CDLL(str(lib_path))
 
-        lib.crack_low32_grid_opencl.argtypes = [
+        lib.crack_low32_grid_special_opencl.argtypes = [
             ctypes.c_uint32, ctypes.c_uint32,
             ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
             ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
             ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
             ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
         ]
-        lib.crack_low32_grid_opencl.restype = ctypes.c_int
+        lib.crack_low32_grid_special_opencl.restype = ctypes.c_int
 
         num_structures = len(OFFSET_RANGE)
         num_offsets = ACTIVE_NUM_OFFSETS
         grid_count = num_structures * num_offsets
-        r_base_arr = (ctypes.c_uint32 * grid_count)(*R_BASE)
-        ox_arr = (ctypes.c_uint32 * grid_count)(*OX)
-        oz_arr = (ctypes.c_uint32 * grid_count)(*OZ)
-        offset_range_arr = (ctypes.c_uint32 * num_structures)(*OFFSET_RANGE)
-        spread_type_arr = (ctypes.c_int * num_structures)(*SPREAD_TYPE)
+        r_base_arr = (ctypes.c_uint32 * grid_count)(*R_BASE) if num_structures > 0 else None
+        ox_arr = (ctypes.c_uint32 * grid_count)(*OX) if num_structures > 0 else None
+        oz_arr = (ctypes.c_uint32 * grid_count)(*OZ) if num_structures > 0 else None
+        offset_range_arr = (ctypes.c_uint32 * num_structures)(*OFFSET_RANGE) if num_structures > 0 else None
+        spread_type_arr = (ctypes.c_int * num_structures)(*SPREAD_TYPE) if num_structures > 0 else None
+
+        num_special = len(SP_TYPE)
+        sp_type_arr = (ctypes.c_int * num_special)(*SP_TYPE) if num_special > 0 else None
+        sp_cx_arr = (ctypes.c_int * num_special)(*SP_CX) if num_special > 0 else None
+        sp_cz_arr = (ctypes.c_int * num_special)(*SP_CZ) if num_special > 0 else None
+        sp_dx_arr = (ctypes.c_int * num_special)(*SP_DX) if num_special > 0 else None
+        sp_dz_arr = (ctypes.c_int * num_special)(*SP_DZ) if num_special > 0 else None
 
         max_results = config.get('max_results', 10000)
         results_arr = (ctypes.c_uint32 * max_results)()
@@ -502,10 +621,12 @@ def run_crack_gpu(search_start, search_end, all_results, config):
 
             batch_elapsed_start = time.time()
 
-            found = lib.crack_low32_grid_opencl(
+            found = lib.crack_low32_grid_special_opencl(
                 batch_start, batch_end,
                 r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                num_structures, num_offsets, results_arr, max_results
+                num_structures, num_offsets,
+                sp_type_arr, sp_cx_arr, sp_cz_arr, sp_dx_arr, sp_dz_arr, num_special,
+                results_arr, max_results
             )
 
             batch_elapsed = time.time() - batch_elapsed_start
@@ -592,13 +713,21 @@ def main():
 
     # Initialize global targets (skip strictness test if search range size < 100000)
     global R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS
+    global SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ, SPECIAL_INFO
     skip_strictness = (search_end - search_start < 100000)
-    R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS, has_zero_sample = prepare_targets(TARGETS, skip_strictness=skip_strictness)
+    (R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, STRUCTURE_INFO, ACTIVE_NUM_OFFSETS, has_zero_sample,
+     SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ, SPECIAL_INFO) = prepare_targets(TARGETS, skip_strictness=skip_strictness)
 
-    print(f"\n[*] Target structures ({len(TARGETS)}) [sorted: linear first]:")
+    print(f"\n[*] Target structures ({len(STRUCTURE_INFO)}) [sorted: linear first]:")
     for i, info in enumerate(STRUCTURE_INFO):
         mode_str = "4-chunk grid" if info.get("grid") else "exact chunk"
         print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']}) [{info['spread_type']}, {mode_str}]")
+
+    if SPECIAL_INFO:
+        print(f"\n[*] Special decoration samples ({len(SPECIAL_INFO)}) [sorted: strictest first]:")
+        for i, info in enumerate(SPECIAL_INFO):
+            sp_desc = "desert well (exact anchor)" if info["sp_type"] == 0 else "amethyst geode (1.18+)"
+            print(f"    {i+1}. {info['name']} ({info['x']}, {info['z']}) [{sp_desc}]")
     
     # Determine compute mode
     use_gpu = False
@@ -689,7 +818,7 @@ def main():
                 print("[!] Too few structures - many false positives are expected!")
             elif predicted <= 0:
                 if has_zero_sample:
-                    print("[!] Estimated candidates: ~0 - some sample(s) matched 0/100000 (possibly invalid), no results expected - check sample coordinates/type!")
+                    print("[!] Estimated candidates: ~0 - some sample(s) matched 0 test seeds (possibly invalid), no results expected - check sample coordinates/type!")
                 else:
                     print(f"[*] Estimated candidates: ~0 (sampled {sampled:,} seeds)")
                     print("[*] Samples are fine - expect only 0-1 candidates over the full range")

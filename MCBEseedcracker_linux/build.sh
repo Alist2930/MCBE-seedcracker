@@ -50,8 +50,9 @@ if [ $OPENCL_FOUND -eq 0 ]; then
 fi
 
 if [ $OPENCL_FOUND -eq 1 ]; then
-    gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL 2>/dev/null
-    if [ -f crack_low32_opencl.so ]; then
+    # gcc inside the if-condition: a failed build must not abort the script
+    # under set -e; the else branch then degrades to CPU-only mode
+    if gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL 2>/dev/null; then
         echo "    [OK] crack_low32_opencl.so created"
         echo "    [INFO] GPU acceleration enabled"
     else

@@ -14,6 +14,15 @@ from ui.utils.language_manager import lang_manager
 NUM_OFFSETS = 4
 FOUR_GRID_STRUCTURES = {"village", "igloo", "pillager_outpost", "ruined_portal_overworld", "ruined_portal_nether"}
 
+# Special structures use the per-chunk decoration RNG (low32-only constraints).
+# Desert Well: /tp coordinates are the exact anchor (chunk origin + dx,dz), 1/128000 per chunk.
+# Amethyst Geode: any block inside the geode; origin chunk = coord >> 4 (1.18+, 1/24 per chunk).
+# Config details (salt/rarity) live in structures.json; sp_type must match the DLL.
+SPECIAL_STRUCTURE_CONFIGS = {
+    "desert_well": {"sp_type": 0, "rarity": 500},
+    "amethyst_geode": {"sp_type": 1, "rarity": 24},
+}
+
 # Sampling window (seeds) for the pre-check that estimates the total candidate
 # count before the full-range scan; skipped when the search range is smaller
 SAMPLE_SEEDS = 1 << 24
@@ -125,8 +134,9 @@ def has_opencl_gpu():
 
 
 def crack_worker_cpu(args):
-    """CPU worker for multiprocessing (per-structure offsets; 4-chunk grid where applicable)"""
-    start, end, r_base, ox, oz, offset_range, spread_type, num_offsets = args
+    """CPU worker for multiprocessing (regular structures + special decoration samples)"""
+    (start, end, r_base, ox, oz, offset_range, spread_type, num_offsets,
+     sp_type, sp_cx, sp_cz, sp_dx, sp_dz) = args
 
     dll_path = get_dll_path(opencl=False)
 
@@ -136,34 +146,50 @@ def crack_worker_cpu(args):
 
     lib = ctypes.CDLL(dll_path, winmode=0x00000008)
 
-    lib.crack_low32_grid.argtypes = [
+    lib.crack_low32_grid_special.argtypes = [
         ctypes.c_uint32, ctypes.c_uint32,
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
         ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
     ]
-    lib.crack_low32_grid.restype = ctypes.c_int
+    lib.crack_low32_grid_special.restype = ctypes.c_int
 
     num_structures = len(offset_range)
     grid_count = num_structures * num_offsets
-    r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
-    ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
-    oz_arr = (ctypes.c_uint32 * grid_count)(*oz)
-    offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range)
-    spread_type_arr = (ctypes.c_int * num_structures)(*spread_type)
+    r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base) if num_structures > 0 else None
+    ox_arr = (ctypes.c_uint32 * grid_count)(*ox) if num_structures > 0 else None
+    oz_arr = (ctypes.c_uint32 * grid_count)(*oz) if num_structures > 0 else None
+    offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range) if num_structures > 0 else None
+    spread_type_arr = (ctypes.c_int * num_structures)(*spread_type) if num_structures > 0 else None
+
+    num_special = len(sp_type)
+    sp_type_arr = (ctypes.c_int * num_special)(*sp_type) if num_special > 0 else None
+    sp_cx_arr = (ctypes.c_int * num_special)(*sp_cx) if num_special > 0 else None
+    sp_cz_arr = (ctypes.c_int * num_special)(*sp_cz) if num_special > 0 else None
+    sp_dx_arr = (ctypes.c_int * num_special)(*sp_dx) if num_special > 0 else None
+    sp_dz_arr = (ctypes.c_int * num_special)(*sp_dz) if num_special > 0 else None
+
     results_arr = (ctypes.c_uint32 * 1000)()
 
-    found = lib.crack_low32_grid(start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr, num_structures, num_offsets, results_arr, 1000)
+    found = lib.crack_low32_grid_special(
+        start, end, r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
+        num_structures, num_offsets,
+        sp_type_arr, sp_cx_arr, sp_cz_arr, sp_dx_arr, sp_dz_arr, num_special,
+        results_arr, 1000)
 
     # Check for native function errors
     if found < 0:
-        raise RuntimeError(f"crack_low32_grid failed for range {start}-{end} (return code {found})")
+        raise RuntimeError(f"crack_low32_grid_special failed for range {start}-{end} (return code {found})")
 
     return [results_arr[i] for i in range(found)]
 
 
-def estimate_candidate_count(sample_start, total_span, r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes):
+def estimate_candidate_count(sample_start, total_span, r_base, ox, oz, offset_range, spread_type, num_offsets,
+                             sp_type, sp_cx, sp_cz, sp_dx, sp_dz, num_processes):
     """Sampling pre-check: scan a small window with the CPU pool and extrapolate
     the total candidate count over the user's full range (total_span seeds).
 
@@ -193,7 +219,8 @@ def estimate_candidate_count(sample_start, total_span, r_base, ox, oz, offset_ra
                 s = processed + i * chunk
                 e = min(processed + (i + 1) * chunk, step_end) if i < num_processes - 1 else step_end
                 if s < e:
-                    tasks.append((s, e, r_base, ox, oz, offset_range, spread_type, num_offsets))
+                    tasks.append((s, e, r_base, ox, oz, offset_range, spread_type, num_offsets,
+                                  sp_type, sp_cx, sp_cz, sp_dx, sp_dz))
 
             for found in pool.map(crack_worker_cpu, tasks):
                 sampled_found += len(found)
@@ -244,7 +271,8 @@ class Low32Worker(QThread):
 
     def run(self):
         try:
-            r_base, ox, oz, offset_range, spread_type, num_offsets, has_zero_sample = self.prepare_structures()
+            (r_base, ox, oz, offset_range, spread_type, num_offsets, has_zero_sample,
+             sp_type, sp_cx, sp_cz, sp_dx, sp_dz) = self.prepare_structures()
 
             # Load configuration
             config = load_config()
@@ -324,7 +352,8 @@ class Low32Worker(QThread):
                     self.estimate_hint_updated.emit("\n" + est_text + "\n")
                     predicted, sampled, saturated = estimate_candidate_count(
                         self.original_start_value, total_span, r_base, ox, oz,
-                        offset_range, spread_type, num_offsets, num_processes)
+                        offset_range, spread_type, num_offsets,
+                        sp_type, sp_cx, sp_cz, sp_dx, sp_dz, num_processes)
                     if saturated:
                         hint = lang_manager.get("estimate_saturated").format("10,000")
                     elif predicted <= 0:
@@ -342,16 +371,19 @@ class Low32Worker(QThread):
                     print(f"[WARNING] Candidate estimation skipped: {e}")
 
             if use_gpu:
-                self._run_gpu(r_base, ox, oz, offset_range, spread_type, num_offsets, config)
+                self._run_gpu(r_base, ox, oz, offset_range, spread_type, num_offsets,
+                              sp_type, sp_cx, sp_cz, sp_dx, sp_dz, config)
             else:
-                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes)
+                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets,
+                              sp_type, sp_cx, sp_cz, sp_dx, sp_dz, num_processes)
 
         except Exception as e:
             import traceback
             traceback.print_exc()
             self.error_occurred.emit(str(e))
 
-    def _run_cpu(self, r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes):
+    def _run_cpu(self, r_base, ox, oz, offset_range, spread_type, num_offsets,
+                 sp_type, sp_cx, sp_cz, sp_dx, sp_dz, num_processes):
         """Run crack using CPU multiprocessing"""
         total_range = self.end_value - self.original_start_value + 1
         step_size = 200_000_000
@@ -381,7 +413,8 @@ class Low32Worker(QThread):
                     task_start = step_start + i * chunk_size
                     task_end = min(step_start + (i + 1) * chunk_size - 1, step_end) if i < num_processes - 1 else step_end
                     if task_start <= task_end:
-                        tasks.append((task_start, task_end + 1, r_base, ox, oz, offset_range, spread_type, num_offsets))
+                        tasks.append((task_start, task_end + 1, r_base, ox, oz, offset_range, spread_type, num_offsets,
+                                      sp_type, sp_cx, sp_cz, sp_dx, sp_dz))
 
                 try:
                     results_list = pool.map(crack_worker_cpu, tasks)
@@ -434,7 +467,8 @@ class Low32Worker(QThread):
         else:
             print(f"[STOPPED] Worker stopped by user at {current:,}")
 
-    def _run_gpu(self, r_base, ox, oz, offset_range, spread_type, num_offsets, config):
+    def _run_gpu(self, r_base, ox, oz, offset_range, spread_type, num_offsets,
+                 sp_type, sp_cx, sp_cz, sp_dx, sp_dz, config):
         """Run crack using GPU (OpenCL)"""
         dll_path = get_dll_path(opencl=True)
         cl_path = get_cl_path()
@@ -455,22 +489,32 @@ class Low32Worker(QThread):
             print(f"[GPU] Loading DLL from: {abs_dll_path}")
             lib = ctypes.CDLL(abs_dll_path, winmode=0x00000008)
 
-            lib.crack_low32_grid_opencl.argtypes = [
+            lib.crack_low32_grid_special_opencl.argtypes = [
                 ctypes.c_uint32, ctypes.c_uint32,
                 ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
                 ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
                 ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
+                ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int), ctypes.c_int,
                 ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
             ]
-            lib.crack_low32_grid_opencl.restype = ctypes.c_int
+            lib.crack_low32_grid_special_opencl.restype = ctypes.c_int
 
             num_structures = len(offset_range)
             grid_count = num_structures * num_offsets
-            r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base)
-            ox_arr = (ctypes.c_uint32 * grid_count)(*ox)
-            oz_arr = (ctypes.c_uint32 * grid_count)(*oz)
-            offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range)
-            spread_type_arr = (ctypes.c_int * num_structures)(*spread_type)
+            r_base_arr = (ctypes.c_uint32 * grid_count)(*r_base) if num_structures > 0 else None
+            ox_arr = (ctypes.c_uint32 * grid_count)(*ox) if num_structures > 0 else None
+            oz_arr = (ctypes.c_uint32 * grid_count)(*oz) if num_structures > 0 else None
+            offset_range_arr = (ctypes.c_uint32 * num_structures)(*offset_range) if num_structures > 0 else None
+            spread_type_arr = (ctypes.c_int * num_structures)(*spread_type) if num_structures > 0 else None
+
+            num_special = len(sp_type)
+            sp_type_arr = (ctypes.c_int * num_special)(*sp_type) if num_special > 0 else None
+            sp_cx_arr = (ctypes.c_int * num_special)(*sp_cx) if num_special > 0 else None
+            sp_cz_arr = (ctypes.c_int * num_special)(*sp_cz) if num_special > 0 else None
+            sp_dx_arr = (ctypes.c_int * num_special)(*sp_dx) if num_special > 0 else None
+            sp_dz_arr = (ctypes.c_int * num_special)(*sp_dz) if num_special > 0 else None
 
             max_results = config.get('max_results', 10000)
             results_arr = (ctypes.c_uint32 * max_results)()
@@ -512,10 +556,12 @@ class Low32Worker(QThread):
                 eta = (self.end_value - processed) / speed if speed > 0 else 0
                 self.progress_updated.emit(progress_pct, int(speed), int(eta))
 
-                found = lib.crack_low32_grid_opencl(
+                found = lib.crack_low32_grid_special_opencl(
                     batch_start, batch_end,
                     r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                    num_structures, num_offsets, results_arr, max_results
+                    num_structures, num_offsets,
+                    sp_type_arr, sp_cx_arr, sp_cz_arr, sp_dx_arr, sp_dz_arr, num_special,
+                    results_arr, max_results
                 )
 
                 if found < 0:
@@ -530,7 +576,8 @@ class Low32Worker(QThread):
                             num_processes = max_processes
                         if mp.cpu_count() > 16:
                             print(f"[INFO] Limiting processes from {mp.cpu_count()} to {num_processes}")
-                        self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes)
+                        self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets,
+                                      sp_type, sp_cx, sp_cz, sp_dx, sp_dz, num_processes)
                     else:
                         self.error_occurred.emit(f"GPU crack failed: {found}")
                     return
@@ -580,7 +627,8 @@ class Low32Worker(QThread):
             if config.get('auto_fallback', True):
                 print("[INFO] Falling back to CPU mode...")
                 num_processes = mp.cpu_count()
-                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets, num_processes)
+                self._run_cpu(r_base, ox, oz, offset_range, spread_type, num_offsets,
+                              sp_type, sp_cx, sp_cz, sp_dx, sp_dz, num_processes)
             else:
                 self.error_occurred.emit(str(e))
         finally:
@@ -596,7 +644,7 @@ class Low32Worker(QThread):
             structure_type = structure.get("type")
             if not structure_type:
                 self.error_occurred.emit(f"Structure {i} missing 'type' field")
-                return [], [], [], [], [], []
+                return [], [], [], [], [], [], False, [], [], [], [], []
 
             if structure_type not in self.structure_data:
                 invalid_structures.append(structure_type)
@@ -608,16 +656,20 @@ class Low32Worker(QThread):
                 f"Valid structures are: {valid_structures}"
             )
             self.error_occurred.emit(error_msg)
-            return [], [], [], [], [], []
+            return [], [], [], [], [], [], False, [], [], [], [], []
+
+        # Split into regular (structure RNG) and special (decoration RNG) structures
+        special_structures = [s for s in self.structures if s["type"] in SPECIAL_STRUCTURE_CONFIGS]
+        regular_structures = [s for s in self.structures if s["type"] not in SPECIAL_STRUCTURE_CONFIGS]
 
         # First sort by spread_type (linear first)
-        sorted_structures = sorted(self.structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)
+        sorted_structures = sorted(regular_structures, key=lambda s: 0 if self.structure_data.get(s["type"], {}).get("spread_type", "linear") == "linear" else 1)
 
         # Calculate parameters for all structures
         # r_base_list/ox_list/oz_list are flattened: [num_structures * num_offsets]
         # offset_range_list/spread_type_list are per-structure: [num_structures]
         # If no structure needs the 4-chunk grid, use num_offsets=1 (saves 4x MT19937 work in DLL/GPU)
-        any_grid = any(s.get("type") in FOUR_GRID_STRUCTURES for s in self.structures)
+        any_grid = any(s.get("type") in FOUR_GRID_STRUCTURES for s in regular_structures)
         num_offsets = NUM_OFFSETS if any_grid else 1
         r_base_list, ox_list, oz_list, offset_range_list, spread_type_list = [], [], [], [], []
         # per_structure_offsets[i] = [(r_base, ox, oz), ...] for strictness test (4 for grid structures, 1 otherwise)
@@ -722,10 +774,12 @@ class Low32Worker(QThread):
                     ]
                     lib.crack_low32_grid.restype = ctypes.c_int
 
-                    num_offsets = len(offsets)
-                    r_base_arr = (ctypes.c_uint32 * num_offsets)(*[o[0] for o in offsets])
-                    ox_arr = (ctypes.c_uint32 * num_offsets)(*[o[1] for o in offsets])
-                    oz_arr = (ctypes.c_uint32 * num_offsets)(*[o[2] for o in offsets])
+                    # Use a distinct name: overwriting the run-level num_offsets here
+                    # would corrupt the per-structure reordering below
+                    test_num_offsets = len(offsets)
+                    r_base_arr = (ctypes.c_uint32 * test_num_offsets)(*[o[0] for o in offsets])
+                    ox_arr = (ctypes.c_uint32 * test_num_offsets)(*[o[1] for o in offsets])
+                    oz_arr = (ctypes.c_uint32 * test_num_offsets)(*[o[2] for o in offsets])
                     offset_range_arr = (ctypes.c_uint32 * 1)(offset_range)
                     spread_type_arr = (ctypes.c_int * 1)(spread_type_int)
                     results_arr = (ctypes.c_uint32 * 100000)()
@@ -733,7 +787,7 @@ class Low32Worker(QThread):
                     found = lib.crack_low32_grid(
                         0, 100000,
                         r_base_arr, ox_arr, oz_arr, offset_range_arr, spread_type_arr,
-                        1, num_offsets,  # num_structures=1, num_offsets per grid membership
+                        1, test_num_offsets,  # num_structures=1, num_offsets per grid membership
                         results_arr, 100000
                     )
 
@@ -747,7 +801,7 @@ class Low32Worker(QThread):
                     structure_info_lines.append(info_line)
                     if found == 0:
                         has_zero_sample = True
-                        zero_line = "    " + lang_manager.get("strictness_zero_sample").format(f"{name} ({x}, {z})")
+                        zero_line = "    " + lang_manager.get("strictness_zero_sample").format(f"{name} ({x}, {z})", "100000")
                         print(zero_line)
                         structure_info_lines.append(zero_line)
                 else:
@@ -823,6 +877,102 @@ class Low32Worker(QThread):
             })
         structure_info_lines.append("=" * 80)
 
+        # Special (decoration RNG) structures: sort strictest first (well 1/128000 before geode 1/24)
+        sp_type_list, sp_cx_list, sp_cz_list, sp_dx_list, sp_dz_list = [], [], [], [], []
+        special_sorted = sorted(special_structures, key=lambda s: -SPECIAL_STRUCTURE_CONFIGS[s["type"]]["rarity"])
+
+        if special_sorted:
+            structure_info_lines.append("\nSpecial decoration samples (sorted: strictest first):")
+            structure_info_lines.append("=" * 80)
+
+        for i, structure in enumerate(special_sorted):
+            structure_type = structure["type"]
+            x, z = structure["x"], structure["z"]
+            config = self.structure_data.get(structure_type, {})
+            sp_type = SPECIAL_STRUCTURE_CONFIGS[structure_type]["sp_type"]
+            # Wells: /tp coordinates are the exact anchor -> chunk origin + (dx, dz);
+            # geodes: any block inside the geode -> origin chunk only, offsets unused
+            sp_cx, sp_cz = x >> 4, z >> 4
+            sp_dx, sp_dz = (x & 15, z & 15) if sp_type == 0 else (0, 0)
+
+            if lang_manager.language == "zh_CN":
+                display_name = config.get("name_zh", structure_type)
+            else:
+                display_name = config.get("name_en", structure_type)
+
+            if skip_strictness:
+                info_line = f"    {i+1}. {display_name} at ({x}, {z}) [decoration]"
+                print(info_line)
+                structure_info_lines.append(info_line)
+            else:
+                # Test using C library (special-only scan; wells use a 2^20 window)
+                num_test = (1 << 20) if sp_type == 0 else 100000
+                found = None
+                try:
+                    dll_path = get_dll_path(opencl=False)
+                    if os.path.exists(dll_path):
+                        lib = ctypes.CDLL(dll_path, winmode=0x00000008)
+                        lib.crack_low32_grid_special.argtypes = [
+                            ctypes.c_uint32, ctypes.c_uint32,
+                            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+                            ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+                            ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int,
+                            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+                            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+                            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+                            ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+                        ]
+                        lib.crack_low32_grid_special.restype = ctypes.c_int
+
+                        sp_type_arr = (ctypes.c_int * 1)(sp_type)
+                        sp_cx_arr = (ctypes.c_int * 1)(sp_cx)
+                        sp_cz_arr = (ctypes.c_int * 1)(sp_cz)
+                        sp_dx_arr = (ctypes.c_int * 1)(sp_dx)
+                        sp_dz_arr = (ctypes.c_int * 1)(sp_dz)
+                        results_arr = (ctypes.c_uint32 * num_test)()
+
+                        # Special-only test: num_structures=0 skips the regular structure loop
+                        found = lib.crack_low32_grid_special(
+                            0, num_test,
+                            None, None, None, None, None, 0, 1,
+                            sp_type_arr, sp_cx_arr, sp_cz_arr, sp_dx_arr, sp_dz_arr, 1,
+                            results_arr, num_test)
+                        if found < 0:
+                            raise RuntimeError(f"crack_low32_grid_special failed (return code {found})")
+                    else:
+                        warning_line = f"    {i+1}. [WARNING] DLL not found for strictness test"
+                        print(warning_line)
+                        structure_info_lines.append(warning_line)
+                except Exception as e:
+                    error_line = f"    {i+1}. [WARNING] Failed to test strictness: {e}"
+                    print(error_line)
+                    structure_info_lines.append(error_line)
+
+                if found is not None:
+                    match_rate = found / num_test * 100
+                    info_line = f"    {i+1}. {display_name} at ({x}, {z}): {found}/{num_test} matches ({match_rate:.4f}%) [decoration]"
+                    print(info_line)
+                    structure_info_lines.append(info_line)
+                    if found == 0:
+                        has_zero_sample = True
+                        zero_line = "    " + lang_manager.get("strictness_zero_sample").format(f"{display_name} ({x}, {z})", f"{num_test}")
+                        print(zero_line)
+                        structure_info_lines.append(zero_line)
+
+            sp_type_list.append(sp_type)
+            sp_cx_list.append(sp_cx)
+            sp_cz_list.append(sp_cz)
+            sp_dx_list.append(sp_dx)
+            sp_dz_list.append(sp_dz)
+
+            # UI display entry: appended after regular structures, decoration marker
+            order_info.append({
+                "x": x,
+                "z": z,
+                "name": display_name,
+                "spread_type": "decoration"
+            })
+
         # Send structure info to UI
         structure_info_text = "\n" + "\n".join(structure_info_lines) + "\n"
         print(structure_info_text)  # Keep console output for debugging
@@ -831,7 +981,8 @@ class Low32Worker(QThread):
         import json
         self.structure_info_updated.emit(json.dumps(order_info))
 
-        return r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, num_offsets, has_zero_sample
+        return (r_base_list, ox_list, oz_list, offset_range_list, spread_type_list, num_offsets, has_zero_sample,
+                sp_type_list, sp_cx_list, sp_cz_list, sp_dx_list, sp_dz_list)
 
     def save_progress(self, current):
         progress_data = {

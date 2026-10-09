@@ -172,5 +172,23 @@
     "separation": 8,
     "spread_type": "linear",
     "rng_type": "java_lcg"
+  },
+  "desert_well": {
+    "name_zh": "沙漠水井",
+    "name_en": "Desert Well",
+    "id": 20,
+    "special": true,
+    "sp_type": 0,
+    "salt": -1160484816,
+    "rarity": 500
+  },
+  "amethyst_geode": {
+    "name_zh": "紫晶洞",
+    "name_en": "Amethyst Geode",
+    "id": 21,
+    "special": true,
+    "sp_type": 1,
+    "salt": 1974035328,
+    "rarity": 24
   }
 }

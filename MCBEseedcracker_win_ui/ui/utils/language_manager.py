@@ -217,7 +217,7 @@ class LanguageManager:
                 "estimate_many": "预计候选数约为 {0}：结构/样本偏少，可能产生大量误报！",
                 "estimate_saturated": "预计候选数远超 {0}（采样结果已饱和）：结构/样本偏少，可能产生大量误报！",
                 "estimate_zero_invalid": "预计候选数约为 0：存在匹配率为 0 的样本（可能无效），预计不会找到结果，请检查样本坐标/类型！",
-                "strictness_zero_sample": "警告：样本 {0} 在 10 万测试种子中匹配 0 次，样本可能无效，请检查坐标/类型！",
+                "strictness_zero_sample": "警告：样本 {0} 在 {1} 个测试种子中匹配 0 次，样本可能无效，请检查坐标/类型！",
                 "conflicting_biome_samples": "错误：以下样本点存在多个不同群系（同一点不可能同时为多个群系），请删除或修正矛盾样本：\n{0}",
             },
             "en_US": {
@@ -429,8 +429,8 @@ class LanguageManager:
                 "estimate_zero": "Estimated candidates: ~0 - samples are fine, expect only 0-1 candidates over the full range",
                 "estimate_many": "Estimated candidates: ~{0} - too few structures/samples, many false positives expected!",
                 "estimate_saturated": "Estimated candidates: far more than {0} (sampling buffer saturated) - too few structures/samples, many false positives expected!",
-                "estimate_zero_invalid": "Estimated candidates: ~0 - some sample(s) matched 0/100000 (possibly invalid), no results expected - check sample coordinates/type!",
-                "strictness_zero_sample": "WARNING: sample {0} matched 0/100000 test seeds - it may be invalid, check coordinates/type!",
+                "estimate_zero_invalid": "Estimated candidates: ~0 - some sample(s) matched 0 test seeds (possibly invalid), no results expected - check sample coordinates/type!",
+                "strictness_zero_sample": "WARNING: sample {0} matched 0/{1} test seeds - it may be invalid, check coordinates/type!",
                 "conflicting_biome_samples": "ERROR: the following sample points have multiple different biomes (one point cannot hold multiple biomes). Remove or fix the contradictory samples:\n{0}",
             }
         }

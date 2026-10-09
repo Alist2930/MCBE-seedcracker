@@ -27,6 +27,8 @@ STRUCTURE_COLORS = {
     "trail_ruins": (139, 90, 43),
     "trial_chamber": (96, 96, 144),
     "abandoned_camp": (160, 120, 60),
+    "desert_well": (216, 196, 144),
+    "amethyst_geode": (135, 90, 191),
 }
 
 STRUCTURE_ICON_FILES = {
@@ -49,6 +51,8 @@ STRUCTURE_ICON_FILES = {
     "trail_ruins": "trail-ruins.png",
     "trial_chamber": "trial-chambers.png",
     "abandoned_camp": "abandoned-camp.png",
+    "desert_well": "desert-well.png",
+    "amethyst_geode": "amethyst-geode.png",
 }
 
 

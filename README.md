@@ -301,7 +301,7 @@ If [Java LCG structure](#java-lcg-structures-optional-acceleration) coordinates 
 1. **Phase 2**: Brute-force bits 32-47 (65536 candidates) using [Java LCG structure](#java-lcg-structures-optional-acceleration) position constraints
 2. **Phase 3**: Verify bits 48-63 with biome samples, only on candidates surviving Phase 2
 
-With just 1-2 [Java LCG structure](#java-lcg-structures-optional-acceleration) samples, Phase 2 usually narrows down to a unique candidate, reducing cracking time from hours to minutes. See [Java LCG Structures](#java-lcg-structures-optional-acceleration) for details.
+With just 1-2 [Java LCG structure](#java-lcg-structures-optional-acceleration) samples, cracking time drops from hours to minutes. See [Java LCG Structures](#java-lcg-structures-optional-acceleration) for details.
 
 ## Java LCG Structures (Optional Acceleration)
 
@@ -309,7 +309,7 @@ Three structures use the Java LCG random number generator in Bedrock Edition (in
 
 When added in the high 32-bit cracking stage, these structures enable a two-stage mode:
 
-1. **Stage 1 (bits 32-47)**: Java LCG structure positions directly constrain the seed's bits 32-47. Each structure reduces the candidates by a factor of ~65536; **just 1-2 structures suffice**: 1 structure usually determines bits 32-47 uniquely (if multiple candidates survive, Stage 1 reports the exact count), and 2 structures guarantee uniqueness.
+1. **Stage 1 (bits 32-47)**: Java LCG structure positions directly constrain the seed's bits 32-47. Each structure reduces the candidates by a factor of ~65536; **just 1-2 structures suffice**.
 2. **Stage 2 (bits 48-63)**: For each surviving candidate, the cracker iterates bits 48-63 (at most 65536 candidates) and verifies biome samples within your search range.
 
 This is dramatically faster than the default full brute force over bits 32-47.
@@ -345,7 +345,7 @@ These structures use the Java edition `Random` LCG: `s ← s × 0x5DEECE66D + 0x
 1. For each candidate 48-bit value, compute the region constant: `r_const = (rx × 341873128712 + rz × 132897987541 + salt) mod 2⁴⁸`
 2. `region_seed = (candidate48 + r_const) mod 2⁴⁸`
 3. `s = region_seed ⊕ 0x5DEECE66D`, then iterate the LCG twice; each time take `(s >> 17) mod chunk_range` to get the chunk offsets `ox`, `oz` (`chunk_range = spacing - separation`)
-4. Compare the computed offsets against the actual positions; 1-2 structures uniquely determine bits 32-47, leaving only bits 48-63 for biome verification
+4. Compare the computed offsets against the actual positions; just 1-2 structures suffice, leaving only bits 48-63 for biome verification
 
 ---
 
@@ -501,13 +501,6 @@ The estimate is shown as one of four hints:
 | Estimated ~0: some sample(s) matched 0/100000 (possibly invalid) | A sample matched 0 of 100000 test seeds | Check sample coordinates/types |
 | Estimated far more than 10000 (sampling saturated) | Too few structures/samples; many false positives expected | Add more structure/biome samples |
 | Estimated ≈ N | Normal estimate | Add more samples if N is large |
-
-Notes:
-
-- The sampling pre-check reuses the exact same verification logic as the real scan (including the 4-chunk grid), so the estimate is reliable
-- The pre-check is skipped automatically when the search range is no larger than the sampling window
-- During strictness testing each sample is checked individually: samples matching 0/100000 trigger a warning, and two different biomes at the same point (mathematically impossible) abort with an error
-
 ---
 
 ## Performance Reference
@@ -519,13 +512,13 @@ Test Environment: Intel Xeon Gold 6330 (112 cores) + NVIDIA RTX 3090
 | Low 32-bit  | GPU  | ~156M/s | **~30 seconds**  | RTX 3090 OpenCL     |
 | Low 32-bit  | CPU  | ~12M/s  | ~6 minutes       | 112 cores parallel  |
 | High 32-bit | CPU  | ~432K/s | ~2.5 hours       | 16 processes (auto) |
-| High 32-bit | Java LCG | ~98K/s | ~8 min (2^16) | 1-2 structures directly determine bits 32-47; biome verification reduced to ≤ 2^16 candidates |
+| High 32-bit | Java LCG | ~98K/s | ~8 min (2^16) | just 1-2 structures; biome verification reduced to ≤ 2^16 candidates |
 
 **Notes**:
 
 - Low 32-bit cracker supports OpenCL GPU acceleration (NVIDIA/AMD/Intel)
 - Old GPUs (compute units < 10) automatically use CPU mode for stability
-- High 32-bit cracking does not support GPU acceleration due to algorithm complexity, but can be dramatically accelerated by the optional Java LCG structure mode: 1-2 structures can uniquely determine bits 32-47 (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
+- High 32-bit cracking does not support GPU acceleration due to algorithm complexity, but can be dramatically accelerated by the optional Java LCG structure mode: just 1-2 structures (see [Java LCG Structures](#java-lcg-structures-optional-acceleration))
 
 ---
 
