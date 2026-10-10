@@ -2,7 +2,7 @@
 
 English | [简体中文](README_CN.md)
 
-Minecraft Bedrock Edition Seed Research Tool (Windows / Linux)
+Minecraft Bedrock Edition Seed Research Tool (Windows / Linux / macOS)
 
 > **Disclaimer**: This tool is designed for Minecraft Bedrock Edition seed cracking. It helps players find world seeds through structure coordinates and biome samples. This tool is for educational and research purposes only, and should not be used for cheating on multiplayer servers or exploiting game mechanics. Similar open-source projects exist on GitHub:
 >
@@ -21,7 +21,7 @@ Crack Minecraft Bedrock Edition world seeds through structure coordinates and bi
 
 ## Requirements
 
-- **OS**: Windows 10+ or Linux (x86_64)
+- **OS**: Windows 10+ (GUI); Windows 10+ / Linux (x86_64, aarch64) / macOS 10.15+ (Command Line)
 - **Game Version**: 1.18/1.19/1.20/1.21/26.XX
 
 > **Version Notes**:
@@ -33,10 +33,10 @@ Crack Minecraft Bedrock Edition world seeds through structure coordinates and bi
 
 ## Quick Start
 
-| Platform    | Version      | Interface | Usage                              |
-| ----------- | ------------ | --------- | ---------------------------------- |
-| **Windows** | GUI Version  | GUI       | Run from source, see details below |
-| **Linux**   | Command Line | Terminal  | Edit config files then run         |
+| Platform                    | Version      | Interface | Usage                              |
+| --------------------------- | ------------ | --------- | ---------------------------------- |
+| **Windows**                 | GUI Version  | GUI       | Run from source, see details below |
+| **Windows / Linux / macOS** | Command Line | Terminal  | Edit config files then run         |
 
 ### Windows Users (Recommended)
 
@@ -52,9 +52,9 @@ See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for det
 - ✅ Chinese/English support
 - ✅ MC 1.18/1.19/1.20/1.21/26.XX support
 
-### Linux Users
+### Command Line Users (Windows / Linux / macOS)
 
-Use the command line version. See [MCBEseedcracker_linux/README.md](MCBEseedcracker_linux/README.md) for details.
+Use the cross-platform command line version. See [MCBEseedcracker_cli/README.md](MCBEseedcracker_cli/README.md) for details.
 
 ---
 
@@ -81,22 +81,23 @@ MCBEseedcracker_win_ui/    # Windows GUI version (recommended)
 ├── build.bat              # Packaging script
 └── version_info.txt       # Version information
 
-MCBEseedcracker_linux/     # Linux command line version
+MCBEseedcracker_cli/       # Cross-platform command line version
 ├── config.json            # Configuration file (low32 and high32)
 ├── config_loader.py       # Configuration loader
-├── build.sh               # Compilation script
+├── build.sh               # Build script (Linux / macOS)
+├── build.bat              # Build script (Windows)
 ├── crack_low32/
 │   ├── crack_low32.c      # Compiled source
 │   ├── crack_low32_opencl.c  # GPU version
 │   ├── crack_low32.cl     # OpenCL kernel
-│   ├── crack_low32.so     # CPU library
-│   ├── crack_low32_opencl.so  # GPU library
-│   └── crack_low32.py     # Command-line script
+│   ├── crack_low32.py     # Command-line script
+│   └── (build outputs: crack_low32.so / crack_low32.dll and
+│        crack_low32_opencl.so / crack_low32_opencl.dll)
 └── crack_high32/
     ├── crack_high32.c     # Compiled source
-    ├── crack_high32.so    # Compiled library
     ├── crack_high32.py    # Command-line script
-    └── cubiomes/          # Biome generation library
+    ├── cubiomes/          # Biome generation library
+    └── (build output: crack_high32.so / crack_high32.dll)
 ```
 
 ---
@@ -169,12 +170,16 @@ Multiple structures matching simultaneously can significantly narrow down candid
 | jungle_temple           | Jungle Temple             | **linear**  |
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
+| desert_well             | Desert Well               | **special** |
+| amethyst_geode          | Amethyst Geode (1.18+)    | **special** |
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
 >
 > **Why the 4-chunk grid**: These structures consist of building pieces spanning multiple chunks, so the position observed in-game may lie in a chunk adjacent to the true origin chunk (the chunk from which generation is seeded) — the origin chunk cannot be determined from the coordinates alone. For each input coordinate, the cracker automatically tests all 4 possible origin chunks (the input chunk plus its 3 neighbors); a match on any one counts as a valid sample.
 >
 > **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the [Java LCG Structures](#java-lcg-structures-optional-acceleration) section.
+>
+> **Special structures**: **Desert Well** and **Amethyst Geode** use the per-chunk decoration RNG (pure low 32-bit constraints, crackable directly in the low 32-bit phase). For Desert Well, enter the exact well coordinates (/tp position); for Amethyst Geode (1.18+), enter any block inside the geode.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -477,9 +482,9 @@ Even with same version number, Java and Bedrock have biome generation difference
 3. Add biomes → Start High 32-bit cracking
 4. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
 
-### Linux (Command Line)
+### Command Line (Windows / Linux / macOS)
 
-1. Edit `config.json` configuration file (see [MCBEseedcracker_linux/README.md](MCBEseedcracker_linux/README.md))
+1. Edit `config.json` configuration file (see [MCBEseedcracker_cli/README.md](MCBEseedcracker_cli/README.md))
 2. Run cracking programs
 3. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
 
@@ -579,7 +584,7 @@ If significantly longer:
 ## Related Links & References
 
 - [Windows GUI Version](MCBEseedcracker_win_ui/README.md)
-- [Linux Command Line Version](MCBEseedcracker_linux/README.md)
+- [Command Line Version](MCBEseedcracker_cli/README.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 

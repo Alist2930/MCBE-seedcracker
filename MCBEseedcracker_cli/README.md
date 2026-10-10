@@ -1,8 +1,8 @@
-# MCBEseedcracker (Linux)
+# MCBEseedcracker (CLI)
 
 English | [简体中文](README_CN.md)
 
-Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
+Minecraft Bedrock Edition Seed Cracker - Cross-Platform Command Line Version (Windows / Linux / macOS)
 
 > For Windows GUI version, see [MCBEseedcracker_win_ui](../MCBEseedcracker_win_ui/README.md)
 
@@ -11,37 +11,39 @@ Minecraft Bedrock Edition Seed Cracker - Linux Command Line Version
 ## Directory Structure
 
 ```
-MCBEseedcracker_linux/     # Linux command line version
+MCBEseedcracker_cli/       # Cross-platform command line version
 ├── config.json            # Configuration file (low32 and high32)
 ├── config_loader.py       # Configuration loader
-├── build.sh               # Compilation script
+├── build.sh               # Build script (Linux / macOS)
+├── build.bat              # Build script (Windows)
 ├── crack_low32/
 │   ├── crack_low32.c      # Compiled source
 │   ├── crack_low32_opencl.c  # GPU version
 │   ├── crack_low32.cl     # OpenCL kernel
-│   ├── crack_low32.so     # CPU library
-│   ├── crack_low32_opencl.so  # GPU library
-│   └── crack_low32.py     # Command-line script
+│   ├── crack_low32.py     # Command-line script
+│   └── (build outputs: crack_low32.so / crack_low32.dll and
+│        crack_low32_opencl.so / crack_low32_opencl.dll)
 └── crack_high32/
     ├── crack_high32.c     # Compiled source
-    ├── crack_high32.so    # Compiled library
     ├── crack_high32.py    # Command-line script
-    └── cubiomes/          # Biome generation library
+    ├── cubiomes/          # Biome generation library
+    └── (build output: crack_high32.so / crack_high32.dll)
 ```
 
 ---
 
 ## Requirements
 
-- **OS**: Linux (x86_64)
+- **OS**: Windows 10+ / Linux (x86_64, aarch64) / macOS 10.15+
 - **Python**: 3.6+
+- **Toolchain**: MinGW-w64 GCC (Windows) or GCC/Clang (Linux/macOS); OpenCL SDK optional for GPU acceleration
 - **Game Version**: 1.18/1.19/1.20/1.21/26.XX (sub-version support)
 
 ---
 
 ### Configuration File
 
-Linux version uses **`config.json`** to manage all configuration parameters (both low32 and high32 cracking).
+The CLI version uses **`config.json`** to manage all configuration parameters (both low32 and high32 cracking).
 
 **The `config.json` file will be automatically created on first run. Please edit it as needed.**
 
@@ -131,12 +133,16 @@ Edit the `low32` section in `config.json`:
 | jungle_temple           | Jungle Temple             | **linear**  |
 | ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
 | ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
+| desert_well             | Desert Well               | **special** |
+| amethyst_geode          | Amethyst Geode (1.18+)    | **special** |
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
 >
 > **Why the 4-chunk grid**: These structures consist of building pieces spanning multiple chunks, so the position observed in-game may lie in a chunk adjacent to the true origin chunk (the chunk from which generation is seeded) — the origin chunk cannot be determined from the coordinates alone. For each input coordinate, the cracker automatically tests all 4 possible origin chunks (the input chunk plus its 3 neighbors); a match on any one counts as a valid sample.
 >
 > **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the [Java LCG Structures](#java-lcg-structures-optional-acceleration) section.
+>
+> **Special structures**: **Desert Well** and **Amethyst Geode** use the per-chunk decoration RNG (pure low 32-bit constraints, crackable directly in the low 32-bit phase). For Desert Well, enter the exact well coordinates (/tp position); for Amethyst Geode (1.18+), enter any block inside the geode.
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -240,13 +246,13 @@ All found seeds are automatically saved to `crack_high32/found_seeds.txt` with t
 
 ### High 32-bit Command Line Arguments
 
-| Argument      | Description                              |
-| ------------- | ---------------------------------------- |
-| `--start`     | Start high32 value (default: 0)          |
-| `--end`       | End high32 value (default: 2^32-1)       |
-| `--test`      | Test mode (0 - 100M)                     |
-| `--low32`     | Low 32-bit value                         |
-| `--processes` | Number of processes (default: CPU cores) |
+| Argument          | Description                                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--start`         | Start high32 value (default: 0)                                                                                                                      |
+| `--end`           | End high32 value (default: 2^32-1)                                                                                                                   |
+| `--test`          | Test mode (0 - 100M)                                                                                                                                 |
+| `--low32`         | Low 32-bit value                                                                                                                                     |
+| `--processes`     | Number of processes (default: CPU cores)                                                                                                             |
 | `--lcg-structure` | [Java LCG structure](#java-lcg-structures-optional-acceleration), format `name:x:z`, repeatable (`trail_ruins` / `trial_chamber` / `abandoned_camp`) |
 
 #### High 32-bit Cracking Configuration
@@ -269,24 +275,22 @@ Edit the `high32` section in `config.json`:
       { "x": -935, "z": 2592, "y": 200, "biome_id": 5 },
       { "x": -2697, "z": 1363, "y": 200, "biome_id": 4 }
     ],
-    "lcg_structures": [
-      { "type": "trial_chamber", "x": 633, "z": 311 }
-    ]
+    "lcg_structures": [{ "type": "trial_chamber", "x": 633, "z": 311 }]
   }
 }
 ```
 
 **Configuration Parameters:**
 
-| Parameter    | Description                                         |
-| ------------ | --------------------------------------------------- |
-| `test_mode`  | Test mode (false: normal, true: test mode)          |
-| `start`      | Start high32 value (default: 0)                     |
-| `end`        | End high32 value (default: 2^32-1)                  |
-| `low32`      | Low 32-bit value (cracked from low32)               |
-| `mc_version` | MC version string (see version mapping table below) |
-| `processes`  | Process count (null: auto-detect, max 16)             |
-| `samples`    | Biome sample list (recommended: 5 samples)          |
+| Parameter        | Description                                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `test_mode`      | Test mode (false: normal, true: test mode)                                                                                  |
+| `start`          | Start high32 value (default: 0)                                                                                             |
+| `end`            | End high32 value (default: 2^32-1)                                                                                          |
+| `low32`          | Low 32-bit value (cracked from low32)                                                                                       |
+| `mc_version`     | MC version string (see version mapping table below)                                                                         |
+| `processes`      | Process count (null: auto-detect, max 16)                                                                                   |
+| `samples`        | Biome sample list (recommended: 5 samples)                                                                                  |
 | `lcg_structures` | Optional Java LCG structure list for two-stage mode (see [Java LCG Structures](#java-lcg-structures-optional-acceleration)) |
 
 **Biome Sample Format:**
@@ -493,36 +497,35 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ## Building
 
-Pre-compiled library files are included. To build yourself:
+Build the native libraries with the script for your platform. Libraries must be built before first use.
 
-### CPU Version
+### Windows (build.bat)
+
+```bat
+:: Requires MinGW-w64 GCC on PATH
+build.bat
+:: Generates crack_low32\crack_low32.dll, crack_high32\crack_high32.dll
+:: and (if an OpenCL SDK is found) crack_low32\crack_low32_opencl.dll
+```
+
+**GPU build on Windows**: an OpenCL SDK is auto-detected from NVIDIA CUDA Toolkit / AMD APP SDK / Intel OpenCL SDK. The OpenCL runtime (`OpenCL.dll`) itself ships with GPU drivers.
+
+### Linux / macOS (build.sh)
 
 ```bash
-# Install dependencies
-sudo apt install -y gcc libomp-dev  # Debian/Ubuntu
-sudo dnf install -y gcc libgomp-devel  # Fedora/RHEL
-
 # Build
 chmod +x build.sh
 ./build.sh
 ```
 
-### GPU Version (OpenCL)
+**GPU version (OpenCL):**
 
-**For GPU acceleration, install OpenCL development packages:**
+- **Ubuntu/Debian**: `sudo apt install -y ocl-icd-opencl-dev ocl-icd-libopencl1`
+- **Fedora/RHEL**: `sudo dnf install -y ocl-icd-devel`
+- **Arch Linux**: `sudo pacman -S ocl-icd`
+- **macOS**: OpenCL ships with the system SDK; no extra packages needed
 
-```bash
-# Ubuntu/Debian
-sudo apt install -y ocl-icd-opencl-dev ocl-icd-libopencl1
-
-# Fedora/RHEL
-sudo dnf install -y ocl-icd-devel
-
-# Arch Linux
-sudo pacman -S ocl-icd
-```
-
-**For NVIDIA GPUs:**
+**NVIDIA GPU users (Linux):**
 
 ```bash
 # Ensure NVIDIA driver is installed
@@ -533,13 +536,17 @@ sudo mkdir -p /etc/OpenCL/vendors
 echo "libnvidia-opencl.so.1" | sudo tee /etc/OpenCL/vendors/nvidia.icd
 ```
 
-Then rebuild with GPU support:
+Then rebuild:
 
 ```bash
-chmod +x build.sh
 ./build.sh
 # Should see: [OK] crack_low32_opencl.so created
 ```
+
+**macOS notes**:
+
+- Apple Silicon (M1/M2/...): the build script automatically uses `-mcpu=native` instead of `-march=native`
+- OpenCL is deprecated on macOS but still functional; performance on Apple Silicon GPUs is lower than on discrete GPUs
 
 ---
 
@@ -625,7 +632,7 @@ After cracking, verify the seed on [ChunkBase](https://www.chunkbase.com/apps/se
 ## Related Links & References
 
 - [Windows GUI Version](../MCBEseedcracker_win_ui/README.md)
-- [Linux Command Line Version](README.md)
+- [Command Line Version](README.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 

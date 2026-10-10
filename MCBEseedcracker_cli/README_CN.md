@@ -1,8 +1,8 @@
-# MCBEseedcracker (Linux)
+# MCBEseedcracker (CLI)
 
 [English](README.md) | 简体中文
 
-Minecraft 基岩版种子破解器 - Linux 命令行版本
+Minecraft 基岩版种子破解器 - 跨平台命令行版本（Windows / Linux / macOS）
 
 > Windows 图形界面版请见 [MCBEseedcracker_win_ui](../MCBEseedcracker_win_ui/README_CN.md)
 
@@ -11,37 +11,39 @@ Minecraft 基岩版种子破解器 - Linux 命令行版本
 ## 目录结构
 
 ```
-MCBEseedcracker_linux/     # Linux 命令行版
+MCBEseedcracker_cli/       # 跨平台命令行版
 ├── config.json            # 配置文件（低32位和高32位）
 ├── config_loader.py       # 配置加载器
-├── build.sh               # 编译脚本
+├── build.sh               # 编译脚本（Linux / macOS）
+├── build.bat              # 编译脚本（Windows）
 ├── crack_low32/
 │   ├── crack_low32.c      # 编译源码
 │   ├── crack_low32_opencl.c  # GPU 版本
 │   ├── crack_low32.cl     # OpenCL 内核
-│   ├── crack_low32.so     # CPU 库
-│   ├── crack_low32_opencl.so  # GPU 库
-│   └── crack_low32.py     # 命令行脚本
+│   ├── crack_low32.py     # 命令行脚本
+│   └── （编译产物：crack_low32.so / crack_low32.dll、
+│        crack_low32_opencl.so / crack_low32_opencl.dll）
 └── crack_high32/
     ├── crack_high32.c     # 编译源码
-    ├── crack_high32.so    # 编译后的库
     ├── crack_high32.py    # 命令行脚本
-    └── cubiomes/          # 群系生成库
+    ├── cubiomes/          # 群系生成库
+    └── （编译产物：crack_high32.so / crack_high32.dll）
 ```
 
 ---
 
 ## 环境要求
 
-- **操作系统**：Linux (x86_64)
+- **操作系统**：Windows 10+ / Linux (x86_64, aarch64) / macOS 10.15+
 - **Python**：3.6+
+- **编译工具**：MinGW-w64 GCC（Windows）或 GCC/Clang（Linux/macOS）；GPU 加速需 OpenCL SDK（可选）
 - **游戏版本**：1.18/1.19/1.20/1.21/26.XX（支持小版本）
 
 ---
 
 ### 配置文件说明
 
-Linux版本使用 **`config.json`** 统一管理所有配置参数（低32位和高32位破解）。
+CLI 版本使用 **`config.json`** 统一管理所有配置参数（低32位和高32位破解）。
 
 **首次运行时会自动创建 `config.json` 文件，请根据需求编辑该文件。**
 
@@ -131,12 +133,16 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 | jungle_temple           | 丛林神庙             | **linear** |
 | ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
 | ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
+| desert_well             | 沙漠水井             | **special** |
+| amethyst_geode          | 紫晶洞（1.18+）      | **special** |
 
 > **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。生成规则复杂的结构（村庄、雪屋、掠夺者哨塔、废弃传送门）在游戏中可能有一个区块的偏移——4宫格会自动处理，可放心使用。
 >
 > **为什么使用 4宫格**：这类结构由跨越多个区块的建筑片段组成，游戏中观察到的位置可能位于与真实生成原点区块相邻的区块，仅凭坐标无法判断真正的原点区块是哪一个。因此破解器会对每个输入坐标自动测试 4 个可能的原点区块（输入区块及其相邻的 3 个区块），任一匹配即视为有效样本。
 >
 > **注意**：古迹废墟、试炼密室、废弃营地使用 Java LCG 随机数生成器，用于**高32位破解**阶段的可选加速，详见 [Java LCG 结构](#java-lcg-结构可选加速) 一节。
+>
+> **特殊结构**：**沙漠水井**和**紫晶洞**使用区块装饰随机数生成器（纯低32位约束，可直接用于低32位破解）。沙漠水井填入精确的水井坐标（/tp 位置）；紫晶洞（1.18+）填入洞内任意方块坐标。
 >
 > ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
@@ -240,13 +246,13 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 
 ### 高32位破解命令行参数
 
-| 参数          | 说明                         |
-| ------------- | ---------------------------- |
-| `--start`     | 起始高32位值（默认: 0）      |
-| `--end`       | 结束高32位值（默认: 2^32-1） |
-| `--test`      | 测试模式（0 ~ 100M）         |
-| `--low32`     | 低32位值                     |
-| `--processes` | 进程数（默认: CPU核心数）    |
+| 参数              | 说明                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--start`         | 起始高32位值（默认: 0）                                                                                                |
+| `--end`           | 结束高32位值（默认: 2^32-1）                                                                                           |
+| `--test`          | 测试模式（0 ~ 100M）                                                                                                   |
+| `--low32`         | 低32位值                                                                                                               |
+| `--processes`     | 进程数（默认: CPU核心数）                                                                                              |
 | `--lcg-structure` | [Java LCG 结构](#java-lcg-结构可选加速)，格式 `name:x:z`，可重复（`trail_ruins` / `trial_chamber` / `abandoned_camp`） |
 
 #### 高32位破解配置
@@ -269,24 +275,22 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
       { "x": -935, "z": 2592, "y": 200, "biome_id": 5 },
       { "x": -2697, "z": 1363, "y": 200, "biome_id": 4 }
     ],
-    "lcg_structures": [
-      { "type": "trial_chamber", "x": 633, "z": 311 }
-    ]
+    "lcg_structures": [{ "type": "trial_chamber", "x": 633, "z": 311 }]
   }
 }
 ```
 
 **配置项说明：**
 
-| 配置项       | 说明                                        |
-| ------------ | ------------------------------------------- |
-| `test_mode`  | 测试模式（false: 正常模式，true: 测试模式） |
-| `start`      | 起始高32位值（默认: 0）                     |
-| `end`        | 结束高32位值（默认: 2^32-1）                |
-| `low32`      | 低32位值（已破解得到）                      |
-| `mc_version` | MC版本字符串（见下方版本对应表）            |
-| `processes`  | 进程数（null: 自动检测，最大16）                    |
-| `samples`    | 群系样本列表（建议5个样本）                 |
+| 配置项           | 说明                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `test_mode`      | 测试模式（false: 正常模式，true: 测试模式）                                        |
+| `start`          | 起始高32位值（默认: 0）                                                            |
+| `end`            | 结束高32位值（默认: 2^32-1）                                                       |
+| `low32`          | 低32位值（已破解得到）                                                             |
+| `mc_version`     | MC版本字符串（见下方版本对应表）                                                   |
+| `processes`      | 进程数（null: 自动检测，最大16）                                                   |
+| `samples`        | 群系样本列表（建议5个样本）                                                        |
 | `lcg_structures` | 可选的 Java LCG 结构列表（两阶段模式，见 [Java LCG 结构](#java-lcg-结构可选加速)） |
 
 **群系样本格式：**
@@ -493,36 +497,35 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 
 ## 编译
 
-预编译的库文件已包含在项目中，可直接使用。如需自行编译：
+首次使用前需根据平台运行对应脚本编译原生库。
 
-### CPU版本
+### Windows (build.bat)
+
+```bat
+:: 需要 MinGW-w64 GCC 在 PATH 中
+build.bat
+:: 生成 crack_low32\crack_low32.dll、crack_high32\crack_high32.dll，
+:: 以及（检测到 OpenCL SDK 时的）crack_low32\crack_low32_opencl.dll
+```
+
+**Windows GPU 编译**：脚本会自动探测 NVIDIA CUDA Toolkit / AMD APP SDK / Intel OpenCL SDK。OpenCL 运行时（`OpenCL.dll`）随显卡驱动自带。
+
+### Linux / macOS (build.sh)
 
 ```bash
-# 安装依赖
-sudo apt install -y gcc libomp-dev  # Debian/Ubuntu
-sudo dnf install -y gcc libgomp-devel  # Fedora/RHEL
-
 # 编译
 chmod +x build.sh
 ./build.sh
 ```
 
-### GPU版本 (OpenCL)
+**GPU版本 (OpenCL)：**
 
-**要使用GPU加速，需要安装OpenCL开发包：**
+- **Ubuntu/Debian**: `sudo apt install -y ocl-icd-opencl-dev ocl-icd-libopencl1`
+- **Fedora/RHEL**: `sudo dnf install -y ocl-icd-devel`
+- **Arch Linux**: `sudo pacman -S ocl-icd`
+- **macOS**: 系统自带 OpenCL SDK，无需额外安装
 
-```bash
-# Ubuntu/Debian
-sudo apt install -y ocl-icd-opencl-dev ocl-icd-libopencl1
-
-# Fedora/RHEL
-sudo dnf install -y ocl-icd-devel
-
-# Arch Linux
-sudo pacman -S ocl-icd
-```
-
-**NVIDIA GPU用户：**
+**NVIDIA GPU用户（Linux）：**
 
 ```bash
 # 确保NVIDIA驱动已安装
@@ -533,13 +536,17 @@ sudo mkdir -p /etc/OpenCL/vendors
 echo "libnvidia-opencl.so.1" | sudo tee /etc/OpenCL/vendors/nvidia.icd
 ```
 
-然后重新编译以支持GPU：
+然后重新编译：
 
 ```bash
-chmod +x build.sh
 ./build.sh
 # 应该看到: [OK] crack_low32_opencl.so created
 ```
+
+**macOS 注意事项**：
+
+- Apple Silicon（M1/M2/...）：脚本会自动使用 `-mcpu=native` 替代 `-march=native`
+- macOS 上 OpenCL 已被弃用但仍可用；Apple Silicon GPU 的性能低于独立显卡
 
 ---
 
@@ -625,7 +632,7 @@ chmod +x build.sh
 ## 相关链接与参考资料
 
 - [Windows 图形界面版](../MCBEseedcracker_win_ui/README_CN.md)
-- [Linux 命令行版](README_CN.md)
+- [命令行版](README_CN.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算；集成 [SeedMapper 的 fork 版本](https://github.com/xpple/SeedMapper) 支持 1.21.5+ 和 26.2+ 群系生成
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 

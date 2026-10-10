@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Configuration Loader for MCBEseedcracker Linux
+Configuration Loader for MCBEseedcracker CLI
 
 Reads configuration from config.json file.
 If config.json doesn't exist, creates default configuration.
@@ -9,6 +9,16 @@ import json
 import sys
 import shutil
 from pathlib import Path
+
+def native_lib_name(base):
+    """Return the platform-appropriate shared library filename.
+
+    Windows builds produce DLLs; Unix builds (Linux/macOS) keep the .so
+    naming produced by build.sh (macOS dlopen loads .so files fine).
+    """
+    if sys.platform == 'win32':
+        return base + '.dll'
+    return base + '.so'
 
 def load_config():
     """Load configuration from config.json

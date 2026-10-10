@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Biome Version Filter for Linux CLI
+Biome Version Filter for CLI
 Biome version compatibility checking for command-line version
 """
 

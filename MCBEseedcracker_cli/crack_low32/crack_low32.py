@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Minecraft Bedrock Low 32-bit Seed Cracker (Linux)
+Minecraft Bedrock Low 32-bit Seed Cracker (CLI)
 
 Supports both CPU (multiprocessing) and GPU (OpenCL) acceleration.
 
@@ -19,16 +19,21 @@ import argparse
 import multiprocessing as mp
 import json
 import os
+import signal
 import sys
 from pathlib import Path
 from datetime import datetime
 
 # Add parent directory to path to import config_loader
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config_loader
 
 CONST_A = 2570712328
 CONST_B = 4048968661
+
+# Directory containing this script (resolved: Python 3.8 keeps __file__
+# relative when the script is launched by name, which breaks DLL loading)
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 # 4-chunk grid: a player-reported coordinate may correspond to one of 4 origin chunks:
 # (cx,cz), (cx,cz+1), (cx+1,cz), (cx+1,cz+1).
@@ -95,13 +100,13 @@ def load_gpu_config():
 def has_opencl_gpu():
     """Check if OpenCL GPU is available"""
     try:
-        script_dir = Path(__file__).parent
-        opencl_so = script_dir / 'crack_low32_opencl.so'
+        script_dir = SCRIPT_DIR
+        opencl_lib = script_dir / config_loader.native_lib_name('crack_low32_opencl')
 
-        if not opencl_so.exists():
-            return False, "OpenCL SO not found"
+        if not opencl_lib.exists():
+            return False, "OpenCL library not found"
 
-        lib = ctypes.CDLL(str(opencl_so))
+        lib = ctypes.CDLL(str(opencl_lib))
 
         lib.has_opencl_gpu.argtypes = []
         lib.has_opencl_gpu.restype = ctypes.c_int
@@ -174,7 +179,7 @@ def test_sample_strictness(structure, config, x, z, num_test_seeds=100000):
             r_base_vals.append((rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF)
 
     # Load C library for fast testing
-    lib_path = Path(__file__).parent / 'crack_low32.so'
+    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
     try:
         lib = ctypes.CDLL(str(lib_path))
         lib.crack_low32_grid.argtypes = [
@@ -215,7 +220,7 @@ def test_special_strictness(sp_type, cx, cz, dx, dz):
     Returns (matches, num_test_seeds).
     """
     num_test_seeds = (1 << 20) if sp_type == 0 else 100000
-    lib_path = Path(__file__).parent / 'crack_low32.so'
+    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
     try:
         lib = ctypes.CDLL(str(lib_path))
         lib.crack_low32_grid_special.argtypes = [
@@ -414,7 +419,7 @@ def crack_worker_cpu(args):
     (start, end, r_base, ox, oz, offset_range, spread_type, num_offsets,
      sp_type, sp_cx, sp_cz, sp_dx, sp_dz) = args
 
-    lib_path = Path(__file__).parent / 'crack_low32.so'
+    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
 
     # Check if library exists before loading
     if not lib_path.exists():
@@ -463,6 +468,13 @@ def crack_worker_cpu(args):
 
     return [results_arr[i] for i in range(found)]
 
+def _worker_init():
+    # Spawned workers must ignore Ctrl+C: on Windows the console delivers
+    # CTRL_C_EVENT to every process in the group, and a worker interrupted
+    # mid-startup dies with "Fatal Python error: init_sys_streams" spam.
+    # The parent handles KeyboardInterrupt and terminates the pool instead.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 def run_crack_cpu(search_start, search_end, num_processes, all_results):
     """Run crack using CPU multiprocessing"""
     global_start = time.time()
@@ -471,46 +483,47 @@ def run_crack_cpu(search_start, search_end, num_processes, all_results):
     search_end_exclusive = search_end + 1
     step_size = 200_000_000
     
-    pool = mp.Pool(num_processes)
-    
-    while processed <= search_end:
-        step_start = processed
-        step_end = min(processed + step_size, search_end_exclusive)
-        chunk_size = (step_end - step_start) // num_processes
-        
-        tasks = []
-        for i in range(num_processes):
-            start = step_start + i * chunk_size
-            end = step_start + (i + 1) * chunk_size if i < num_processes - 1 else step_end
-            if start < end:
-                tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS,
-                              SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ))
-        
-        results = pool.map(crack_worker_cpu, tasks)
-        
-        for r in results:
-            all_results.extend(r)
-            for seed in r:
-                seed_info = f">>> [!] Found seed: {seed} (0x{seed:08X})"
-                print(seed_info)
-                if FOUND_SEEDS_FILE:
-                    with open(FOUND_SEEDS_FILE, 'a', encoding='utf-8') as f:
-                        f.write(seed_info + '\n')
-                        f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                        f.write("-" * 60 + '\n')
-        
-        processed = step_end
-        elapsed = time.time() - global_start
-        speed = (processed - search_start) / elapsed if elapsed > 0 else 0
-        progress = (processed - search_start) / total_seeds * 100
-        eta = (search_end_exclusive - processed) / speed if speed > 0 else 0
-        
-        eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
-        print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
-    
-    pool.close()
-    pool.join()
-    
+    pool = mp.Pool(num_processes, initializer=_worker_init)
+
+    try:
+        while processed <= search_end:
+            step_start = processed
+            step_end = min(processed + step_size, search_end_exclusive)
+            chunk_size = (step_end - step_start) // num_processes
+
+            tasks = []
+            for i in range(num_processes):
+                start = step_start + i * chunk_size
+                end = step_start + (i + 1) * chunk_size if i < num_processes - 1 else step_end
+                if start < end:
+                    tasks.append((start, end, R_BASE, OX, OZ, OFFSET_RANGE, SPREAD_TYPE, ACTIVE_NUM_OFFSETS,
+                                  SP_TYPE, SP_CX, SP_CZ, SP_DX, SP_DZ))
+
+            results = pool.map(crack_worker_cpu, tasks)
+
+            for r in results:
+                all_results.extend(r)
+                for seed in r:
+                    seed_info = f">>> [!] Found seed: {seed} (0x{seed:08X})"
+                    print(seed_info)
+                    if FOUND_SEEDS_FILE:
+                        with open(FOUND_SEEDS_FILE, 'a', encoding='utf-8') as f:
+                            f.write(seed_info + '\n')
+                            f.write(f"Found at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                            f.write("-" * 60 + '\n')
+
+            processed = step_end
+            elapsed = time.time() - global_start
+            speed = (processed - search_start) / elapsed if elapsed > 0 else 0
+            progress = (processed - search_start) / total_seeds * 100
+            eta = (search_end_exclusive - processed) / speed if speed > 0 else 0
+
+            eta_str = f"{eta/3600:.1f}h" if eta > 3600 else f"{eta/60:.1f}min" if eta > 60 else f"{eta:.0f}s"
+            print(f"[-] {processed - search_start:,}/{total_seeds:,} ({progress:5.1f}%) | Speed: {speed:,.0f}/s | ETA: {eta_str}")
+    finally:
+        pool.terminate()
+        pool.join()
+
     return time.time() - global_start
 
 def estimate_candidate_count(search_start, search_end, num_processes):
@@ -528,7 +541,7 @@ def estimate_candidate_count(search_start, search_end, num_processes):
     sample_span = min(total_span, SAMPLE_SEEDS)
     sample_end_exclusive = search_start + sample_span
 
-    pool = mp.Pool(num_processes)
+    pool = mp.Pool(num_processes, initializer=_worker_init)
     sampled_found = 0
     saturated = False
     try:
@@ -553,7 +566,7 @@ def estimate_candidate_count(search_start, search_end, num_processes):
 
             processed = step_end
     finally:
-        pool.close()
+        pool.terminate()
         pool.join()
 
     predicted = round(sampled_found * total_span / sample_span)
@@ -561,7 +574,7 @@ def estimate_candidate_count(search_start, search_end, num_processes):
 
 def run_crack_gpu(search_start, search_end, all_results, config):
     """Run crack using GPU (OpenCL) with batch processing"""
-    lib_path = Path(__file__).parent / 'crack_low32_opencl.so'
+    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32_opencl')
 
     # Change working directory to find crack_low32.cl
     original_dir = os.getcwd()
@@ -672,7 +685,7 @@ def run_crack_gpu(search_start, search_end, all_results, config):
         os.chdir(original_dir)
 
 def main():
-    parser = argparse.ArgumentParser(description="Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
+    parser = argparse.ArgumentParser(description="Minecraft Bedrock Low 32-bit Seed Cracker (CLI)")
     parser.add_argument("--start", type=int, default=None, help="Start low32 value (inclusive), overrides config")
     parser.add_argument("--end", type=int, default=None, help="End low32 value (inclusive), overrides config")
     parser.add_argument("--test", action="store_true", help="Test mode (100M seeds), overrides config")
@@ -695,12 +708,12 @@ def main():
         search_end = args.end if args.end is not None else cfg.get('end', 0xFFFFFFFF)
     
     print("=" * 60)
-    print("Minecraft Bedrock Low 32-bit Seed Cracker (Linux)")
+    print("Minecraft Bedrock Low 32-bit Seed Cracker (CLI)")
     print("=" * 60)
 
     # Create/Clear found seeds file
     global FOUND_SEEDS_FILE
-    FOUND_SEEDS_FILE = Path(__file__).parent / "found_seeds.txt"
+    FOUND_SEEDS_FILE = SCRIPT_DIR / "found_seeds.txt"
     start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(FOUND_SEEDS_FILE, 'w', encoding='utf-8') as f:
         f.write("=" * 60 + "\n")
@@ -759,7 +772,7 @@ def main():
 
     # CRITICAL: Limit processes to prevent resource exhaustion
     # On high-core systems (>16 cores), using all cores causes:
-    # - SO loading conflicts (multiple processes loading same .so)
+    # - Library loading conflicts (multiple processes loading same library)
     # - Memory exhaustion
     # - Lock contention
     # Solution: Use max 16 processes regardless of core count
@@ -791,16 +804,16 @@ def main():
     
     # Check library files
     if use_gpu:
-        lib_path = Path(__file__).parent / 'crack_low32_opencl.so'
+        lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32_opencl')
         if not lib_path.exists():
             print(f"\n[!] Error: OpenCL library not found: {lib_path}")
-            print("[!] Run 'gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL' first")
+            print("[!] Run the build script first (build.bat on Windows, ./build.sh on Linux/macOS)")
             return
     else:
-        lib_path = Path(__file__).parent / 'crack_low32.so'
+        lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
         if not lib_path.exists():
             print(f"\n[!] Error: CPU library not found: {lib_path}")
-            print("[!] Please run 'bash build.sh' first to compile the library.")
+            print("[!] Run the build script first (build.bat on Windows, ./build.sh on Linux/macOS)")
             return
     
     total_seeds = search_end - search_start + 1
@@ -856,4 +869,9 @@ def main():
         print(f"    Low 32-bit: {seed} (0x{seed:08X})")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        # Children ignore SIGINT (_worker_init); the pool was already
+        # terminated in run_crack_cpu's finally block
+        print("\n[!] Interrupted by user")

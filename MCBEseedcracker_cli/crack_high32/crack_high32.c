@@ -35,7 +35,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <immintrin.h>
 
 #include "cubiomes/biomes.h"
 #include "cubiomes/biomenoise.h"

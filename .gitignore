@@ -48,6 +48,11 @@ progress_*.json
 *.spec
 !MCBEseedcracker_win_ui/build.spec
 
+# CLI build artifacts and runtime output (build with build.sh / build.bat)
+MCBEseedcracker_cli/**/*.so
+MCBEseedcracker_cli/**/*.dll
+MCBEseedcracker_cli/**/found_seeds.txt
+
 # Compiled EXE (upload as Release instead)
 MCBEseedcracker_win_ui/dist/
 MCBEseedcracker_win_ui/build/

@@ -131,12 +131,16 @@ MCBEseedcracker_win_ui/
 | jungle_temple           | 丛林神庙             | **linear** |
 | ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
 | ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
+| desert_well             | 沙漠水井             | **special** |
+| amethyst_geode          | 紫晶洞（1.18+）      | **special** |
 
 > **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。生成规则复杂的结构（村庄、雪屋、掠夺者哨塔、废弃传送门）在游戏中可能有一个区块的偏移——4宫格会自动处理，可放心使用。
 >
 > **为什么使用 4宫格**：这类结构由跨越多个区块的建筑片段组成，游戏中观察到的位置可能位于与真实生成原点区块相邻的区块，仅凭坐标无法判断真正的原点区块是哪一个。因此破解器会对每个输入坐标自动测试 4 个可能的原点区块（输入区块及其相邻的 3 个区块），任一匹配即视为有效样本。
 >
 > **注意**：古迹废墟、试炼密室、废弃营地使用 Java LCG 随机数生成器，用于**高32位破解**阶段的可选加速，详见 [Java LCG 结构](#java-lcg-结构可选加速) 一节。
+>
+> **特殊结构**：**沙漠水井**和**紫晶洞**使用区块装饰随机数生成器（纯低32位约束，可直接用于低32位破解）。沙漠水井填入精确的水井坐标（/tp 位置）；紫晶洞（1.18+）填入洞内任意方块坐标。
 >
 > ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
@@ -566,7 +570,7 @@ pyinstaller build.spec --noconfirm
 ## 相关链接与参考资料
 
 - [Windows 图形界面版](README_CN.md)
-- [Linux 命令行版](../MCBEseedcracker_linux/README_CN.md)
+- [命令行版](../MCBEseedcracker_cli/README_CN.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算；集成 [SeedMapper 的 fork 版本](https://github.com/xpple/SeedMapper) 支持 1.21.5+ 和 26.2+ 群系生成
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 

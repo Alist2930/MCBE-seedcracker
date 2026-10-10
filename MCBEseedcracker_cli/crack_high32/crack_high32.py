@@ -11,6 +11,7 @@ import ctypes
 import time
 import sys
 import os
+import signal
 import argparse
 import multiprocessing as mp
 from pathlib import Path
@@ -22,11 +23,11 @@ import functools
 print = functools.partial(print, flush=True)  # Always flush print output
 
 # Add parent directory to path to import config_loader
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config_loader
 
 script_dir = Path(__file__).parent.resolve()
-dll_path = script_dir / "crack_high32.so"
+dll_path = script_dir / config_loader.native_lib_name("crack_high32")
 
 # Load biome data from biomes.json for ID->name mapping (display only)
 import json as _json
@@ -480,7 +481,7 @@ def estimate_candidate_count_high32(search_start, total_span, sorted_samples, lo
     sample_end_exclusive = search_start + sample_span
 
     ctx = mp.get_context('spawn')
-    pool = ctx.Pool(num_processes)
+    pool = ctx.Pool(num_processes, initializer=_worker_init)
     sampled_found = 0
     saturated = False
     try:
@@ -500,12 +501,19 @@ def estimate_candidate_count_high32(search_start, total_span, sorted_samples, lo
                         saturated = True
             pos += chunk * num_processes
     finally:
-        pool.close()
+        pool.terminate()
         pool.join()
 
     predicted = round(sampled_found * total_span / sample_span)
     return predicted, sampled_found, saturated
 
+
+def _worker_init():
+    # Spawned workers must ignore Ctrl+C: on Windows the console delivers
+    # CTRL_C_EVENT to every process in the group, and a worker interrupted
+    # mid-startup dies with "Fatal Python error: init_sys_streams" spam.
+    # The parent handles KeyboardInterrupt and terminates the pool instead.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def main():
     # Create/Clear found seeds file
@@ -582,7 +590,7 @@ def main():
 
     # CRITICAL: Limit processes to prevent resource exhaustion
     # On high-core systems (>32 cores), using all cores causes:
-    # - DLL loading conflicts (multiple processes loading same .so)
+    # - Library loading conflicts (multiple processes loading same library)
     # - Memory exhaustion
     # - Lock contention
     # Solution: Use max 8-16 processes regardless of core count
@@ -731,7 +739,7 @@ def main():
         # Parallel Phase 3: same spawn process pool as the normal path
         ctx = mp.get_context('spawn')
         print(f"\n[*] Initializing {max_processes} worker processes (using spawn)...")
-        pool = ctx.Pool(max_processes)
+        pool = ctx.Pool(max_processes, initializer=_worker_init)
         print("[*] Workers initialized! Starting biome verify...")
 
         tasks = [(h, low32, min_u, max_u, sorted_samples, MC_VERSION)
@@ -770,7 +778,7 @@ def main():
                 sys.stdout.write(f"\r  [{bar}] {progress:.1f}% | Candidate {i+1}/{len(valid_candidates)} | {speed:,.0f}/s | ETA: {eta/60:.1f}min | Found: {found_count}")
                 sys.stdout.flush()
         finally:
-            pool.close()
+            pool.terminate()
             pool.join()
 
         # Clear the progress line after completion
@@ -842,7 +850,7 @@ def main():
     # This is CRITICAL for stability on high-core systems
     ctx = mp.get_context('spawn')
     print(f"\n[*] Initializing {max_processes} worker processes (using spawn)...")
-    pool = ctx.Pool(max_processes)
+    pool = ctx.Pool(max_processes, initializer=_worker_init)
     print("[*] Workers initialized! Starting crack...")
     print("[*] Progress will be updated in real-time...")
     print(f"[*] Found seeds will be saved to: {found_seeds_file}\n")
@@ -943,4 +951,9 @@ def main():
     print("=" * 60)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        # Children ignore SIGINT (_worker_init); idle workers are terminated
+        # by the pool's exit handler when the parent process exits
+        print("\n[!] Interrupted by user")

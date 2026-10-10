@@ -1,8 +1,10 @@
 /**
- * Minecraft Bedrock Low 32-bit Seed Cracker - OpenCL Host Code (Linux)
+ * Minecraft Bedrock Low 32-bit Seed Cracker - OpenCL Host Code
  *
  * Compile:
- *   gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL
+ *   Linux:   gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL
+ *   macOS:   clang -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -framework OpenCL
+ *   Windows: gcc -O3 -shared -o crack_low32_opencl.dll crack_low32_opencl.c -I"<OpenCL SDK>/include" -L"<OpenCL SDK>/lib/x64" -lOpenCL
  *
  * Usage:
  *   python crack_low32.py              # Auto-detect GPU/CPU
@@ -14,7 +16,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef __APPLE__
+#include <OpenCL/cl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 #ifdef _WIN32
 #define EXPORT __declspec(dllexport)
@@ -56,7 +62,7 @@ static void get_device_info(cl_device_id device, const char **name, const char *
  * Check if OpenCL GPU is available
  * Returns: 1 if GPU available, 0 otherwise
  */
-int has_opencl_gpu()
+EXPORT int has_opencl_gpu()
 {
     cl_platform_id platforms[8];
     cl_uint num_platforms;
@@ -83,7 +89,7 @@ int has_opencl_gpu()
  * Get GPU compute units for dynamic scaling
  * Returns: number of compute units, or 0 if not available
  */
-int get_gpu_compute_units()
+EXPORT int get_gpu_compute_units()
 {
     cl_platform_id platforms[8];
     cl_uint num_platforms;
@@ -115,7 +121,7 @@ int get_gpu_compute_units()
  * Get OpenCL device info string
  * Returns device name in the provided buffer
  */
-int get_opencl_device_info(char *buffer, int buffer_size)
+EXPORT int get_opencl_device_info(char *buffer, int buffer_size)
 {
     cl_platform_id platforms[8];
     cl_uint num_platforms;
@@ -150,7 +156,7 @@ int get_opencl_device_info(char *buffer, int buffer_size)
 /**
  * Main crack function using OpenCL
  */
-int crack_low32_opencl(
+EXPORT int crack_low32_opencl(
     uint32_t start,
     uint32_t end,
     uint32_t *r_base,
@@ -411,7 +417,7 @@ int crack_low32_opencl(
 /**
  * Main crack function using OpenCL with grid offset support
  */
-int crack_low32_grid_opencl(
+EXPORT int crack_low32_grid_opencl(
     uint32_t start,
     uint32_t end,
     uint32_t *r_base,       /* [num_structures * num_offsets] */

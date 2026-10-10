@@ -1,10 +1,19 @@
 #!/bin/bash
-# MCBEseedcracker Linux Build Script
+# MCBEseedcracker CLI Build Script (Linux/macOS)
+# Windows users: use build.bat instead
 
 set -e
 
+OS="$(uname -s)"
+ARCH="$(uname -m)"
+
 echo "=============================================="
-echo "MCBEseedcracker Linux Build Script"
+echo "MCBEseedcracker CLI Build Script"
+if [ "$OS" = "Darwin" ]; then
+    echo "Platform: macOS ($ARCH)"
+else
+    echo "Platform: Linux ($ARCH)"
+fi
 echo "=============================================="
 
 cd "$(dirname "$0")"
@@ -22,37 +31,46 @@ fi
 
 echo ""
 echo "[2/3] Building crack_low32_opencl.so (GPU version)..."
-# Check if OpenCL is available (try multiple methods)
 OPENCL_FOUND=0
+OPENCL_LIBS=""
 
-# Method 1: Check if header exists
-if [ -f /usr/include/CL/cl.h ] || [ -f /usr/local/include/CL/cl.h ]; then
-    OPENCL_FOUND=1
-    echo "    [INFO] OpenCL headers found"
-fi
-
-# Method 2: Try pkg-config
-if [ $OPENCL_FOUND -eq 0 ]; then
-    if pkg-config --exists OpenCL 2>/dev/null; then
+if [ "$OS" = "Darwin" ]; then
+    # macOS: OpenCL framework ships with the OS SDK
+    if [ -d /System/Library/Frameworks/OpenCL.framework ]; then
         OPENCL_FOUND=1
-        echo "    [INFO] OpenCL found via pkg-config"
+        OPENCL_LIBS="-framework OpenCL"
+        echo "    [INFO] OpenCL framework found"
     fi
-fi
-
-# Method 3: Check if libOpenCL.so exists
-if [ $OPENCL_FOUND -eq 0 ]; then
-    if [ -f /usr/lib/x86_64-linux-gnu/libOpenCL.so ] || \
-       [ -f /usr/lib/libOpenCL.so ] || \
-       [ -f /usr/local/lib/libOpenCL.so ]; then
+else
+    # Linux: try header, pkg-config, then shared object
+    if [ -f /usr/include/CL/cl.h ] || [ -f /usr/local/include/CL/cl.h ]; then
         OPENCL_FOUND=1
-        echo "    [INFO] OpenCL library found"
+        echo "    [INFO] OpenCL headers found"
     fi
+
+    if [ $OPENCL_FOUND -eq 0 ]; then
+        if pkg-config --exists OpenCL 2>/dev/null; then
+            OPENCL_FOUND=1
+            echo "    [INFO] OpenCL found via pkg-config"
+        fi
+    fi
+
+    if [ $OPENCL_FOUND -eq 0 ]; then
+        if [ -f /usr/lib/x86_64-linux-gnu/libOpenCL.so ] || \
+           [ -f /usr/lib/aarch64-linux-gnu/libOpenCL.so ] || \
+           [ -f /usr/lib/libOpenCL.so ] || \
+           [ -f /usr/local/lib/libOpenCL.so ]; then
+            OPENCL_FOUND=1
+            echo "    [INFO] OpenCL library found"
+        fi
+    fi
+    OPENCL_LIBS="-lOpenCL"
 fi
 
 if [ $OPENCL_FOUND -eq 1 ]; then
     # gcc inside the if-condition: a failed build must not abort the script
     # under set -e; the else branch then degrades to CPU-only mode
-    if gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c -lOpenCL 2>/dev/null; then
+    if gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c $OPENCL_LIBS 2>/dev/null; then
         echo "    [OK] crack_low32_opencl.so created"
         echo "    [INFO] GPU acceleration enabled"
     else
@@ -62,10 +80,14 @@ if [ $OPENCL_FOUND -eq 1 ]; then
     fi
 else
     echo "    [WARNING] OpenCL not found - skipping GPU version"
-    echo "    [INFO] To enable GPU acceleration, install OpenCL:"
-    echo "          Ubuntu/Debian: sudo apt-get install ocl-icd-opencl-dev"
-    echo "          Fedora/RHEL: sudo dnf install ocl-icd-devel"
-    echo "          Arch Linux: sudo pacman -S ocl-icd"
+    if [ "$OS" = "Darwin" ]; then
+        echo "    [INFO] macOS ships OpenCL in the system SDK; update Xcode Command Line Tools"
+    else
+        echo "    [INFO] To enable GPU acceleration, install OpenCL:"
+        echo "          Ubuntu/Debian: sudo apt-get install ocl-icd-opencl-dev"
+        echo "          Fedora/RHEL: sudo dnf install ocl-icd-devel"
+        echo "          Arch Linux: sudo pacman -S ocl-icd"
+    fi
     echo "    [INFO] GPU acceleration disabled (CPU only mode)"
 fi
 cd ..
@@ -76,19 +98,26 @@ cd crack_high32
 
 # Performance optimization flags
 # -march=native -mtune=native: Optimize for current CPU architecture
+#   (Apple Silicon does not support -march; use -mcpu instead)
 # -flto: Link-time optimization for better inlining
 # -fomit-frame-pointer: Free up a register for better performance
 # -ffast-math -fno-math-errno: Faster floating-point operations (safe for biome noise)
 # -funroll-loops: Unroll small loops for better instruction-level parallelism
-# -fno-semantic-interposition: Better function inlining (GCC 10+)
-# -fno-plt: Avoid PLT indirection for library calls
+# -fno-semantic-interposition -fno-plt: Better function inlining (GCC 10+, Linux only)
 
-echo "    [INFO] Building with aggressive optimization flags..."
-gcc -O3 -march=native -mtune=native \
+if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
+    OPT_FLAGS="-O3 -mcpu=native -flto -fomit-frame-pointer -ffast-math -fno-math-errno -funroll-loops"
+else
+    OPT_FLAGS="-O3 -march=native -mtune=native \
     -flto -fomit-frame-pointer \
     -ffast-math -fno-math-errno \
     -funroll-loops \
-    -fno-semantic-interposition -fno-plt \
+    -fno-semantic-interposition -fno-plt"
+fi
+
+echo "    [INFO] Building with aggressive optimization flags..."
+# shellcheck disable=SC2086
+gcc $OPT_FLAGS \
     -fPIC -shared -o crack_high32.so crack_high32.c \
     cubiomes/biomes.c \
     cubiomes/biomenoise.c \
