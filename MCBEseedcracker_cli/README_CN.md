@@ -115,26 +115,26 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 
 #### 支持的结构
 
-| 英文名                  | 中文名               | 分布类型   |
-| ----------------------- | -------------------- | ---------- |
-| village                 | 村庄/僵尸村庄        | triangular |
-| mansion                 | 林地府邸             | triangular |
-| end_city                | 末地城               | triangular |
-| ocean_monument          | 海底神殿             | triangular |
-| ancient_city            | 远古城市             | triangular |
-| pillager_outpost        | 掠夺者哨塔           | triangular |
-| buried_treasure         | 埋藏的宝藏           | triangular |
-| ocean_ruins             | 海底废墟             | **linear** |
-| shipwreck               | 沉船                 | **linear** |
-| nether_complexes        | 下界要塞/堡垒遗迹    | **linear** |
-| desert_temple           | 沙漠神殿             | **linear** |
-| igloo                   | 雪屋                 | **linear** |
-| swamp_hut               | 女巫屋               | **linear** |
-| jungle_temple           | 丛林神庙             | **linear** |
-| ruined_portal_overworld | 废弃传送门（主世界） | **linear** |
-| ruined_portal_nether    | 废弃传送门（下界）   | **linear** |
-| desert_well             | 沙漠水井             | **special** |
-| amethyst_geode          | 紫晶洞（1.18+）      | **special** |
+| 英文名                  | 中文名               | 分布类型            |
+| ----------------------- | -------------------- | ------------------- |
+| village                 | 村庄/僵尸村庄        | triangular（4宫格） |
+| mansion                 | 林地府邸             | triangular          |
+| end_city                | 末地城               | triangular          |
+| ocean_monument          | 海底神殿             | triangular          |
+| ancient_city            | 远古城市             | triangular          |
+| buried_treasure         | 埋藏的宝藏           | triangular          |
+| pillager_outpost        | 掠夺者哨塔           | triangular（4宫格） |
+| ocean_ruins             | 海底废墟             | **linear**          |
+| shipwreck               | 沉船                 | **linear**          |
+| nether_complexes        | 下界要塞/堡垒遗迹    | **linear**          |
+| desert_temple           | 沙漠神殿             | **linear**          |
+| igloo                   | 雪屋                 | **linear**（4宫格） |
+| swamp_hut               | 女巫屋               | **linear**          |
+| jungle_temple           | 丛林神庙             | **linear**          |
+| ruined_portal_overworld | 废弃传送门（主世界） | **linear**（4宫格） |
+| ruined_portal_nether    | 废弃传送门（下界）   | **linear**（4宫格） |
+| desert_well             | 沙漠水井             | **special**         |
+| amethyst_geode          | 紫晶洞               | **special**         |
 
 > **提示**：优先寻找 **linear** 类型的结构（如沙漠神殿、女巫屋、丛林神庙、沉船）。Linear 类型计算量更少，破解速度更快。生成规则复杂的结构（村庄、雪屋、掠夺者哨塔、废弃传送门）在游戏中可能有一个区块的偏移——4宫格会自动处理，可放心使用。
 >
@@ -142,7 +142,7 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 >
 > **注意**：古迹废墟、试炼密室、废弃营地使用 Java LCG 随机数生成器，用于**高32位破解**阶段的可选加速，详见 [Java LCG 结构](#java-lcg-结构可选加速) 一节。
 >
-> **特殊结构**：**沙漠水井**和**紫晶洞**使用区块装饰随机数生成器（纯低32位约束，可直接用于低32位破解）。沙漠水井填入精确的水井坐标（/tp 位置）；紫晶洞（1.18+）填入洞内任意方块坐标。
+> **特殊结构**：**沙漠水井**和**紫晶洞**使用区块装饰随机数生成器（纯低32位约束，可直接用于低32位破解）。
 >
 > ⚠️ **关于埋藏的宝藏**：虽然参数正确，但由于生成密度极高（spacing=4区块），单独使用容易产生大量候选种子。实测使用4个埋藏宝箱样本，在0-10000种子范围内得到400个候选种子。建议仅在其他结构样本不足时作为补充，或作为验证使用。
 
@@ -213,6 +213,14 @@ python3 crack_low32.py --processes 8      # 指定进程数（CPU模式）
 - **远古城市**：（区块确定方法待补充）
 
   ![远古城市区块确定](../assets/imgs/ancient_city.png)
+
+- **沙漠水井**：（区块确定方法待补充）
+
+  ![沙漠水井区块确定](../assets/imgs/desert_well.png)
+
+- **紫晶洞**：（区块确定方法待补充）
+
+  ![紫晶洞区块确定](../assets/imgs/amethyst_geode.png)
 
 ---
 

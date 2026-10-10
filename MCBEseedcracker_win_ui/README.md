@@ -113,26 +113,26 @@ Edit `crack_config.json` in the application directory:
 
 #### Supported Structures
 
-| Name                    | Description               | Spread Type |
-| ----------------------- | ------------------------- | ----------- |
-| village                 | Village/Zombie Village    | triangular  |
-| mansion                 | Woodland Mansion          | triangular  |
-| end_city                | End City                  | triangular  |
-| ocean_monument          | Ocean Monument            | triangular  |
-| ancient_city            | Ancient City              | triangular  |
-| buried_treasure         | Buried Treasure           | triangular  |
-| pillager_outpost        | Pillager Outpost          | triangular  |
-| ocean_ruins             | Ocean Ruins               | **linear**  |
-| shipwreck               | Shipwreck                 | **linear**  |
-| nether_complexes        | Nether Fortress/Bastion   | **linear**  |
-| desert_temple           | Desert Temple             | **linear**  |
-| igloo                   | Igloo                     | **linear**  |
-| swamp_hut               | Witch Hut                 | **linear**  |
-| jungle_temple           | Jungle Temple             | **linear**  |
-| ruined_portal_overworld | Ruined Portal (Overworld) | **linear**  |
-| ruined_portal_nether    | Ruined Portal (Nether)    | **linear**  |
-| desert_well             | Desert Well               | **special** |
-| amethyst_geode          | Amethyst Geode (1.18+)    | **special** |
+| Name                    | Description               | Spread Type               |
+| ----------------------- | ------------------------- | ------------------------- |
+| village                 | Village/Zombie Village    | triangular (4-chunk grid) |
+| mansion                 | Woodland Mansion          | triangular                |
+| end_city                | End City                  | triangular                |
+| ocean_monument          | Ocean Monument            | triangular                |
+| ancient_city            | Ancient City              | triangular                |
+| buried_treasure         | Buried Treasure           | triangular                |
+| pillager_outpost        | Pillager Outpost          | triangular (4-chunk grid) |
+| ocean_ruins             | Ocean Ruins               | **linear**                |
+| shipwreck               | Shipwreck                 | **linear**                |
+| nether_complexes        | Nether Fortress/Bastion   | **linear**                |
+| desert_temple           | Desert Temple             | **linear**                |
+| igloo                   | Igloo                     | **linear** (4-chunk grid) |
+| swamp_hut               | Witch Hut                 | **linear**                |
+| jungle_temple           | Jungle Temple             | **linear**                |
+| ruined_portal_overworld | Ruined Portal (Overworld) | **linear** (4-chunk grid) |
+| ruined_portal_nether    | Ruined Portal (Nether)    | **linear** (4-chunk grid) |
+| desert_well             | Desert Well               | **special**               |
+| amethyst_geode          | Amethyst Geode            | **special**               |
 
 > **Tip**: Prioritize **linear** type structures (Desert Temple, Witch Hut, Jungle Temple, Shipwreck). Linear types require less computation and crack faster. Structures with complex generation rules (Village, Igloo, Pillager Outpost, Ruined Portal) may appear offset by one chunk in-game — the 4-chunk grid automatically handles this, so they are safe to use.
 >
@@ -140,7 +140,7 @@ Edit `crack_config.json` in the application directory:
 >
 > **Note**: Trail Ruins, Trial Chamber, and Abandoned Camp use the Java LCG random number generator and are used as optional acceleration in the **high 32-bit cracking** phase. They are listed in the [Java LCG Structures](#java-lcg-structures-optional-acceleration) section.
 >
-> **Special structures**: **Desert Well** and **Amethyst Geode** use the per-chunk decoration RNG (pure low 32-bit constraints, crackable directly in the low 32-bit phase). For Desert Well, enter the exact well coordinates (/tp position); for Amethyst Geode (1.18+), enter any block inside the geode.
+> **Special structures**: **Desert Well** and **Amethyst Geode** use the per-chunk decoration RNG (pure low 32-bit constraints, crackable directly in the low 32-bit phase).
 
 > ⚠️ **About Buried Treasure**: Although the parameters are correct, due to extremely high generation density (spacing=4 chunks), using it alone tends to produce many candidate seeds. Testing with 4 buried treasure samples yielded 400 candidate seeds in the 0-10000 seed range. Recommended only as a supplement when other structure samples are insufficient, or for verification purposes.
 
@@ -211,6 +211,14 @@ Edit `crack_config.json` in the application directory:
 - **Ancient City**: (chunk location method to be added)
 
   ![Ancient City Chunk Location](../assets/imgs/ancient_city.png)
+
+- **Desert Well**: (chunk location method to be added)
+
+  ![Desert Well Chunk Location](../assets/imgs/desert_well.png)
+
+- **Amethyst Geode**: (chunk location method to be added)
+
+  ![Amethyst Geode Chunk Location](../assets/imgs/amethyst_geode.png)
 
 ---
 
