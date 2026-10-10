@@ -91,13 +91,13 @@ MCBEseedcracker_cli/       # Cross-platform command line version
 │   ├── crack_low32_opencl.c  # GPU version
 │   ├── crack_low32.cl     # OpenCL kernel
 │   ├── crack_low32.py     # Command-line script
-│   └── (build outputs: crack_low32.so / crack_low32.dll and
-│        crack_low32_opencl.so / crack_low32_opencl.dll)
+│   └── (build outputs: crack_low32_<os>_<arch>.so/.dll and
+│        crack_low32_opencl_<os>_<arch>.so/.dll)
 └── crack_high32/
     ├── crack_high32.c     # Compiled source
     ├── crack_high32.py    # Command-line script
     ├── cubiomes/          # Biome generation library
-    └── (build output: crack_high32.so / crack_high32.dll)
+    └── (build output: crack_high32_<os>_<arch>.so/.dll)
 ```
 
 ---

@@ -101,10 +101,7 @@ def has_opencl_gpu():
     """Check if OpenCL GPU is available"""
     try:
         script_dir = SCRIPT_DIR
-        opencl_lib = script_dir / config_loader.native_lib_name('crack_low32_opencl')
-
-        if not opencl_lib.exists():
-            return False, "OpenCL library not found"
+        opencl_lib = config_loader.resolve_native_lib(script_dir, 'crack_low32_opencl')
 
         lib = ctypes.CDLL(str(opencl_lib))
 
@@ -179,8 +176,8 @@ def test_sample_strictness(structure, config, x, z, num_test_seeds=100000):
             r_base_vals.append((rx * CONST_A + rz * CONST_B + config["salt"]) & 0xFFFFFFFF)
 
     # Load C library for fast testing
-    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
     try:
+        lib_path = config_loader.resolve_native_lib(SCRIPT_DIR, 'crack_low32')
         lib = ctypes.CDLL(str(lib_path))
         lib.crack_low32_grid.argtypes = [
             ctypes.c_uint32, ctypes.c_uint32,
@@ -220,8 +217,8 @@ def test_special_strictness(sp_type, cx, cz, dx, dz):
     Returns (matches, num_test_seeds).
     """
     num_test_seeds = (1 << 20) if sp_type == 0 else 100000
-    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
     try:
+        lib_path = config_loader.resolve_native_lib(SCRIPT_DIR, 'crack_low32')
         lib = ctypes.CDLL(str(lib_path))
         lib.crack_low32_grid_special.argtypes = [
             ctypes.c_uint32, ctypes.c_uint32,
@@ -419,11 +416,7 @@ def crack_worker_cpu(args):
     (start, end, r_base, ox, oz, offset_range, spread_type, num_offsets,
      sp_type, sp_cx, sp_cz, sp_dx, sp_dz) = args
 
-    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
-
-    # Check if library exists before loading
-    if not lib_path.exists():
-        raise RuntimeError(f"crack_low32 library not found: {lib_path}")
+    lib_path = config_loader.resolve_native_lib(SCRIPT_DIR, 'crack_low32')
 
     lib = ctypes.CDLL(str(lib_path))
 
@@ -574,7 +567,7 @@ def estimate_candidate_count(search_start, search_end, num_processes):
 
 def run_crack_gpu(search_start, search_end, all_results, config):
     """Run crack using GPU (OpenCL) with batch processing"""
-    lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32_opencl')
+    lib_path = config_loader.resolve_native_lib(SCRIPT_DIR, 'crack_low32_opencl')
 
     # Change working directory to find crack_low32.cl
     original_dir = os.getcwd()
@@ -804,16 +797,16 @@ def main():
     
     # Check library files
     if use_gpu:
-        lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32_opencl')
-        if not lib_path.exists():
-            print(f"\n[!] Error: OpenCL library not found: {lib_path}")
-            print("[!] Run the build script first (build.bat on Windows, ./build.sh on Linux/macOS)")
+        try:
+            lib_path = config_loader.resolve_native_lib(SCRIPT_DIR, 'crack_low32_opencl')
+        except RuntimeError as e:
+            print(f"\n[!] Error: {e}")
             return
     else:
-        lib_path = SCRIPT_DIR / config_loader.native_lib_name('crack_low32')
-        if not lib_path.exists():
-            print(f"\n[!] Error: CPU library not found: {lib_path}")
-            print("[!] Run the build script first (build.bat on Windows, ./build.sh on Linux/macOS)")
+        try:
+            lib_path = config_loader.resolve_native_lib(SCRIPT_DIR, 'crack_low32')
+        except RuntimeError as e:
+            print(f"\n[!] Error: {e}")
             return
     
     total_seeds = search_end - search_start + 1

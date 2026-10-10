@@ -6,19 +6,45 @@ Reads configuration from config.json file.
 If config.json doesn't exist, creates default configuration.
 """
 import json
+import platform
 import sys
 import shutil
 from pathlib import Path
 
-def native_lib_name(base):
-    """Return the platform-appropriate shared library filename.
+def native_lib_candidates(base):
+    """Return platform-specific shared library filename candidates in priority order.
 
-    Windows builds produce DLLs; Unix builds (Linux/macOS) keep the .so
-    naming produced by build.sh (macOS dlopen loads .so files fine).
+    Prebuilt per-platform artifacts ({base}_{os}_{arch}.so/.dll) are preferred
+    so Linux, macOS and Windows libraries can be shipped side by side without
+    compiling; the bare {base}.so/.dll produced by an older local build works
+    as a fallback.
     """
+    machine = platform.machine().lower()
+    arch = 'arm64' if machine in ('arm64', 'aarch64') else 'x86_64'
     if sys.platform == 'win32':
-        return base + '.dll'
-    return base + '.so'
+        return [f'{base}_win_{arch}.dll', base + '.dll']
+    os_tag = 'macos' if sys.platform == 'darwin' else 'linux'
+    return [f'{base}_{os_tag}_{arch}.so', base + '.so']
+
+def resolve_native_lib(directory, base):
+    """Return the first existing native library path for the current platform.
+
+    Args:
+        directory: Directory that contains the built libraries
+        base: Library base name, e.g. 'crack_low32'
+
+    Raises:
+        RuntimeError: If none of the candidate libraries exist.
+    """
+    missing = []
+    for name in native_lib_candidates(base):
+        path = Path(directory) / name
+        if path.exists():
+            return path
+        missing.append(name)
+    raise RuntimeError(
+        f"Native library not found for '{base}' (tried: {', '.join(missing)}). "
+        f"Run the build script first (build.bat on Windows, ./build.sh on Linux/macOS)")
 
 def load_config():
     """Load configuration from config.json

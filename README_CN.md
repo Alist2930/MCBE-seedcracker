@@ -92,13 +92,13 @@ MCBEseedcracker_cli/       # 跨平台命令行版
 │   ├── crack_low32_opencl.c  # GPU 版本
 │   ├── crack_low32.cl     # OpenCL 内核
 │   ├── crack_low32.py     # 命令行脚本
-│   └── （编译产物：crack_low32.so / crack_low32.dll 与
-│        crack_low32_opencl.so / crack_low32_opencl.dll）
+│   └── （编译产物：crack_low32_<平台>_<架构>.so/.dll 与
+│        crack_low32_opencl_<平台>_<架构>.so/.dll）
 └── crack_high32/
     ├── crack_high32.c     # 编译源码
     ├── crack_high32.py    # 命令行脚本
     ├── cubiomes/          # 群系生成库
-    └── （编译产物：crack_high32.so / crack_high32.dll）
+    └── （编译产物：crack_high32_<平台>_<架构>.so/.dll）
 ```
 
 ---

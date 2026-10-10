@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config_loader
 
 script_dir = Path(__file__).parent.resolve()
-dll_path = script_dir / config_loader.native_lib_name("crack_high32")
+dll_path = None  # resolved lazily in init_dll()
 
 # Load biome data from biomes.json for ID->name mapping (display only)
 import json as _json
@@ -267,6 +267,8 @@ class BiomeSample(ctypes.Structure):
     _fields_ = [("x", ctypes.c_int), ("z", ctypes.c_int), ("y", ctypes.c_int), ("biome_id", ctypes.c_int)]
 
 def init_dll():
+    global dll_path
+    dll_path = config_loader.resolve_native_lib(script_dir, "crack_high32")
     dll = ctypes.CDLL(str(dll_path))
 
     dll.crack_high32_soa.argtypes = [

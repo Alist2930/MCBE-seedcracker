@@ -10,6 +10,15 @@ REM ============================================
 
 cd /d "%~dp0"
 
+REM Platform-tagged library names so prebuilt Windows libraries can be
+REM shipped alongside the Linux/macOS ones; Python's config_loader
+REM resolve_native_lib() picks the matching one and falls back to the
+REM bare name for older local builds.
+set "LIB_TAG=win_x86_64"
+set "LIB_LOW32=crack_low32_%LIB_TAG%.dll"
+set "LIB_OPENCL=crack_low32_opencl_%LIB_TAG%.dll"
+set "LIB_HIGH32=crack_high32_%LIB_TAG%.dll"
+
 echo ==============================================
 echo MCBEseedcracker CLI Build Script (Windows)
 echo ==============================================
@@ -21,16 +30,16 @@ if errorlevel 1 (
 )
 
 echo.
-echo [1/3] Building crack_low32.dll (CPU version)...
-gcc -O3 -shared -o crack_low32\crack_low32.dll crack_low32\crack_low32.c
+echo [1/3] Building %LIB_LOW32% (CPU version)...
+gcc -O3 -shared -o crack_low32\%LIB_LOW32% crack_low32\crack_low32.c
 if errorlevel 1 (
-    echo     [ERROR] Failed to build crack_low32.dll
+    echo     [ERROR] Failed to build %LIB_LOW32%
     exit /b 1
 )
-echo     [OK] crack_low32.dll created
+echo     [OK] %LIB_LOW32% created
 
 echo.
-echo [2/3] Building crack_low32_opencl.dll (GPU version)...
+echo [2/3] Building %LIB_OPENCL% (GPU version)...
 REM Detect an OpenCL SDK (include + import lib)
 set "OPENCL_INCLUDE="
 set "OPENCL_LIB="
@@ -64,30 +73,30 @@ if "%OPENCL_INCLUDE%"=="" (
     echo     [INFO] GPU acceleration disabled (CPU only mode)
 ) else (
     echo     [INFO] OpenCL include: %OPENCL_INCLUDE%
-    gcc -O3 -shared -o crack_low32\crack_low32_opencl.dll crack_low32\crack_low32_opencl.c -I"%OPENCL_INCLUDE%" -L"%OPENCL_LIB%" -lOpenCL
+    gcc -O3 -shared -o crack_low32\%LIB_OPENCL% crack_low32\crack_low32_opencl.c -I"%OPENCL_INCLUDE%" -L"%OPENCL_LIB%" -lOpenCL
     if errorlevel 1 (
-        echo     [WARNING] Failed to compile crack_low32_opencl.dll
+        echo     [WARNING] Failed to compile %LIB_OPENCL%
         echo     [INFO] Check if gcc and the OpenCL SDK are properly installed
         echo     [INFO] GPU acceleration disabled (CPU only mode)
     ) else (
-        echo     [OK] crack_low32_opencl.dll created
+        echo     [OK] %LIB_OPENCL% created
         echo     [INFO] GPU acceleration enabled
     )
 )
 
 echo.
-echo [3/3] Building crack_high32.dll...
+echo [3/3] Building %LIB_HIGH32%...
 echo     [INFO] Building with aggressive optimization flags...
-gcc -O3 -march=native -mtune=native -flto -fomit-frame-pointer -ffast-math -fno-math-errno -funroll-loops -fno-semantic-interposition -fno-plt -shared -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes
+gcc -O3 -march=native -mtune=native -flto -fomit-frame-pointer -ffast-math -fno-math-errno -funroll-loops -fno-semantic-interposition -fno-plt -shared -o crack_high32\%LIB_HIGH32% crack_high32\crack_high32.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes
 if errorlevel 1 (
     echo     [WARNING] Aggressive flags failed, falling back to -O3...
-    gcc -O3 -shared -o crack_high32\crack_high32.dll crack_high32\crack_high32.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes
+    gcc -O3 -shared -o crack_high32\%LIB_HIGH32% crack_high32\crack_high32.c crack_high32\cubiomes\biomes.c crack_high32\cubiomes\biomenoise.c crack_high32\cubiomes\layers.c crack_high32\cubiomes\noise.c -Icrack_high32\cubiomes
     if errorlevel 1 (
-        echo     [ERROR] Failed to build crack_high32.dll
+        echo     [ERROR] Failed to build %LIB_HIGH32%
         exit /b 1
     )
 )
-echo     [OK] crack_high32.dll created
+echo     [OK] %LIB_HIGH32% created
 
 echo.
 echo ==============================================
@@ -95,9 +104,9 @@ echo Build Complete!
 echo ==============================================
 echo.
 echo Generated files:
-echo   - crack_low32\crack_low32.dll (CPU version)
-if exist crack_low32\crack_low32_opencl.dll echo   - crack_low32\crack_low32_opencl.dll (GPU version)
-echo   - crack_high32\crack_high32.dll
+echo   - crack_low32\%LIB_LOW32% (CPU version)
+if exist crack_low32\%LIB_OPENCL% echo   - crack_low32\%LIB_OPENCL% (GPU version)
+echo   - crack_high32\%LIB_HIGH32%
 echo.
 echo Usage:
 echo   cd crack_low32 ^&^& python crack_low32.py --test

@@ -21,13 +21,13 @@ MCBEseedcracker_cli/       # 跨平台命令行版
 │   ├── crack_low32_opencl.c  # GPU 版本
 │   ├── crack_low32.cl     # OpenCL 内核
 │   ├── crack_low32.py     # 命令行脚本
-│   └── （编译产物：crack_low32.so / crack_low32.dll、
-│        crack_low32_opencl.so / crack_low32_opencl.dll）
+│   └── （编译产物：crack_low32_<平台>_<架构>.so/.dll、
+│        crack_low32_opencl_<平台>_<架构>.so/.dll）
 └── crack_high32/
     ├── crack_high32.c     # 编译源码
     ├── crack_high32.py    # 命令行脚本
     ├── cubiomes/          # 群系生成库
-    └── （编译产物：crack_high32.so / crack_high32.dll）
+    └── （编译产物：crack_high32_<平台>_<架构>.so/.dll）
 ```
 
 ---
@@ -503,17 +503,17 @@ python3 crack_high32.py --lcg-structure trail_ruins:123:456 --lcg-structure tria
 
 ---
 
-## 编译
+## 编译（可选）
 
-首次使用前需根据平台运行对应脚本编译原生库。
+仓库已附带各平台的预编译库（`crack_low32_linux_x86_64.so`、`crack_low32_macos_arm64.so`、`crack_low32_win_x86_64.dll` 等），克隆后可直接运行，无需编译。如需自行编译原生库，按平台运行对应脚本：
 
 ### Windows (build.bat)
 
 ```bat
 :: 需要 MinGW-w64 GCC 在 PATH 中
 build.bat
-:: 生成 crack_low32\crack_low32.dll、crack_high32\crack_high32.dll，
-:: 以及（检测到 OpenCL SDK 时的）crack_low32\crack_low32_opencl.dll
+:: 生成 crack_low32\crack_low32_win_x86_64.dll、crack_high32\crack_high32_win_x86_64.dll，
+:: 以及（检测到 OpenCL SDK 时的）crack_low32\crack_low32_opencl_win_x86_64.dll
 ```
 
 **Windows GPU 编译**：脚本会自动探测 NVIDIA CUDA Toolkit / AMD APP SDK / Intel OpenCL SDK。OpenCL 运行时（`OpenCL.dll`）随显卡驱动自带。
@@ -548,7 +548,7 @@ echo "libnvidia-opencl.so.1" | sudo tee /etc/OpenCL/vendors/nvidia.icd
 
 ```bash
 ./build.sh
-# 应该看到: [OK] crack_low32_opencl.so created
+# 应该看到: [OK] crack_low32_opencl_<平台>_<架构>.so created
 ```
 
 **macOS 注意事项**：

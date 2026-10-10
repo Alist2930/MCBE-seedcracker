@@ -18,19 +18,36 @@ echo "=============================================="
 
 cd "$(dirname "$0")"
 
-echo ""
-echo "[1/3] Building crack_low32.so (CPU version)..."
-cd crack_low32
-gcc -O3 -fPIC -shared -o crack_low32.so crack_low32.c
-if [ -f crack_low32.so ]; then
-    echo "    [OK] crack_low32.so created"
+# Platform-tagged library names so prebuilt Linux/macOS libraries can be
+# shipped side by side; Python's config_loader.resolve_native_lib() picks
+# the matching one and falls back to the bare name for older local builds.
+if [ "$OS" = "Darwin" ]; then
+    LIB_OS="macos"
 else
-    echo "    [ERROR] Failed to build crack_low32.so"
+    LIB_OS="linux"
+fi
+case "$ARCH" in
+    aarch64|arm64) ARCH_TAG="arm64" ;;
+    *)             ARCH_TAG="x86_64" ;;
+esac
+LIB_TAG="${LIB_OS}_${ARCH_TAG}"
+LIB_LOW32="crack_low32_${LIB_TAG}.so"
+LIB_OPENCL="crack_low32_opencl_${LIB_TAG}.so"
+LIB_HIGH32="crack_high32_${LIB_TAG}.so"
+
+echo ""
+echo "[1/3] Building ${LIB_LOW32} (CPU version)..."
+cd crack_low32
+gcc -O3 -fPIC -shared -o "$LIB_LOW32" crack_low32.c
+if [ -f "$LIB_LOW32" ]; then
+    echo "    [OK] ${LIB_LOW32} created"
+else
+    echo "    [ERROR] Failed to build ${LIB_LOW32}"
     exit 1
 fi
 
 echo ""
-echo "[2/3] Building crack_low32_opencl.so (GPU version)..."
+echo "[2/3] Building ${LIB_OPENCL} (GPU version)..."
 OPENCL_FOUND=0
 OPENCL_LIBS=""
 
@@ -70,11 +87,11 @@ fi
 if [ $OPENCL_FOUND -eq 1 ]; then
     # gcc inside the if-condition: a failed build must not abort the script
     # under set -e; the else branch then degrades to CPU-only mode
-    if gcc -O3 -fPIC -shared -o crack_low32_opencl.so crack_low32_opencl.c $OPENCL_LIBS 2>/dev/null; then
-        echo "    [OK] crack_low32_opencl.so created"
+    if gcc -O3 -fPIC -shared -o "$LIB_OPENCL" crack_low32_opencl.c $OPENCL_LIBS 2>/dev/null; then
+        echo "    [OK] ${LIB_OPENCL} created"
         echo "    [INFO] GPU acceleration enabled"
     else
-        echo "    [WARNING] Failed to compile crack_low32_opencl.so"
+        echo "    [WARNING] Failed to compile ${LIB_OPENCL}"
         echo "    [INFO] Check if gcc and OpenCL are properly installed"
         echo "    [INFO] GPU acceleration disabled (CPU only mode)"
     fi
@@ -93,7 +110,7 @@ fi
 cd ..
 
 echo ""
-echo "[3/3] Building crack_high32.so..."
+echo "[3/3] Building ${LIB_HIGH32}..."
 cd crack_high32
 
 # Performance optimization flags
@@ -118,16 +135,16 @@ fi
 echo "    [INFO] Building with aggressive optimization flags..."
 # shellcheck disable=SC2086
 gcc $OPT_FLAGS \
-    -fPIC -shared -o crack_high32.so crack_high32.c \
+    -fPIC -shared -o "$LIB_HIGH32" crack_high32.c \
     cubiomes/biomes.c \
     cubiomes/biomenoise.c \
     cubiomes/layers.c \
     cubiomes/noise.c \
     -lm
-if [ -f crack_high32.so ]; then
-    echo "    [OK] crack_high32.so created"
+if [ -f "$LIB_HIGH32" ]; then
+    echo "    [OK] ${LIB_HIGH32} created"
 else
-    echo "    [ERROR] Failed to build crack_high32.so"
+    echo "    [ERROR] Failed to build ${LIB_HIGH32}"
     exit 1
 fi
 cd ..
@@ -138,11 +155,11 @@ echo "Build Complete!"
 echo "=============================================="
 echo ""
 echo "Generated files:"
-echo "  - crack_low32/crack_low32.so (CPU version)"
-if [ -f crack_low32/crack_low32_opencl.so ]; then
-    echo "  - crack_low32/crack_low32_opencl.so (GPU version)"
+echo "  - crack_low32/${LIB_LOW32} (CPU version)"
+if [ -f "crack_low32/${LIB_OPENCL}" ]; then
+    echo "  - crack_low32/${LIB_OPENCL} (GPU version)"
 fi
-echo "  - crack_high32/crack_high32.so"
+echo "  - crack_high32/${LIB_HIGH32}"
 echo ""
 echo "Usage:"
 echo "  cd crack_low32 && python crack_low32.py --test"

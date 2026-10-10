@@ -21,13 +21,13 @@ MCBEseedcracker_cli/       # Cross-platform command line version
 │   ├── crack_low32_opencl.c  # GPU version
 │   ├── crack_low32.cl     # OpenCL kernel
 │   ├── crack_low32.py     # Command-line script
-│   └── (build outputs: crack_low32.so / crack_low32.dll and
-│        crack_low32_opencl.so / crack_low32_opencl.dll)
+│   └── (build outputs: crack_low32_<os>_<arch>.so/.dll and
+│        crack_low32_opencl_<os>_<arch>.so/.dll)
 └── crack_high32/
     ├── crack_high32.c     # Compiled source
     ├── crack_high32.py    # Command-line script
     ├── cubiomes/          # Biome generation library
-    └── (build output: crack_high32.so / crack_high32.dll)
+    └── (build output: crack_high32_<os>_<arch>.so/.dll)
 ```
 
 ---
@@ -503,17 +503,17 @@ The program automatically sorts samples by biome rarity, checking the rarest bio
 
 ---
 
-## Building
+## Building (Optional)
 
-Build the native libraries with the script for your platform. Libraries must be built before first use.
+Prebuilt per-platform libraries are included in the repo (`crack_low32_linux_x86_64.so`, `crack_low32_macos_arm64.so`, `crack_low32_win_x86_64.dll`, etc.), so you can run directly after cloning. To build the libraries yourself instead, use the script for your platform.
 
 ### Windows (build.bat)
 
 ```bat
 :: Requires MinGW-w64 GCC on PATH
 build.bat
-:: Generates crack_low32\crack_low32.dll, crack_high32\crack_high32.dll
-:: and (if an OpenCL SDK is found) crack_low32\crack_low32_opencl.dll
+:: Generates crack_low32\crack_low32_win_x86_64.dll, crack_high32\crack_high32_win_x86_64.dll
+:: and (if an OpenCL SDK is found) crack_low32\crack_low32_opencl_win_x86_64.dll
 ```
 
 **GPU build on Windows**: an OpenCL SDK is auto-detected from NVIDIA CUDA Toolkit / AMD APP SDK / Intel OpenCL SDK. The OpenCL runtime (`OpenCL.dll`) itself ships with GPU drivers.
@@ -548,7 +548,7 @@ Then rebuild:
 
 ```bash
 ./build.sh
-# Should see: [OK] crack_low32_opencl.so created
+# Should see: [OK] crack_low32_opencl_<os>_<arch>.so created
 ```
 
 **macOS notes**:

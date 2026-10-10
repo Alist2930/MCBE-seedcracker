@@ -52,6 +52,14 @@ progress_*.json
 MCBEseedcracker_cli/**/*.so
 MCBEseedcracker_cli/**/*.dll
 MCBEseedcracker_cli/**/found_seeds.txt
+# Prebuilt per-platform libraries are shipped in the repo so users do not
+# need to compile; bare-name .so/.dll (older local builds) stay ignored
+!MCBEseedcracker_cli/crack_low32/crack_low32_*_*.so
+!MCBEseedcracker_cli/crack_low32/crack_low32_opencl_*_*.so
+!MCBEseedcracker_cli/crack_high32/crack_high32_*_*.so
+!MCBEseedcracker_cli/crack_low32/crack_low32_win_*.dll
+!MCBEseedcracker_cli/crack_low32/crack_low32_opencl_win_*.dll
+!MCBEseedcracker_cli/crack_high32/crack_high32_win_*.dll
 
 # Compiled EXE (upload as Release instead)
 MCBEseedcracker_win_ui/dist/
