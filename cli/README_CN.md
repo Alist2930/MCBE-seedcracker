@@ -16,7 +16,8 @@ MCBEseedcracker/
 │   ├── low32.py              # 低32位命令行入口
 │   ├── high32.py             # 高32位命令行入口
 │   ├── config.json           # 配置文件（低32位和高32位）
-│   └── found_seeds.txt       # 找到的种子输出（运行时创建）
+│   ├── found_seeds_low32.txt  # 低32位种子输出（运行时创建）
+│   └── found_seeds_high32.txt # 高32位种子输出（运行时创建）
 └── core/                     # 破解核心
     ├── low32.py / high32.py  # 破解逻辑
     ├── config_loader.py      # 配置加载器
@@ -62,7 +63,7 @@ python cli/low32.py --processes 8      # 指定进程数（CPU模式）
 ```
 
 **找到的种子输出：**
-所有找到的种子会自动保存到 `cli/found_seeds.txt`，包含时间戳。程序启动时创建该文件，破解过程中实时追加找到的种子。
+所有找到的种子会自动保存到 `cli/found_seeds_low32.txt`，包含时间戳。程序启动时创建该文件，破解过程中实时追加找到的种子。
 
 ### 低32位破解命令行参数
 
@@ -251,7 +252,7 @@ python cli/high32.py --lcg-structure trail_ruins:123:456 --lcg-structure trial_c
 ```
 
 **找到的种子输出：**
-所有找到的种子会自动保存到 `cli/found_seeds.txt`，包含时间戳和详细信息。程序启动时会创建/清空此文件，确保即使进度输出过多也不会遗漏找到的种子。
+所有找到的种子会自动保存到 `cli/found_seeds_high32.txt`，包含时间戳和详细信息。程序启动时会创建/清空此文件，确保即使进度输出过多也不会遗漏找到的种子。
 
 ---
 

@@ -65,7 +65,7 @@ core/native/*
 !core/native/crack_low32.cl
 
 # CLI runtime output
-**/found_seeds.txt
+**/found_seeds*.txt
 
 # Docs are local-only except the README template toolchain (source of the
 # 6 READMEs). Nested rules: docs/* would otherwise block re-inclusion of the

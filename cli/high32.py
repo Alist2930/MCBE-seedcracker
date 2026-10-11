@@ -31,7 +31,7 @@ def _pause():
 
 
 class ConsoleReporter(Reporter):
-    """Renders core events as English console lines and writes found_seeds.txt."""
+    """Renders core events as English console lines and writes found_seeds_high32.txt."""
 
     def __init__(self, found_seeds_file=None):
         self.found_seeds_file = found_seeds_file
@@ -97,8 +97,8 @@ class ConsoleReporter(Reporter):
 
 
 def init_found_seeds_file():
-    """Create/clear found_seeds.txt and return its path."""
-    found_seeds_file = SCRIPT_DIR / "found_seeds.txt"
+    """Create/clear found_seeds_high32.txt and return its path."""
+    found_seeds_file = SCRIPT_DIR / "found_seeds_high32.txt"
     start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(found_seeds_file, 'w', encoding='utf-8') as f:
         f.write("=" * 60 + "\n")

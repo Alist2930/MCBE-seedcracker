@@ -2,9 +2,9 @@
 """Package the cross-platform CLI release into a distributable zip.
 
 The CLI release contains only the shared core and the thin CLI frontends
-(no GUI code), plus the root READMEs and assets/ (the READMEs reference
-../assets/imgs/ images). Runtime artifacts (__pycache__, config.json,
-found_seeds.txt, session data, progress files) are excluded.
+(no GUI code, no READMEs, no assets), plus the tracked cli/config.json
+template. Runtime artifacts (__pycache__, found-seeds logs, session data,
+progress files) are excluded.
 
 Usage:
     python scripts/package_cli.py                 # dist/MCBEseedcracker_cli_v<version>.zip
@@ -27,22 +27,18 @@ ARCHIVE_ROOT = 'MCBEseedcracker'
 EXCLUDED_DIRS = {'__pycache__', 'build', 'dist', '.git', 'sounds'}
 # File names never packed (any depth)
 EXCLUDED_FILES = {
-    'config.json',           # auto-created on first run, may hold user data
     'session_data.json',
-    'found_seeds.txt',
     'crack_config.json',
 }
 # File patterns never packed (any depth)
-EXCLUDED_PATTERNS = ['*.py[cod]', 'progress_*.json']
+EXCLUDED_PATTERNS = ['*.py[cod]', 'progress_*.json', 'README*.md', 'found_seeds*.txt']
 
-# Contents packed from the repository root (directories + files)
-INCLUDE_DIRS = ['cli', 'core', 'assets']
-INCLUDE_FILES = ['README.md', 'README_CN.md']
+# Contents packed from the repository root
+INCLUDE_DIRS = ['cli', 'core']
 
 # Files that must exist in the archive for a valid CLI release
 REQUIRED_IN_ARCHIVE = [
-    'README.md',
-    'README_CN.md',
+    'cli/config.json',       # generated default configuration
     'cli/low32.py',
     'cli/high32.py',
     'core/low32.py',
@@ -101,11 +97,6 @@ def collect_files():
         for path in sorted(src_dir.rglob('*')):
             if path.is_file() and not is_excluded(path, PROJECT_ROOT):
                 yield path, f'{ARCHIVE_ROOT}/{name}/{path.relative_to(src_dir).as_posix()}'
-    for name in INCLUDE_FILES:
-        src = PROJECT_ROOT / name
-        if not src.is_file():
-            raise SystemExit(f'[ERROR] required file missing: {src}')
-        yield src, f'{ARCHIVE_ROOT}/{name}'
 
 
 def main():

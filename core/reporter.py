@@ -4,7 +4,8 @@
 Core cracking functions never print and never touch Qt: they emit events
 through a Reporter and honor pause/stop through a Control. Frontends provide
 their own implementations:
-- CLI: ConsoleReporter prints English text and writes found_seeds.txt
+- CLI: ConsoleReporter prints English text and writes found_seeds_low32.txt
+  / found_seeds_high32.txt
 - GUI: a bridge object forwards events to Qt signals
 - Reporter/Control instances never cross the multiprocessing boundary; only
   the parent process calls them while aggregating worker results.

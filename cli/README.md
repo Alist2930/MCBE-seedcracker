@@ -16,7 +16,8 @@ MCBEseedcracker/
 │   ├── low32.py              # Low 32-bit CLI entry
 │   ├── high32.py             # High 32-bit CLI entry
 │   ├── config.json           # Configuration file (low32 and high32)
-│   └── found_seeds.txt       # Found seeds output (created at runtime)
+│   ├── found_seeds_low32.txt  # Low32 found seeds output (created at runtime)
+│   └── found_seeds_high32.txt # High32 found seeds output (created at runtime)
 └── core/                     # Cracking core
     ├── low32.py / high32.py  # Cracking logic
     ├── config_loader.py      # Configuration loader
@@ -62,7 +63,7 @@ python cli/low32.py --processes 8      # Specify process count (CPU mode)
 ```
 
 **Found Seeds Output:**
-All found seeds are automatically saved to `cli/found_seeds.txt` with timestamps. The file is created at program start, and found seeds are appended in real time during cracking.
+All found seeds are automatically saved to `cli/found_seeds_low32.txt` with timestamps. The file is created at program start, and found seeds are appended in real time during cracking.
 
 ### Low 32-bit Command Line Arguments
 
@@ -251,7 +252,7 @@ Adding one or more `--lcg-structure` arguments (format: `name:x:z`, supported na
 ```
 
 **Found Seeds Output:**
-All found seeds are automatically saved to `cli/found_seeds.txt` with timestamps and detailed information. This file is created/cleared at program start, ensuring you never miss any found seeds even with verbose progress output.
+All found seeds are automatically saved to `cli/found_seeds_high32.txt` with timestamps and detailed information. This file is created/cleared at program start, ensuring you never miss any found seeds even with verbose progress output.
 
 ---
 

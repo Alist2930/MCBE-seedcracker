@@ -3,7 +3,7 @@
 
 Thin console shell over core.low32: argparse + English console rendering.
 All cracking logic lives in core/; this file only formats output and handles
-the found_seeds.txt log.
+the found_seeds_low32.txt log.
 """
 import sys
 import argparse
@@ -21,7 +21,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 class ConsoleReporter(Reporter):
-    """Renders core events as English console lines and writes found_seeds.txt."""
+    """Renders core events as English console lines and writes found_seeds_low32.txt."""
 
     def __init__(self, found_seeds_file=None):
         self.found_seeds_file = found_seeds_file
@@ -86,8 +86,8 @@ class ConsoleReporter(Reporter):
 
 
 def init_found_seeds_file(search_start, search_end):
-    """Create/clear found_seeds.txt and return its path."""
-    found_seeds_file = SCRIPT_DIR / "found_seeds.txt"
+    """Create/clear found_seeds_low32.txt and return its path."""
+    found_seeds_file = SCRIPT_DIR / "found_seeds_low32.txt"
     start_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(found_seeds_file, 'w', encoding='utf-8') as f:
         f.write("=" * 60 + "\n")
