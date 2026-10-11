@@ -43,7 +43,7 @@ Minecraft 基岩版种子研究工具 (Windows / Linux / macOS)
 
 **Windows 图形界面版**，无需命令行操作，无需编辑配置文件！
 
-详见 [MCBEseedcracker_win_ui/README_CN.md](MCBEseedcracker_win_ui/README_CN.md)。
+详见 [gui/README_CN.md](gui/README_CN.md)。
 
 **功能特性：**
 
@@ -55,50 +55,39 @@ Minecraft 基岩版种子研究工具 (Windows / Linux / macOS)
 
 ### 命令行用户（Windows / Linux / macOS）
 
-使用跨平台命令行版本。详见 [MCBEseedcracker_cli/README_CN.md](MCBEseedcracker_cli/README_CN.md)。
+使用跨平台命令行版本。详见 [cli/README_CN.md](cli/README_CN.md)。
 
 ---
 
 ## 目录结构
 
 ```
-MCBEseedcracker_win_ui/    # Windows 图形界面版（推荐）
-├── ui/                    # UI 源代码
-├── crack_low32/           # 低32位编译源码
-│   ├── crack_low32.c      # CPU 版本
-│   ├── crack_low32_opencl.c  # GPU 版本
-│   └── crack_low32.cl     # OpenCL 内核
-├── crack_high32/          # 高32位编译源码
-│   ├── crack_high32.c     # 高32位源码
-│   └── cubiomes/          # 群系生成库
-├── dll/                   # 编译后的 DLL
-│   ├── crack_low32/
-│   │   ├── crack_low32.dll
-│   │   ├── crack_low32_opencl.dll
-│   │   └── crack_low32.cl
-│   └── crack_high32/
-│       └── crack_high32.dll
-├── compile.bat            # 编译脚本
-├── build.bat              # 打包脚本
-└── version_info.txt       # 版本信息
-
-MCBEseedcracker_cli/       # 跨平台命令行版
-├── config.json            # 配置文件（低32位和高32位）
-├── config_loader.py       # 配置加载器
-├── build.sh               # 编译脚本（Linux / macOS）
-├── build.bat              # 编译脚本（Windows）
-├── crack_low32/
-│   ├── crack_low32.c      # 编译源码
-│   ├── crack_low32_opencl.c  # GPU 版本
-│   ├── crack_low32.cl     # OpenCL 内核
-│   ├── crack_low32.py     # 命令行脚本
-│   └── （编译产物：crack_low32_<平台>_<架构>.so/.dll 与
-│        crack_low32_opencl_<平台>_<架构>.so/.dll）
-└── crack_high32/
-    ├── crack_high32.c     # 编译源码
-    ├── crack_high32.py    # 命令行脚本
-    ├── cubiomes/          # 群系生成库
-    └── （编译产物：crack_high32_<平台>_<架构>.so/.dll）
+MCBEseedcracker/
+├── core/                     # 共享核心：破解逻辑 + 原生库
+│   ├── low32.py              # 低32位破解逻辑
+│   ├── high32.py             # 高32位破解逻辑
+│   ├── reporter.py           # 进度/结果回调接口
+│   ├── config_loader.py      # 配置加载器
+│   ├── check_cpu.py          # CPU/OpenCL 能力检测
+│   ├── data/                 # structures.json / biomes.json
+│   ├── native/               # 预编译原生库（Windows / Linux / macOS）
+│   └── native_src/           # C 源码 + 编译脚本（编译可选）
+│       ├── build.bat         # Windows 编译脚本
+│       ├── build.sh          # Linux / macOS 编译脚本
+│       ├── crack_low32.c     # 低32位 CPU 源码
+│       ├── crack_low32_opencl.c  # 低32位 GPU 源码
+│       ├── crack_low32.cl    # OpenCL 内核
+│       ├── crack_high32.c    # 高32位源码
+│       └── cubiomes/         # 群系生成库
+├── cli/                      # 命令行前端（Windows / Linux / macOS）
+│   ├── low32.py              # 低32位命令行入口
+│   ├── high32.py             # 高32位命令行入口
+│   └── config.json           # 配置文件（低32位和高32位）
+└── gui/                      # Windows 图形界面（PyQt5）
+    ├── main.py               # 应用程序入口
+    ├── ui/                   # UI 源代码
+    ├── build.bat             # PyInstaller 打包脚本
+    └── build.spec            # PyInstaller 规格文件
 ```
 
 ---
@@ -486,14 +475,14 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ### Windows（图形界面）
 
-1. 运行图形界面程序（详见 [MCBEseedcracker_win_ui/README_CN.md](MCBEseedcracker_win_ui/README_CN.md)）
+1. 运行图形界面程序（详见 [gui/README_CN.md](gui/README_CN.md)）
 2. 添加建筑 → 开始低32位破解
 3. 添加群系 → 开始高32位破解
 4. 在 [ChunkBase](https://www.chunkbase.com/apps/seed-map) 验证种子
 
 ### 命令行（Windows / Linux / macOS）
 
-1. 编辑 `config.json` 配置文件（详见 [MCBEseedcracker_cli/README_CN.md](MCBEseedcracker_cli/README_CN.md)）
+1. 编辑 `cli/config.json` 配置文件（详见 [cli/README_CN.md](cli/README_CN.md)）
 2. 运行破解程序
 3. 在 [ChunkBase](https://www.chunkbase.com/apps/seed-map) 验证种子
 
@@ -592,8 +581,8 @@ voronoi_offset = voronoiAccess3D(sha256_hash, x, y, z)
 
 ## 相关链接与参考资料
 
-- [Windows 图形界面版](MCBEseedcracker_win_ui/README_CN.md)
-- [命令行版](MCBEseedcracker_cli/README_CN.md)
+- [Windows 图形界面版](gui/README_CN.md)
+- [命令行版](cli/README_CN.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft 群系生成模拟库，用于高32位破解中的群系计算；集成 [SeedMapper 的 fork 版本](https://github.com/xpple/SeedMapper) 支持 1.21.5+ 和 26.2+ 群系生成
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - 低32位破解中使用的随机数生成器，用于结构偏移计算
 

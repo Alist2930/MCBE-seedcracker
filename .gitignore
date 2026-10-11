@@ -1,6 +1,5 @@
 # Compiled files
 *.o
-# *.so
 *.a
 *.obj
 *.lib
@@ -16,6 +15,7 @@ build/
 # IDE
 .idea/
 .vscode/
+.trae/
 *.swp
 *.swo
 *~
@@ -32,6 +32,7 @@ check_*.py
 biomes_zh.txt
 get_biome.py
 measure_biome_rarity.py
+!core/check_cpu.py
 
 # Documentation (root level)
 UI_DEVELOPMENT_PLAN.md
@@ -46,23 +47,28 @@ progress_*.json
 
 # Build artifacts
 *.spec
-!MCBEseedcracker_win_ui/build.spec
+!gui/build.spec
 
-# CLI build artifacts and runtime output (build with build.sh / build.bat)
-MCBEseedcracker_cli/**/*.so
-MCBEseedcracker_cli/**/*.dll
-MCBEseedcracker_cli/**/found_seeds.txt
-# Prebuilt per-platform libraries are shipped in the repo so users do not
-# need to compile; bare-name .so/.dll (older local builds) stay ignored
-!MCBEseedcracker_cli/crack_low32/crack_low32_*_*.so
-!MCBEseedcracker_cli/crack_low32/crack_low32_opencl_*_*.so
-!MCBEseedcracker_cli/crack_high32/crack_high32_*_*.so
-!MCBEseedcracker_cli/crack_low32/crack_low32_win_*.dll
-!MCBEseedcracker_cli/crack_low32/crack_low32_opencl_win_*.dll
-!MCBEseedcracker_cli/crack_high32/crack_high32_win_*.dll
+# Native build artifacts: locally built bare-name libs stay untracked; the
+# prebuilt per-platform libraries shipped in core/native are whitelisted so
+# users never need to compile
+core/native/*
+!core/native/crack_low32_win_x86_64.dll
+!core/native/crack_low32_opencl_win_x86_64.dll
+!core/native/crack_high32_win_x86_64.dll
+!core/native/crack_low32_linux_x86_64.so
+!core/native/crack_low32_opencl_linux_x86_64.so
+!core/native/crack_high32_linux_x86_64.so
+!core/native/crack_low32_macos_arm64.so
+!core/native/crack_low32_opencl_macos_arm64.so
+!core/native/crack_high32_macos_arm64.so
+!core/native/crack_low32.cl
 
-# Compiled EXE (upload as Release instead)
-MCBEseedcracker_win_ui/dist/
-MCBEseedcracker_win_ui/build/
+# CLI runtime output
+**/found_seeds.txt
 
-docs/
+# Docs are local-only except the README template toolchain (source of the
+# 6 READMEs). Nested rules: docs/* would otherwise block re-inclusion of the
+# subdirectory, and the sub-level whitelist keeps legacy one-off scripts and
+# __pycache__ out of the repo.
+docs/*

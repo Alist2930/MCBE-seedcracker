@@ -1,0 +1,194 @@
+{
+  "village": {
+    "name_zh": "村庄",
+    "name_en": "Village",
+    "id": 1,
+    "salt": 10387312,
+    "spacing": 34,
+    "separation": 8,
+    "spread_type": "triangular"
+  },
+  "mansion": {
+    "name_zh": "林地府邸",
+    "name_en": "Woodland Mansion",
+    "id": 2,
+    "salt": 10387319,
+    "spacing": 80,
+    "separation": 20,
+    "spread_type": "triangular"
+  },
+  "end_city": {
+    "name_zh": "末地城",
+    "name_en": "End City",
+    "id": 3,
+    "salt": 10387313,
+    "spacing": 20,
+    "separation": 11,
+    "spread_type": "triangular"
+  },
+  "ocean_monument": {
+    "name_zh": "海底神殿",
+    "name_en": "Ocean Monument",
+    "id": 4,
+    "salt": 10387313,
+    "spacing": 32,
+    "separation": 5,
+    "spread_type": "triangular"
+  },
+  "ancient_city": {
+    "name_zh": "深暗古城",
+    "name_en": "Ancient City",
+    "id": 5,
+    "salt": 20083232,
+    "spacing": 24,
+    "separation": 8,
+    "spread_type": "triangular"
+  },
+  "ocean_ruins": {
+    "name_zh": "海底废墟",
+    "name_en": "Ocean Ruins",
+    "id": 6,
+    "salt": 14357621,
+    "spacing": 20,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "shipwreck": {
+    "name_zh": "沉船",
+    "name_en": "Shipwreck",
+    "id": 7,
+    "salt": 165745295,
+    "spacing": 24,
+    "separation": 4,
+    "spread_type": "linear"
+  },
+  "nether_complexes": {
+    "name_zh": "下界要塞/堡垒遗迹",
+    "name_en": "Nether Fortress/Bastion",
+    "id": 8,
+    "salt": 30084232,
+    "spacing": 30,
+    "separation": 4,
+    "spread_type": "linear"
+  },
+  "desert_temple": {
+    "name_zh": "沙漠神殿",
+    "name_en": "Desert Temple",
+    "id": 9,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "igloo": {
+    "name_zh": "雪屋",
+    "name_en": "Igloo",
+    "id": 10,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "swamp_hut": {
+    "name_zh": "女巫屋",
+    "name_en": "Swamp Hut",
+    "id": 11,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "jungle_temple": {
+    "name_zh": "丛林神庙",
+    "name_en": "Jungle Temple",
+    "id": 12,
+    "salt": 14357617,
+    "spacing": 32,
+    "separation": 8,
+    "spread_type": "linear"
+  },
+  "pillager_outpost": {
+    "name_zh": "掠夺者哨塔",
+    "name_en": "Pillager Outpost",
+    "id": 13,
+    "salt": 165745296,
+    "spacing": 80,
+    "separation": 24,
+    "spread_type": "triangular"
+  },
+  "ruined_portal_overworld": {
+    "name_zh": "废弃传送门（主世界）",
+    "name_en": "Ruined Portal (Overworld)",
+    "id": 14,
+    "salt": 40552231,
+    "spacing": 40,
+    "separation": 15,
+    "spread_type": "linear"
+  },
+  "ruined_portal_nether": {
+    "name_zh": "废弃传送门（下界）",
+    "name_en": "Ruined Portal (Nether)",
+    "id": 15,
+    "salt": 40552231,
+    "spacing": 25,
+    "separation": 10,
+    "spread_type": "linear"
+  },
+  "buried_treasure": {
+    "name_zh": "埋藏的宝藏",
+    "name_en": "Buried Treasure",
+    "id": 16,
+    "salt": 16842397,
+    "spacing": 4,
+    "separation": 2,
+    "spread_type": "triangular"
+  },
+  "trail_ruins": {
+    "name_zh": "古迹废墟",
+    "name_en": "Trail Ruins",
+    "id": 17,
+    "salt": 83469867,
+    "spacing": 34,
+    "separation": 8,
+    "spread_type": "linear",
+    "rng_type": "java_lcg"
+  },
+  "trial_chamber": {
+    "name_zh": "试炼密室",
+    "name_en": "Trial Chamber",
+    "id": 18,
+    "salt": 94251327,
+    "spacing": 34,
+    "separation": 12,
+    "spread_type": "linear",
+    "rng_type": "java_lcg"
+  },
+  "abandoned_camp": {
+    "name_zh": "废弃营地",
+    "name_en": "Abandoned Camp",
+    "id": 19,
+    "salt": 91231127,
+    "spacing": 37,
+    "separation": 8,
+    "spread_type": "linear",
+    "rng_type": "java_lcg"
+  },
+  "desert_well": {
+    "name_zh": "沙漠水井",
+    "name_en": "Desert Well",
+    "id": 20,
+    "special": true,
+    "sp_type": 0,
+    "salt": -1160484816,
+    "rarity": 500
+  },
+  "amethyst_geode": {
+    "name_zh": "紫晶洞",
+    "name_en": "Amethyst Geode",
+    "id": 21,
+    "special": true,
+    "sp_type": 1,
+    "salt": 1974035328,
+    "rarity": 24
+  }
+}

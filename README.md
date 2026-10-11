@@ -42,7 +42,7 @@ Crack Minecraft Bedrock Edition world seeds through structure coordinates and bi
 
 **Windows GUI Version** - no command line or code editing needed!
 
-See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for details.
+See [gui/README.md](gui/README.md) for details.
 
 **Features:**
 
@@ -54,50 +54,39 @@ See [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md) for det
 
 ### Command Line Users (Windows / Linux / macOS)
 
-Use the cross-platform command line version. See [MCBEseedcracker_cli/README.md](MCBEseedcracker_cli/README.md) for details.
+Use the cross-platform command line version. See [cli/README.md](cli/README.md) for details.
 
 ---
 
 ## Directory Structure
 
 ```
-MCBEseedcracker_win_ui/    # Windows GUI version (recommended)
-├── ui/                    # UI source code
-├── crack_low32/           # Low 32-bit compilation source
-│   ├── crack_low32.c      # CPU version
-│   ├── crack_low32_opencl.c  # GPU version
-│   └── crack_low32.cl     # OpenCL kernel
-├── crack_high32/          # High 32-bit compilation source
-│   ├── crack_high32.c     # High 32-bit source
-│   └── cubiomes/          # Biome generation library
-├── dll/                   # Compiled DLLs
-│   ├── crack_low32/
-│   │   ├── crack_low32.dll
-│   │   ├── crack_low32_opencl.dll
-│   │   └── crack_low32.cl
-│   └── crack_high32/
-│       └── crack_high32.dll
-├── compile.bat            # Compilation script
-├── build.bat              # Packaging script
-└── version_info.txt       # Version information
-
-MCBEseedcracker_cli/       # Cross-platform command line version
-├── config.json            # Configuration file (low32 and high32)
-├── config_loader.py       # Configuration loader
-├── build.sh               # Build script (Linux / macOS)
-├── build.bat              # Build script (Windows)
-├── crack_low32/
-│   ├── crack_low32.c      # Compiled source
-│   ├── crack_low32_opencl.c  # GPU version
-│   ├── crack_low32.cl     # OpenCL kernel
-│   ├── crack_low32.py     # Command-line script
-│   └── (build outputs: crack_low32_<os>_<arch>.so/.dll and
-│        crack_low32_opencl_<os>_<arch>.so/.dll)
-└── crack_high32/
-    ├── crack_high32.c     # Compiled source
-    ├── crack_high32.py    # Command-line script
-    ├── cubiomes/          # Biome generation library
-    └── (build output: crack_high32_<os>_<arch>.so/.dll)
+MCBEseedcracker/
+├── core/                     # Shared core: cracking logic + native libraries
+│   ├── low32.py              # Low 32-bit cracking logic
+│   ├── high32.py             # High 32-bit cracking logic
+│   ├── reporter.py           # Progress/result callback interface
+│   ├── config_loader.py      # Configuration loader
+│   ├── check_cpu.py          # CPU/OpenCL capability detection
+│   ├── data/                 # structures.json / biomes.json
+│   ├── native/               # Prebuilt native libraries (Windows / Linux / macOS)
+│   └── native_src/           # C sources + build scripts (compilation optional)
+│       ├── build.bat         # Windows build script
+│       ├── build.sh          # Linux / macOS build script
+│       ├── crack_low32.c     # Low 32-bit CPU source
+│       ├── crack_low32_opencl.c  # Low 32-bit GPU source
+│       ├── crack_low32.cl    # OpenCL kernel
+│       ├── crack_high32.c    # High 32-bit source
+│       └── cubiomes/         # Biome generation library
+├── cli/                      # Command line frontends (Windows / Linux / macOS)
+│   ├── low32.py              # Low 32-bit CLI entry
+│   ├── high32.py             # High 32-bit CLI entry
+│   └── config.json           # Configuration file (low32 and high32)
+└── gui/                      # Windows GUI (PyQt5)
+    ├── main.py               # Application entry point
+    ├── ui/                   # UI source code
+    ├── build.bat             # PyInstaller packaging script
+    └── build.spec            # PyInstaller spec
 ```
 
 ---
@@ -485,14 +474,14 @@ Even with same version number, Java and Bedrock have biome generation difference
 
 ### Windows (GUI)
 
-1. Run the GUI application (see [MCBEseedcracker_win_ui/README.md](MCBEseedcracker_win_ui/README.md))
+1. Run the GUI application (see [gui/README.md](gui/README.md))
 2. Add structures → Start Low 32-bit cracking
 3. Add biomes → Start High 32-bit cracking
 4. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
 
 ### Command Line (Windows / Linux / macOS)
 
-1. Edit `config.json` configuration file (see [MCBEseedcracker_cli/README.md](MCBEseedcracker_cli/README.md))
+1. Edit `cli/config.json` configuration file (see [cli/README.md](cli/README.md))
 2. Run cracking programs
 3. Verify seed on [ChunkBase](https://www.chunkbase.com/apps/seed-map)
 
@@ -591,8 +580,8 @@ If significantly longer:
 
 ## Related Links & References
 
-- [Windows GUI Version](MCBEseedcracker_win_ui/README.md)
-- [Command Line Version](MCBEseedcracker_cli/README.md)
+- [Windows GUI Version](gui/README.md)
+- [Command Line Version](cli/README.md)
 - [cubiomes](https://github.com/Cubitect/cubiomes) - Minecraft biome generation simulation library, used for biome calculation in high 32-bit cracking; integrated [SeedMapper's fork](https://github.com/xpple/SeedMapper) for 1.21.5+ and 26.2+ biome generation support
 - [Mersenne Twister (MT19937)](https://en.wikipedia.org/wiki/Mersenne_Twister) - Random number generator used in low 32-bit cracking for structure offset calculation
 
